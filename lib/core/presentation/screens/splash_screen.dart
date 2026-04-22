@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../router/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_svg.dart';
@@ -30,7 +31,13 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _ctrl.forward();
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) context.go(AppRoutes.login);
+      if (!mounted) return;
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        context.go(AppRoutes.feed);
+      } else {
+        context.go(AppRoutes.login);
+      }
     });
   }
 

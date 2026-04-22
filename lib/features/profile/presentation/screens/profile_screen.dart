@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../data/profile_repository.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
 
@@ -34,16 +36,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-        actions: [
-          IconButton(icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white : Colors.black), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20), onPressed: () => context.go(AppRoutes.login)),
-        ],
-      ),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, _) => [
+    return ref.watch(myProfileProvider).when(
+      data: (profile) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+            actions: [
+              IconButton(icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white : Colors.black), onPressed: () {}),
+              IconButton(icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20), onPressed: () => context.go(AppRoutes.login)),
+            ],
+          ),
+          body: NestedScrollView(
+            headerSliverBuilder: (context, _) => [
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -86,27 +90,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _Stat(value: '48', label: '게시물', sub: sub),
-                            _Stat(value: '312', label: '팔로워', sub: sub),
-                            _Stat(value: '87', label: '팔로잉', sub: sub),
+                            _Stat(value: '${profile.postCount}', label: '게시물', sub: sub),
+                            _Stat(value: '0', label: '팔로워', sub: sub),
+                            _Stat(value: '0', label: '팔로잉', sub: sub),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // 이름 + 핸들
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Text('배스왕 김민준', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                          SizedBox(width: 6),
-                          _LunkerBadge(),
+                          Text(profile.username, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          const SizedBox(width: 6),
+                          if (profile.isLunkerClub) const _LunkerBadge(),
                         ]),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                       ],
                     ),
                   ),
@@ -141,7 +144,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ]),
                   const SizedBox(height: 16),
 
-                  // 등급 바
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -153,14 +155,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Row(children: [
                         Text('앵글러 온도', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
                         const Spacer(),
-                        Text('86.5°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
-                        Text(' 플래티넘', style: TextStyle(fontSize: 12, color: sub)),
+                        Text('${profile.mannerTemperature}°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
                       ]),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(3),
                         child: LinearProgressIndicator(
-                          value: 0.865,
+                          value: profile.mannerTemperature / 100,
                           backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
                           valueColor: AlwaysStoppedAnimation(accent),
                           minHeight: 6,
@@ -171,28 +172,29 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 10),
 
                   // 런커 기록
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                  if (profile.maxFishLength != null)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(children: [
+                        AppSvg(AppIcons.trophy, size: 36, color: AppColors.gold),
+                        const SizedBox(width: 12),
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
+                          Text('배스 ${profile.maxFishLength}cm', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.gold)),
+                          Text('2026.04.22 · 충주호', style: TextStyle(fontSize: 11, color: sub)),
+                        ]),
+                        const Spacer(),
+                        const Column(children: [
+                          Icon(Icons.verified_rounded, color: AppColors.gold, size: 18),
+                          Text('인증', style: TextStyle(fontSize: 10, color: AppColors.gold)),
+                        ]),
+                      ]),
                     ),
-                    child: Row(children: [
-                      AppSvg(AppIcons.trophy, size: 36, color: AppColors.gold),
-                      const SizedBox(width: 12),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
-                        const Text('배스 52.3cm', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.gold)),
-                        Text('2026.04.22 · 충주호', style: TextStyle(fontSize: 11, color: sub)),
-                      ]),
-                      const Spacer(),
-                      const Column(children: [
-                        Icon(Icons.verified_rounded, color: AppColors.gold, size: 18),
-                        Text('인증', style: TextStyle(fontSize: 10, color: AppColors.gold)),
-                      ]),
-                    ]),
-                  ),
                   const SizedBox(height: 10),
 
                   // 통계 4칸
@@ -220,14 +222,18 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
         ],
-        body: TabBarView(
-          controller: _tab,
-          children: [
-            _Grid(isDark: isDark),
-            _History(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg),
-          ],
-        ),
-      ),
+            body: TabBarView(
+              controller: _tab,
+              children: [
+                _Grid(isDark: isDark),
+                _History(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('오류: $e'))),
     );
   }
 }

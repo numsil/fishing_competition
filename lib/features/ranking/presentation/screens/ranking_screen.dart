@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../data/ranking_repository.dart';
 
-class RankingScreen extends StatefulWidget {
+class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
 
   @override
-  State<RankingScreen> createState() => _RankingScreenState();
+  ConsumerState<RankingScreen> createState() => _RankingScreenState();
 }
 
-class _RankingScreenState extends State<RankingScreen>
+class _RankingScreenState extends ConsumerState<RankingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
 
@@ -30,43 +32,40 @@ class _RankingScreenState extends State<RankingScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('랭킹', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-        bottom: TabBar(
-          controller: _tab,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-          tabs: const [Tab(text: '리그'), Tab(text: '지역'), Tab(text: '이달의')],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tab,
-        children: [
-          _LeagueTab(isDark: isDark, accent: accent),
-          _RegionTab(isDark: isDark, accent: accent),
-          _MonthlyTab(isDark: isDark, accent: accent),
-        ],
-      ),
+    return ref.watch(topRankingsProvider).when(
+      data: (rankings) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('랭킹', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+            bottom: TabBar(
+              controller: _tab,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+              tabs: const [Tab(text: '리그'), Tab(text: '지역'), Tab(text: '이달의')],
+            ),
+          ),
+          body: TabBarView(
+            controller: _tab,
+            children: [
+              _LeagueTab(entries: rankings, isDark: isDark, accent: accent),
+              _RegionTab(entries: rankings, isDark: isDark, accent: accent),
+              _MonthlyTab(isDark: isDark, accent: accent),
+            ],
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('오류: $e'))),
     );
   }
 }
 
 // ── 리그 탭 ─────────────────────────────────────────────
 class _LeagueTab extends StatelessWidget {
-  const _LeagueTab({required this.isDark, required this.accent});
+  const _LeagueTab({required this.entries, required this.isDark, required this.accent});
+  final List<RankingEntry> entries;
   final bool isDark;
   final Color accent;
-
-  static const _entries = [
-    ('김민준', '52.3cm', '배스', 1),
-    ('이서연', '48.7cm', '배스', 2),
-    ('박태준', '45.1cm', '배스', 3),
-    ('최현수', '42.8cm', '배스', 4),
-    ('정민호', '41.5cm', '쏘가리', 5),
-    ('강준혁', '40.2cm', '배스', 6),
-    ('윤지후', '38.9cm', '배스', 7),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -103,11 +102,11 @@ class _LeagueTab extends StatelessWidget {
         const SizedBox(height: 20),
 
         // 상위 3
-        _Podium(entries: _entries.take(3).toList(), isDark: isDark, accent: accent),
+        _Podium(entries: entries.take(3).toList(), isDark: isDark, accent: accent),
         const SizedBox(height: 16),
 
         // 4위~
-        ..._entries.skip(3).map((e) => _RankRow(entry: e, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, isMe: e.$4 == 5)),
+        ...entries.skip(3).toList().asMap().entries.map((e) => _RankRow(entry: e.value, rank: e.key + 4, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, isMe: false)),
       ],
     );
   }
@@ -115,23 +114,31 @@ class _LeagueTab extends StatelessWidget {
 
 class _Podium extends StatelessWidget {
   const _Podium({required this.entries, required this.isDark, required this.accent});
-  final List<(String, String, String, int)> entries;
+  final List<RankingEntry> entries;
   final bool isDark;
   final Color accent;
 
   @override
   Widget build(BuildContext context) {
+    if (entries.isEmpty) return const SizedBox();
+    
     final e = entries;
     final heights = [100.0, 75.0, 55.0];
-    final order = [1, 0, 2]; // 2위, 1위, 3위 순서
+    // 2위, 1위, 3위 순서인데 항목 수가 부족할 수 있음
+    final order = [];
+    if (e.length > 1) order.add(1); // 2위
+    if (e.isNotEmpty) order.add(0); // 1위
+    if (e.length > 2) order.add(2); // 3위
+
     final medals = [AppColors.silver, AppColors.gold, AppColors.bronze];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: order.asMap().entries.map((item) {
-        final pos = item.key;
-        final idx = item.value;
-        final (name, size, _, rank) = e[idx];
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: order.map((idx) {
+        final rank = idx + 1;
+        final entry = e[idx];
+        final pos = rank == 1 ? 1 : rank == 2 ? 0 : 2;
         final medal = medals[pos];
 
         return Expanded(
@@ -143,8 +150,8 @@ class _Podium extends StatelessWidget {
                 size: rank == 1 ? 56 : 44,
               ),
               const SizedBox(height: 6),
-              Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: rank == 1 ? 13 : 12), overflow: TextOverflow.ellipsis),
-              Text(size, style: TextStyle(fontSize: rank == 1 ? 14 : 12, fontWeight: FontWeight.w800, color: medal)),
+              Text(entry.username, style: TextStyle(fontWeight: FontWeight.w700, fontSize: rank == 1 ? 13 : 12), overflow: TextOverflow.ellipsis),
+              Text('${entry.length}cm', style: TextStyle(fontSize: rank == 1 ? 14 : 12, fontWeight: FontWeight.w800, color: medal)),
               const SizedBox(height: 4),
               Container(
                 height: heights[pos],
@@ -167,14 +174,14 @@ class _Podium extends StatelessWidget {
 }
 
 class _RankRow extends StatelessWidget {
-  const _RankRow({required this.entry, required this.isDark, required this.accent, required this.sub, required this.cardBg, required this.isMe});
-  final (String, String, String, int) entry;
+  const _RankRow({required this.entry, required this.rank, required this.isDark, required this.accent, required this.sub, required this.cardBg, required this.isMe});
+  final RankingEntry entry;
+  final int rank;
   final bool isDark, isMe;
   final Color accent, sub, cardBg;
 
   @override
   Widget build(BuildContext context) {
-    final (name, size, fish, rank) = entry;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -191,7 +198,7 @@ class _RankRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Row(children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              Text(entry.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               if (isMe) ...[
                 const SizedBox(width: 6),
                 Container(
@@ -202,7 +209,7 @@ class _RankRow extends StatelessWidget {
               ],
             ]),
           ),
-          Text(size, style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 14)),
+          Text('${entry.length}cm', style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 14)),
         ],
       ),
     );
@@ -211,28 +218,26 @@ class _RankRow extends StatelessWidget {
 
 // ── 지역 탭 ─────────────────────────────────────────────
 class _RegionTab extends StatelessWidget {
-  const _RegionTab({required this.isDark, required this.accent});
+  const _RegionTab({required this.entries, required this.isDark, required this.accent});
+  final List<RankingEntry> entries;
   final bool isDark;
   final Color accent;
-
-  static const _regions = [
-    ('충주호', '김민준', '52.3cm', 284),
-    ('소양강', '이서연', '48.7cm', 192),
-    ('팔당호', '박태준', '45.1cm', 156),
-    ('가평', '최현수', '44.8cm', 98),
-    ('춘천', '정민호', '41.5cm', 87),
-  ];
 
   @override
   Widget build(BuildContext context) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
 
+    // 간단하게 전체 데이터를 띄우도록 대체 (실제로는 location group by가 필요하지만 데모용)
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _regions.length,
+      itemCount: entries.length,
       itemBuilder: (_, i) {
-        final (name, top, record, count) = _regions[i];
+        final entry = entries[i];
+        final name = entry.location ?? '전국';
+        final top = entry.username;
+        final record = '${entry.length}cm';
+        final count = 1;
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(16),

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/league_repository.dart';
 
-class LeagueScreen extends StatefulWidget {
+class LeagueScreen extends ConsumerStatefulWidget {
   const LeagueScreen({super.key});
 
   @override
-  State<LeagueScreen> createState() => _LeagueScreenState();
+  ConsumerState<LeagueScreen> createState() => _LeagueScreenState();
 }
 
-class _LeagueScreenState extends State<LeagueScreen> {
+class _LeagueScreenState extends ConsumerState<LeagueScreen> {
   int _filter = 0;
   final _filters = ['전체', '모집중', '진행중', '내 주변'];
 
@@ -80,17 +83,40 @@ class _LeagueScreenState extends State<LeagueScreen> {
           const SizedBox(height: 16),
           // 리스트
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: const [
-                _LeagueItem(id: '1', title: '2026 충주호 배스 오픈', location: '충북 충주시', date: '4/22 ~ 4/23', participants: 24, max: 30, prize: '50만원', status: _Status.live, rule: '최대어'),
-                SizedBox(height: 1),
-                _LeagueItem(id: '2', title: '소양강 쏘가리 챔피언십', location: '강원 춘천시', date: '4/26 ~ 4/27', participants: 12, max: 20, prize: '30만원', status: _Status.open, rule: '합산'),
-                SizedBox(height: 1),
-                _LeagueItem(id: '3', title: '팔당 주말 릴낚시 모임', location: '경기 남양주시', date: '5/3', participants: 8, max: 15, prize: '식사 제공', status: _Status.open, rule: '마릿수'),
-                SizedBox(height: 1),
-                _LeagueItem(id: '4', title: '가평 계곡 송어 대회', location: '경기 가평군', date: '5/10 ~ 5/11', participants: 5, max: 40, prize: '100만원', status: _Status.soon, rule: '최대어'),
-              ],
+            child: ref.watch(leaguesProvider).when(
+              data: (leaguesData) {
+                if (leaguesData.isEmpty) {
+                  return const Center(child: Text('등록된 리그가 없습니다.', style: TextStyle(color: Colors.grey)));
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: leaguesData.length,
+                  itemBuilder: (context, index) {
+                    final l = leaguesData[index];
+                    final startStr = DateFormat('M/d').format(l.startTime);
+                    final endStr = DateFormat('M/d').format(l.endTime);
+                    
+                    _Status stat = _Status.open;
+                    if (l.status == 'in_progress') stat = _Status.live;
+                    else if (l.status == 'completed') stat = _Status.ended;
+                    else if (l.status == 'canceled') stat = _Status.canceled;
+
+                    return _LeagueItem(
+                      id: l.id,
+                      title: l.title,
+                      location: l.location,
+                      date: startStr == endStr ? startStr : '$startStr ~ $endStr',
+                      participants: l.participantsCount,
+                      max: l.maxParticipants,
+                      prize: l.entryFee > 0 ? '${NumberFormat('#,###').format(l.entryFee)}원' : '무료 참가',
+                      status: stat,
+                      rule: l.description ?? '',
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Center(child: Text('오류가 발생했습니다: $e')),
             ),
           ),
         ],
@@ -99,7 +125,7 @@ class _LeagueScreenState extends State<LeagueScreen> {
   }
 }
 
-enum _Status { live, open, soon }
+enum _Status { live, open, ended, canceled }
 
 class _LeagueItem extends StatelessWidget {
   const _LeagueItem({required this.id, required this.title, required this.location, required this.date, required this.participants, required this.max, required this.prize, required this.status, required this.rule});
@@ -118,7 +144,8 @@ class _LeagueItem extends StatelessWidget {
     final (statusText, statusColor) = switch (status) {
       _Status.live => ('LIVE', AppColors.liveRed),
       _Status.open => ('모집중', AppColors.success),
-      _Status.soon => ('예정', sub),
+      _Status.ended => ('종료', sub),
+      _Status.canceled => ('취소', AppColors.error),
     };
 
     return GestureDetector(

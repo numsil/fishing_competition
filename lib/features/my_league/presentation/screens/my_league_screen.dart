@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../data/my_league_repository.dart';
+import '../../../league/data/league_model.dart';
 
-class MyLeagueScreen extends StatefulWidget {
+class MyLeagueScreen extends ConsumerStatefulWidget {
   const MyLeagueScreen({super.key});
 
   @override
-  State<MyLeagueScreen> createState() => _MyLeagueScreenState();
+  ConsumerState<MyLeagueScreen> createState() => _MyLeagueScreenState();
 }
 
-class _MyLeagueScreenState extends State<MyLeagueScreen>
+class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
 
@@ -35,31 +39,43 @@ class _MyLeagueScreenState extends State<MyLeagueScreen>
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('나의 리그', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-        bottom: TabBar(
-          controller: _tab,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-          indicatorColor: accent,
-          labelColor: accent,
-          unselectedLabelColor: sub,
-          tabs: const [
-            Tab(text: '참여중'),
-            Tab(text: '참여 기록'),
-            Tab(text: '개설한 리그'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tab,
-        children: [
-          _ActiveTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-          _HistoryTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-          _MyLeaguesTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-        ],
-      ),
+    return ref.watch(myLeaguesProvider).when(
+      data: (myLeaguesMap) {
+        final hosted = myLeaguesMap['hosted'] ?? [];
+        final participated = myLeaguesMap['participated'] ?? [];
+        
+        final activeLeagues = participated.where((l) => l.status != 'completed' && l.status != 'canceled').toList();
+        final historyLeagues = participated.where((l) => l.status == 'completed' || l.status == 'canceled').toList();
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('나의 리그', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+            bottom: TabBar(
+              controller: _tab,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+              indicatorColor: accent,
+              labelColor: accent,
+              unselectedLabelColor: sub,
+              tabs: const [
+                Tab(text: '참여중'),
+                Tab(text: '참여 기록'),
+                Tab(text: '개설한 리그'),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            controller: _tab,
+            children: [
+              _ActiveTab(leagues: activeLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+              _HistoryTab(leagues: historyLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+              _MyLeaguesTab(leagues: hosted, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+            ],
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('오류: $e'))),
     );
   }
 }
@@ -67,57 +83,20 @@ class _MyLeagueScreenState extends State<MyLeagueScreen>
 // ── 참여중 탭 ─────────────────────────────────────────────
 class _ActiveTab extends StatelessWidget {
   const _ActiveTab({
+    required this.leagues,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
+  final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
-  static const _active = [
-    _LeagueEntry(
-      id: 'lg001',
-      name: '2026 충주호 배스 오픈',
-      location: '충주호',
-      dateRange: '2026.04.20 ~ 2026.04.27',
-      status: 'live',
-      myRank: 1,
-      totalParticipants: 48,
-      fish: '배스',
-      myRecord: '52.3cm',
-      daysLeft: 5,
-    ),
-    _LeagueEntry(
-      id: 'lg002',
-      name: '소양강 봄 챔피언십',
-      location: '소양강',
-      dateRange: '2026.05.01 ~ 2026.05.10',
-      status: 'upcoming',
-      myRank: null,
-      totalParticipants: 32,
-      fish: '쏘가리',
-      myRecord: null,
-      daysLeft: 9,
-    ),
-    _LeagueEntry(
-      id: 'lg003',
-      name: '가평 계곡 배스 리그',
-      location: '가평',
-      dateRange: '2026.04.15 ~ 2026.04.30',
-      status: 'live',
-      myRank: 4,
-      totalParticipants: 24,
-      fish: '배스',
-      myRecord: '44.8cm',
-      daysLeft: 8,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    if (_active.isEmpty) {
+    if (leagues.isEmpty) {
       return _EmptyState(
         isDark: isDark,
         accent: accent,
@@ -131,14 +110,13 @@ class _ActiveTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 내 현황 요약 카드
         _MySummaryCard(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
         const SizedBox(height: 20),
-        Text('참여중인 리그 ${_active.length}개',
+        Text('참여중인 리그 ${leagues.length}개',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
         const SizedBox(height: 10),
-        ..._active.map((e) => _ActiveLeagueCard(
-              entry: e,
+        ...leagues.map((e) => _ActiveLeagueCard(
+              league: e,
               isDark: isDark,
               accent: accent,
               sub: sub,
@@ -229,26 +207,29 @@ class _Divider extends StatelessWidget {
 
 class _ActiveLeagueCard extends StatelessWidget {
   const _ActiveLeagueCard({
-    required this.entry,
+    required this.league,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
-  final _LeagueEntry entry;
+  final League league;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
   @override
   Widget build(BuildContext context) {
-    final isLive = entry.status == 'live';
-    final isUpcoming = entry.status == 'upcoming';
+    final isLive = league.status == 'in_progress';
+    final isUpcoming = league.status == 'recruiting';
     final type = isLive ? 'live' : isUpcoming ? 'upcoming' : 'history';
+    
+    final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
+    final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
 
     return GestureDetector(
       onTap: () => context.push(
-        '${AppRoutes.myLeagueDetail}/${entry.id}?type=$type',
+        '${AppRoutes.myLeagueDetail}/${league.id}?type=$type',
       ),
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -296,7 +277,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.liveRed)),
                       ] else ...[
-                        Text('D-${entry.daysLeft}',
+                        Text('모집중',
                             style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -308,7 +289,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    entry.name,
+                    league.title,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -325,11 +306,11 @@ class _ActiveLeagueCard extends StatelessWidget {
               children: [
                 Icon(Icons.location_on_outlined, size: 13, color: sub),
                 const SizedBox(width: 3),
-                Text(entry.location, style: TextStyle(fontSize: 12, color: sub)),
+                Text(league.location, style: TextStyle(fontSize: 12, color: sub)),
                 const SizedBox(width: 12),
                 Icon(Icons.calendar_today_outlined, size: 12, color: sub),
                 const SizedBox(width: 3),
-                Text(entry.dateRange, style: TextStyle(fontSize: 12, color: sub)),
+                Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
               ],
             ),
           ),
@@ -345,14 +326,8 @@ class _ActiveLeagueCard extends StatelessWidget {
                 // 내 순위
                 _RecordChip(
                   label: '내 순위',
-                  value: entry.myRank != null ? '${entry.myRank}위' : '-',
-                  color: entry.myRank == 1
-                      ? AppColors.gold
-                      : entry.myRank == 2
-                          ? AppColors.silver
-                          : entry.myRank == 3
-                              ? AppColors.bronze
-                              : accent,
+                  value: '-',
+                  color: accent,
                   sub: sub,
                   isDark: isDark,
                   divColor: divColor,
@@ -361,7 +336,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                 // 내 최대어
                 _RecordChip(
                   label: '내 최대어',
-                  value: entry.myRecord ?? '-',
+                  value: '-',
                   color: accent,
                   sub: sub,
                   isDark: isDark,
@@ -371,7 +346,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                 // 참가자
                 _RecordChip(
                   label: '참가자',
-                  value: '${entry.totalParticipants}명',
+                  value: '${league.participantsCount}명',
                   color: accent,
                   sub: sub,
                   isDark: isDark,
@@ -426,76 +401,20 @@ class _RecordChip extends StatelessWidget {
 // ── 참여 기록 탭 ─────────────────────────────────────────
 class _HistoryTab extends StatelessWidget {
   const _HistoryTab({
+    required this.leagues,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
+  final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
-  static const _history = [
-    _HistoryEntry(
-      id: 'h001',
-      name: '2026 충주호 배스 오픈 (시즌1)',
-      location: '충주호',
-      dateRange: '2026.01.10 ~ 2026.01.17',
-      fish: '배스',
-      myRank: 1,
-      totalParticipants: 52,
-      myRecord: '48.2cm',
-      score: 300,
-    ),
-    _HistoryEntry(
-      id: 'h002',
-      name: '소양강 겨울 챔피언십',
-      location: '소양강',
-      dateRange: '2026.02.05 ~ 2026.02.08',
-      fish: '쏘가리',
-      myRank: 3,
-      totalParticipants: 28,
-      myRecord: '35.0cm',
-      score: 150,
-    ),
-    _HistoryEntry(
-      id: 'h003',
-      name: '팔당 주말 리그',
-      location: '팔당호',
-      dateRange: '2026.03.01 ~ 2026.03.02',
-      fish: '붕어',
-      myRank: 7,
-      totalParticipants: 40,
-      myRecord: '30.5cm',
-      score: 80,
-    ),
-    _HistoryEntry(
-      id: 'h004',
-      name: '가평 봄맞이 배스 대회',
-      location: '가평',
-      dateRange: '2026.03.20 ~ 2026.03.22',
-      fish: '배스',
-      myRank: 2,
-      totalParticipants: 35,
-      myRecord: '41.3cm',
-      score: 200,
-    ),
-    _HistoryEntry(
-      id: 'h005',
-      name: '충주호 배스 리그 시즌2',
-      location: '충주호',
-      dateRange: '2026.04.01 ~ 2026.04.07',
-      fish: '배스',
-      myRank: 1,
-      totalParticipants: 45,
-      myRecord: '50.1cm',
-      score: 350,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    if (_history.isEmpty) {
+    if (leagues.isEmpty) {
       return _EmptyState(
         isDark: isDark,
         accent: accent,
@@ -507,8 +426,8 @@ class _HistoryTab extends StatelessWidget {
     }
 
     // 총 통계
-    final totalScore = _history.fold(0, (sum, e) => sum + e.score);
-    final wins = _history.where((e) => e.myRank == 1).length;
+    final totalScore = 0;
+    final wins = 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -534,11 +453,11 @@ class _HistoryTab extends StatelessWidget {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  _SummaryItem(value: '${_history.length}회', label: '총 참여', accent: accent),
+                  _SummaryItem(value: '${leagues.length}회', label: '총 참여', accent: accent),
                   _Divider(divColor: divColor),
                   _SummaryItem(value: '$wins회', label: '우승', accent: AppColors.gold),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '50.1cm', label: '최대어', accent: accent),
+                  _SummaryItem(value: '-', label: '최대어', accent: accent),
                   _Divider(divColor: divColor),
                   _SummaryItem(value: '$totalScore', label: '총 점수', accent: accent),
                 ],
@@ -547,11 +466,11 @@ class _HistoryTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Text('참여 기록 ${_history.length}건',
+        Text('참여 기록 ${leagues.length}건',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
         const SizedBox(height: 10),
-        ..._history.reversed.map((e) => _HistoryCard(
-              entry: e,
+        ...leagues.reversed.map((e) => _HistoryCard(
+              league: e,
               isDark: isDark,
               accent: accent,
               sub: sub,
@@ -565,35 +484,32 @@ class _HistoryTab extends StatelessWidget {
 
 class _HistoryCard extends StatelessWidget {
   const _HistoryCard({
-    required this.entry,
+    required this.league,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
-  final _HistoryEntry entry;
+  final League league;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
   Color get _rankColor {
-    if (entry.myRank == 1) return AppColors.gold;
-    if (entry.myRank == 2) return AppColors.silver;
-    if (entry.myRank == 3) return AppColors.bronze;
     return sub;
   }
 
   String get _rankEmoji {
-    if (entry.myRank == 1) return '🥇';
-    if (entry.myRank == 2) return '🥈';
-    if (entry.myRank == 3) return '🥉';
     return '🎣';
   }
 
   @override
   Widget build(BuildContext context) {
+    final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
+    final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
+
     return GestureDetector(
-      onTap: () => context.push('${AppRoutes.myLeagueDetail}/${entry.id}?type=history'),
+      onTap: () => context.push('${AppRoutes.myLeagueDetail}/${league.id}?type=history'),
       child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -601,7 +517,7 @@ class _HistoryCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: entry.myRank <= 3 ? _rankColor.withValues(alpha: 0.3) : divColor,
+          color: divColor,
         ),
       ),
       child: Row(
@@ -610,9 +526,7 @@ class _HistoryCard extends StatelessWidget {
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
-              color: entry.myRank <= 3
-                  ? _rankColor.withValues(alpha: 0.1)
-                  : (isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5)),
+              color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -626,7 +540,7 @@ class _HistoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.name,
+                  league.title,
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -636,9 +550,9 @@ class _HistoryCard extends StatelessWidget {
                   children: [
                     Icon(Icons.location_on_outlined, size: 11, color: sub),
                     const SizedBox(width: 2),
-                    Text(entry.location, style: TextStyle(fontSize: 11, color: sub)),
+                    Text(league.location, style: TextStyle(fontSize: 11, color: sub)),
                     const SizedBox(width: 8),
-                    Text(entry.dateRange, style: TextStyle(fontSize: 11, color: sub)),
+                    Text('$startStr ~ $endStr', style: TextStyle(fontSize: 11, color: sub)),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -651,12 +565,12 @@ class _HistoryCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${entry.myRank}위 / ${entry.totalParticipants}명',
+                        '-위 / ${league.participantsCount}명',
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _rankColor),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(entry.myRecord,
+                    Text('-',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accent)),
                   ],
                 ),
@@ -667,7 +581,7 @@ class _HistoryCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('+${entry.score}',
+              Text('+0',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
               Text('점수', style: TextStyle(fontSize: 10, color: sub)),
             ],
@@ -713,107 +627,25 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ── 데이터 모델 ───────────────────────────────────────────
-class _LeagueEntry {
-  const _LeagueEntry({
-    required this.id,
-    required this.name,
-    required this.location,
-    required this.dateRange,
-    required this.status,
-    required this.myRank,
-    required this.totalParticipants,
-    required this.fish,
-    required this.myRecord,
-    required this.daysLeft,
-  });
-  final String id, name, location, dateRange, status, fish;
-  final int? myRank;
-  final int totalParticipants, daysLeft;
-  final String? myRecord;
-}
-
-class _HistoryEntry {
-  const _HistoryEntry({
-    required this.id,
-    required this.name,
-    required this.location,
-    required this.dateRange,
-    required this.fish,
-    required this.myRank,
-    required this.totalParticipants,
-    required this.myRecord,
-    required this.score,
-  });
-  final String id, name, location, dateRange, fish, myRecord;
-  final int myRank, totalParticipants, score;
-}
+// _LeagueEntry is removed
 
 // ── 개설한 리그 탭 ────────────────────────────────────────
-class _MyLeague {
-  const _MyLeague({
-    required this.id,
-    required this.name,
-    required this.location,
-    required this.dateRange,
-    required this.fish,
-    required this.status,
-    required this.participants,
-    required this.maxParticipants,
-    this.daysLeft,
-  });
-  final String id, name, location, dateRange, fish, status;
-  final int participants, maxParticipants;
-  final int? daysLeft;
-}
-
 class _MyLeaguesTab extends StatelessWidget {
   const _MyLeaguesTab({
+    required this.leagues,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
+  final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
-  static const _myLeagues = [
-    _MyLeague(
-      id: 'mg001',
-      name: '소양강 봄 챔피언십',
-      location: '소양강',
-      dateRange: '2026.05.01 ~ 2026.05.10',
-      fish: '쏘가리',
-      status: 'upcoming',
-      participants: 8,
-      maxParticipants: 50,
-      daysLeft: 9,
-    ),
-    _MyLeague(
-      id: 'mg002',
-      name: '충주호 봄 배스 리그',
-      location: '충주호',
-      dateRange: '2026.04.10 ~ 2026.04.20',
-      fish: '배스',
-      status: 'live',
-      participants: 32,
-      maxParticipants: 40,
-    ),
-    _MyLeague(
-      id: 'mg003',
-      name: '팔당 겨울 붕어 대회',
-      location: '팔당호',
-      dateRange: '2026.02.10 ~ 2026.02.12',
-      fish: '붕어',
-      status: 'ended',
-      participants: 25,
-      maxParticipants: 30,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    if (_myLeagues.isEmpty) {
+    if (leagues.isEmpty) {
       return _EmptyState(
         isDark: isDark,
         accent: accent,
@@ -839,7 +671,7 @@ class _MyLeaguesTab extends StatelessWidget {
             children: [
               Expanded(
                 child: _SummaryItem(
-                  value: '${_myLeagues.length}개',
+                  value: '${leagues.length}개',
                   label: '총 개설',
                   accent: accent,
                 ),
@@ -847,7 +679,7 @@ class _MyLeaguesTab extends StatelessWidget {
               Container(width: 1, height: 36, color: divColor),
               Expanded(
                 child: _SummaryItem(
-                  value: '${_myLeagues.where((l) => l.status == 'live').length}개',
+                  value: '${leagues.where((l) => l.status == 'in_progress').length}개',
                   label: '진행중',
                   accent: AppColors.liveRed,
                 ),
@@ -855,7 +687,7 @@ class _MyLeaguesTab extends StatelessWidget {
               Container(width: 1, height: 36, color: divColor),
               Expanded(
                 child: _SummaryItem(
-                  value: '${_myLeagues.fold(0, (s, l) => s + l.participants)}명',
+                  value: '${leagues.fold<int>(0, (s, l) => s + l.participantsCount)}명',
                   label: '총 참가자',
                   accent: accent,
                 ),
@@ -864,10 +696,10 @@ class _MyLeaguesTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Text('개설한 리그 ${_myLeagues.length}개',
+        Text('개설한 리그 ${leagues.length}개',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
         const SizedBox(height: 10),
-        ..._myLeagues.map((league) => _MyLeagueCard(
+        ...leagues.map((league) => _MyLeagueCard(
               league: league,
               isDark: isDark,
               accent: accent,
@@ -889,14 +721,17 @@ class _MyLeagueCard extends StatelessWidget {
     required this.cardBg,
     required this.divColor,
   });
-  final _MyLeague league;
+  final League league;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
   @override
   Widget build(BuildContext context) {
-    final isLive = league.status == 'live';
-    final isUpcoming = league.status == 'upcoming';
+    final isLive = league.status == 'in_progress';
+    final isUpcoming = league.status == 'recruiting';
+    
+    final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
+    final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
 
     final statusLabel = isLive ? '진행중' : isUpcoming ? '진행 예정' : '종료';
     final statusColor = isLive ? AppColors.liveRed : isUpcoming ? accent : sub;
@@ -950,7 +785,7 @@ class _MyLeagueCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      league.name,
+                      league.title,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -985,7 +820,7 @@ class _MyLeagueCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Icon(Icons.calendar_today_outlined, size: 12, color: sub),
                   const SizedBox(width: 3),
-                  Text(league.dateRange, style: TextStyle(fontSize: 12, color: sub)),
+                  Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
                 ],
               ),
             ),
@@ -997,18 +832,18 @@ class _MyLeagueCard extends StatelessWidget {
                 children: [
                   _InfoChip(
                     icon: Icons.group_outlined,
-                    label: '${league.participants}/${league.maxParticipants}명',
-                    color: isLive && league.participants >= league.maxParticipants
+                    label: '${league.participantsCount}/${league.maxParticipants ?? "무제한"}명',
+                    color: isLive && league.maxParticipants != null && league.participantsCount >= league.maxParticipants!
                         ? AppColors.liveRed
                         : accent,
                   ),
                   const SizedBox(width: 8),
-                  _InfoChip(icon: Icons.set_meal_outlined, label: league.fish, color: accent),
-                  if (isUpcoming && league.daysLeft != null) ...[
+                  _InfoChip(icon: Icons.set_meal_outlined, label: '모든 어종', color: accent),
+                  if (isUpcoming) ...[
                     const SizedBox(width: 8),
                     _InfoChip(
                         icon: Icons.timer_outlined,
-                        label: 'D-${league.daysLeft}',
+                        label: '모집중',
                         color: accent),
                   ],
                   const Spacer(),

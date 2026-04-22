@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../data/auth_repository.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
@@ -28,10 +30,28 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) {
-      setState(() => _loading = false);
-      context.go(AppRoutes.feed);
+    
+    try {
+      await ref.read(authRepositoryProvider).signInWithEmail(
+        _emailCtrl.text,
+        _pwCtrl.text,
+      );
+      if (mounted) {
+        context.go(AppRoutes.feed);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('로그인 실패: 이메일과 비밀번호를 확인해주세요.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -177,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text('계정이 없으신가요?  ', style: TextStyle(color: sub, fontSize: 13)),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () => context.go(AppRoutes.signup),
                     child: Text('회원가입', style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
                 ],

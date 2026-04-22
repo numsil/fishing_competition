@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/league/presentation/screens/league_screen.dart';
 import '../../features/league/presentation/screens/league_detail_screen.dart';
@@ -32,6 +33,10 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.signup,
+        builder: (context, state) => const SignupScreen(),
       ),
       // 업로드: ShellRoute 밖 → 하단 탭 없는 풀스크린
       GoRoute(
@@ -106,6 +111,7 @@ class AppRoutes {
 
   static const String splash = '/';
   static const String login = '/login';
+  static const String signup = '/signup';
   static const String feed = '/feed';
   static const String league = '/league';
   static const String myLeague = '/my-league';

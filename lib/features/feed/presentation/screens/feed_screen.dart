@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../../auth/data/auth_repository.dart';
+import '../../data/feed_repository.dart';
+import '../../data/post_model.dart';
 
-class FeedScreen extends StatelessWidget {
+class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
@@ -25,14 +29,31 @@ class FeedScreen extends StatelessWidget {
               color: isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) => _InstaPost(
-                post: _posts[i % _posts.length],
-                isDark: isDark,
-                accent: accent,
-              ),
-              childCount: 8,
+          ref.watch(feedPostsProvider).when(
+            data: (posts) {
+              if (posts.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(
+                    child: Text('아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'),
+                  ),
+                );
+              }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) => _InstaPost(
+                    post: posts[i],
+                    isDark: isDark,
+                    accent: accent,
+                  ),
+                  childCount: posts.length,
+                ),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, st) => SliverFillRemaining(
+              child: Center(child: Text('피드를 불러오지 못했습니다.')),
             ),
           ),
         ],
@@ -316,17 +337,17 @@ class _StoryItem extends StatelessWidget {
 }
 
 // ── 인스타그램 스타일 포스트 ──────────────────────────────
-class _InstaPost extends StatefulWidget {
+class _InstaPost extends ConsumerStatefulWidget {
   const _InstaPost({required this.post, required this.isDark, required this.accent});
-  final _Post post;
+  final Post post;
   final bool isDark;
   final Color accent;
 
   @override
-  State<_InstaPost> createState() => _InstaPostState();
+  ConsumerState<_InstaPost> createState() => _InstaPostState();
 }
 
-class _InstaPostState extends State<_InstaPost>
+class _InstaPostState extends ConsumerState<_InstaPost>
     with SingleTickerProviderStateMixin {
   bool _liked = false;
   bool _showHeart = false;
@@ -339,7 +360,7 @@ class _InstaPostState extends State<_InstaPost>
   @override
   void initState() {
     super.initState();
-    _comments = List.from(widget.post.commentList);
+    _comments = [];
     _heartCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -363,11 +384,40 @@ class _InstaPostState extends State<_InstaPost>
   }
 
   void _doubleTapLike() {
-    setState(() {
-      _liked = true;
-      _showHeart = true;
-    });
+    setState(() => _showHeart = true);
     _heartCtrl.forward(from: 0);
+    if (!_liked) _toggleLike();
+  }
+
+  Future<void> _toggleLike() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final wasLiked = _liked;
+    setState(() => _liked = !wasLiked);
+    try {
+      await ref.read(feedRepositoryProvider).toggleLike(widget.post.id, user.id);
+      ref.invalidate(feedPostsProvider);
+    } catch (_) {
+      if (mounted) setState(() => _liked = wasLiked);
+    }
+  }
+
+  /// 캡션에서 해시태그(#으로 시작하는 단어)를 제거한 텍스트 반환
+  String _stripHashtags(String caption) {
+    return caption
+        .split(RegExp(r'\s+'))
+        .where((w) => !w.startsWith('#'))
+        .join(' ')
+        .trim();
+  }
+
+  /// 캡션에서 해시태그 목록 추출 (예: ['#배스', '#조황'])
+  List<String> _extractHashtags(String? caption) {
+    if (caption == null || caption.isEmpty) return [];
+    return caption
+        .split(RegExp(r'\s+'))
+        .where((w) => w.startsWith('#') && w.length > 1)
+        .toList();
   }
 
   void _openComments() {
@@ -409,8 +459,8 @@ class _InstaPostState extends State<_InstaPost>
     final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = isDark ? AppColors.darkBg : Colors.white;
     final avatarBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFEFEFEF);
-    final likeCount = _liked ? p.likes + 1 : p.likes;
-    final commentCount = _comments.length;
+    final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
+    final commentCount = p.commentsCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,7 +477,7 @@ class _InstaPostState extends State<_InstaPost>
                 decoration: BoxDecoration(shape: BoxShape.circle, color: avatarBg),
                 child: Center(
                   child: Text(
-                    p.user[0],
+                    p.username[0],
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -444,7 +494,7 @@ class _InstaPostState extends State<_InstaPost>
                     Row(
                       children: [
                         Text(
-                          p.user,
+                          p.username,
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                         ),
                         if (p.isLunker) ...[
@@ -479,16 +529,32 @@ class _InstaPostState extends State<_InstaPost>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // 물고기 SVG
-                  Center(
-                    child: AppSvg(
-                      AppIcons.fish,
-                      width: MediaQuery.of(context).size.width * 0.55,
-                      color: isDark ? const Color(0xFF1A3026) : const Color(0xFFC8E6D4),
+                  // 실제 이미지
+                  Image.network(
+                    p.imageUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, progress) {
+                      if (progress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                              : null,
+                          strokeWidth: 2,
+                          color: accent,
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => Center(
+                      child: AppSvg(
+                        AppIcons.fish,
+                        width: MediaQuery.of(context).size.width * 0.55,
+                        color: isDark ? const Color(0xFF1A3026) : const Color(0xFFC8E6D4),
+                      ),
                     ),
                   ),
                   // 리그 태그
-                  if (p.league != null)
+                  if (p.leagueId != null)
                     Positioned(
                       top: 12,
                       left: 12,
@@ -504,7 +570,7 @@ class _InstaPostState extends State<_InstaPost>
                             AppSvg(AppIcons.trophy, size: 10, color: AppColors.gold),
                             const SizedBox(width: 5),
                             Text(
-                              p.league!,
+                              '리그 게시물',
                               style: TextStyle(
                                 color: accent,
                                 fontSize: 11,
@@ -544,7 +610,7 @@ class _InstaPostState extends State<_InstaPost>
             children: [
               // 좋아요
               IconButton(
-                onPressed: () => setState(() => _liked = !_liked),
+                onPressed: _toggleLike,
                 icon: Icon(
                   _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   color: _liked ? AppColors.error : iconColor,
@@ -594,33 +660,39 @@ class _InstaPostState extends State<_InstaPost>
           ),
         ),
 
-        // ── 캡션 ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: p.user,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-                const TextSpan(text: '  '),
-                TextSpan(
-                  text: p.caption,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
+        // ── 캡션 (해시태그 제외한 일반 텍스트만) ──
+        if (p.caption != null && p.caption!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: p.username,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const TextSpan(text: '  '),
+                  TextSpan(
+                    text: _stripHashtags(p.caption!),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
 
-        // ── 해시태그 ──
+        // ── 해시태그 행 (어종 + 캡션 태그 + 낚시/조과) ──
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 3, 16, 0),
           child: Text(
-            '#${p.fish}  #${p.lure}  #낚시  #조과',
+            [
+              '#${p.fishType}',
+              ..._extractHashtags(p.caption),
+              '#낚시',
+              '#조과',
+            ].join('  '),
             style: TextStyle(
               fontSize: 13,
               color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B),
@@ -671,7 +743,7 @@ class _InstaPostState extends State<_InstaPost>
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 5, 16, 12),
           child: Text(
-            p.timeAgo,
+            '${DateTime.now().difference(p.createdAt).inHours}시간 전',
             style: TextStyle(fontSize: 10, color: subColor),
           ),
         ),
@@ -783,7 +855,7 @@ class _MenuItem extends StatelessWidget {
 }
 
 // ── 댓글 시트 ─────────────────────────────────────────
-class _CommentSheet extends StatefulWidget {
+class _CommentSheet extends ConsumerStatefulWidget {
   const _CommentSheet({
     required this.post,
     required this.isDark,
@@ -791,17 +863,17 @@ class _CommentSheet extends StatefulWidget {
     required this.comments,
     required this.onCommentAdded,
   });
-  final _Post post;
+  final Post post;
   final bool isDark;
   final Color accent;
   final List<_Comment> comments;
   final ValueChanged<_Comment> onCommentAdded;
 
   @override
-  State<_CommentSheet> createState() => _CommentSheetState();
+  ConsumerState<_CommentSheet> createState() => _CommentSheetState();
 }
 
-class _CommentSheetState extends State<_CommentSheet> {
+class _CommentSheetState extends ConsumerState<_CommentSheet> {
   final _ctrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   late List<_Comment> _localComments;
@@ -820,11 +892,15 @@ class _CommentSheetState extends State<_CommentSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
+
+    final user = ref.read(currentUserProvider);
+    final username = user?.userMetadata?['username'] as String? ?? '나';
+
     final comment = _Comment(
-      user: '나',
+      user: username,
       text: _replyTo != null ? '@$_replyTo $text' : text,
       timeAgo: '방금',
       isMe: true,
@@ -835,6 +911,20 @@ class _CommentSheetState extends State<_CommentSheet> {
     });
     widget.onCommentAdded(comment);
     _ctrl.clear();
+
+    if (user != null) {
+      try {
+        await ref.read(feedRepositoryProvider).addComment(
+          widget.post.id,
+          user.id,
+          text,
+        );
+        ref.invalidate(feedPostsProvider);
+      } catch (_) {
+        // 로컬 UI는 유지, 서버 저장 실패 무시
+      }
+    }
+
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
@@ -1132,93 +1222,3 @@ class _Comment {
   final String user, text, timeAgo;
   final bool isMe;
 }
-
-class _Post {
-  const _Post({
-    required this.id,
-    required this.user,
-    this.location,
-    required this.caption,
-    required this.fish,
-    required this.size,
-    required this.lure,
-    required this.likes,
-    required this.timeAgo,
-    this.league,
-    this.isLunker = false,
-    this.commentList = const [],
-  });
-
-  final String id, user, caption, fish, size, lure, timeAgo;
-  final String? location, league;
-  final int likes;
-  final bool isLunker;
-  final List<_Comment> commentList;
-}
-
-const _posts = [
-  _Post(
-    id: 'post_001',
-    user: '김민준',
-    location: '충주호 북쪽 포인트',
-    caption: '드디어 런커 달성!! 52cm 배스. 빅베이트 스로잉으로 낚았습니다. 충주호 최고의 포인트 발견',
-    fish: '배스',
-    size: '52.3cm',
-    lure: '빅베이트',
-    likes: 1284,
-    timeAgo: '3시간 전',
-    league: '충주호 리그',
-    isLunker: true,
-    commentList: [
-      _Comment(user: '이서연', text: '대박이다!! 런커 축하해요 🎣', timeAgo: '2시간 전'),
-      _Comment(user: '박태준', text: '충주호 포인트 여쭤봐도 될까요?', timeAgo: '1시간 전'),
-      _Comment(user: '강준혁', text: '빅베이트 사이즈가 어떻게 되세요?', timeAgo: '45분 전'),
-      _Comment(user: '정민호', text: '와 진짜 런커네요 부럽다', timeAgo: '30분 전'),
-    ],
-  ),
-  _Post(
-    id: 'post_002',
-    user: '이서연',
-    location: '소양강 댐 하류',
-    caption: '오늘 쏘가리 4마리 조과! 날씨도 좋고 물도 맑고. 스피너베이트가 제격이었네요',
-    fish: '쏘가리',
-    size: '38.5cm',
-    lure: '스피너베이트',
-    likes: 876,
-    timeAgo: '5시간 전',
-    commentList: [
-      _Comment(user: '김민준', text: '4마리나요? 대단해요!', timeAgo: '4시간 전'),
-      _Comment(user: '최현수', text: '소양강 요즘 잘 나오나요?', timeAgo: '3시간 전'),
-    ],
-  ),
-  _Post(
-    id: 'post_003',
-    user: '박태준',
-    location: '팔당호',
-    caption: '주말 가족 낚시. 아이들이 너무 좋아해서 매주 오게 될 것 같네요 😊',
-    fish: '붕어',
-    size: '30.0cm',
-    lure: '지렁이',
-    likes: 2031,
-    timeAgo: '8시간 전',
-    commentList: [
-      _Comment(user: '이서연', text: '가족 낚시 너무 좋아요~', timeAgo: '7시간 전'),
-      _Comment(user: '강준혁', text: '아이들 반응이 어떤가요 ㅋㅋ', timeAgo: '6시간 전'),
-      _Comment(user: '정민호', text: '팔당 붕어 포인트 알 수 있을까요?', timeAgo: '5시간 전'),
-    ],
-  ),
-  _Post(
-    id: 'post_004',
-    user: '최현수',
-    location: '가평 계곡',
-    caption: '계곡 배스 공략 성공. 탑워터 플러그에 폭발적인 반응. 가평은 역시 배스 성지',
-    fish: '배스',
-    size: '44.8cm',
-    lure: '탑워터',
-    likes: 543,
-    timeAgo: '어제',
-    commentList: [
-      _Comment(user: '김민준', text: '가평 탑워터 시즌이군요!', timeAgo: '어제'),
-    ],
-  ),
-];
