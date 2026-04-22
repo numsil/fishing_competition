@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70" fill="none">
+  <!-- Crown base -->
+  <path d="M10 60 H90 L80 25 L65 45 L50 10 L35 45 L20 25 Z" fill="currentColor"/>
+  <!-- Base band -->
+  <rect x="10" y="55" width="80" height="12" rx="4" fill="currentColor" opacity="0.8"/>
+  <!-- Gems -->
+  <circle cx="50" cy="58" r="4" fill="white" opacity="0.6"/>
+  <circle cx="30" cy="58" r="3" fill="white" opacity="0.4"/>
+  <circle cx="70" cy="58" r="3" fill="white" opacity="0.4"/>
+  <!-- Top jewels -->
+  <circle cx="50" cy="12" r="4" fill="white" opacity="0.5"/>
+  <circle cx="20" cy="27" r="3" fill="white" opacity="0.4"/>
+  <circle cx="80" cy="27" r="3" fill="white" opacity="0.4"/>
+</svg>

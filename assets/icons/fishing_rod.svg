@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Rod handle -->
+  <rect x="8" y="72" width="28" height="8" rx="4" fill="currentColor"/>
+  <!-- Rod body -->
+  <line x1="30" y1="76" x2="88" y2="14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Rod tip thin part -->
+  <line x1="72" y1="32" x2="88" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Fishing line -->
+  <line x1="88" y1="14" x2="82" y2="62" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <!-- Hook -->
+  <path d="M82 62 Q86 70 80 74 Q74 78 72 72" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+  <!-- Reel -->
+  <circle cx="38" cy="68" r="8" stroke="currentColor" stroke-width="2.5" fill="none"/>
+  <circle cx="38" cy="68" r="3" fill="currentColor" opacity="0.5"/>
+</svg>

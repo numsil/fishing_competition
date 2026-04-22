@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" fill="none">
+  <path d="M0 20 C10 10 20 10 30 20 C40 30 50 30 60 20 C70 10 80 10 90 20 C100 30 110 30 120 20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M0 32 C10 22 20 22 30 32 C40 42 50 42 60 32 C70 22 80 22 90 32 C100 42 110 42 120 32" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.5"/>
+</svg>

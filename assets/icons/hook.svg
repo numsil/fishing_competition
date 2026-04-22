@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" fill="none">
+  <!-- Hook shank (vertical) -->
+  <line x1="30" y1="8" x2="30" y2="52" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <!-- Hook eye (top loop) -->
+  <circle cx="30" cy="8" r="6" stroke="currentColor" stroke-width="3.5" fill="none"/>
+  <!-- Hook bend -->
+  <path d="M30 52 Q30 76 46 76 Q58 76 58 64 Q58 56 50 56" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Barb -->
+  <path d="M50 56 L44 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+</svg>

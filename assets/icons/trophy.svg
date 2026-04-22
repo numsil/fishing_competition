@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110" fill="none">
+  <!-- Cup body -->
+  <path d="M28 10 H72 V52 C72 70 62 80 50 84 C38 80 28 70 28 52 Z" fill="currentColor"/>
+  <!-- Cup shine -->
+  <path d="M36 16 Q40 10 50 12 Q44 18 38 28 Q36 24 36 16Z" fill="white" opacity="0.2"/>
+  <!-- Left handle -->
+  <path d="M28 22 H16 C14 22 10 32 10 40 C10 48 18 52 28 48" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right handle -->
+  <path d="M72 22 H84 C86 22 90 32 90 40 C90 48 82 52 72 48" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Stem -->
+  <rect x="44" y="84" width="12" height="12" rx="2" fill="currentColor"/>
+  <!-- Base plate -->
+  <rect x="28" y="96" width="44" height="8" rx="4" fill="currentColor"/>
+  <!-- Star -->
+  <path d="M50 28 L52.2 34.6 H59.2 L53.6 38.6 L55.8 45.2 L50 41.2 L44.2 45.2 L46.4 38.6 L40.8 34.6 H47.8 Z" fill="white" opacity="0.35"/>
+</svg>

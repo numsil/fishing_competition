@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" fill="none">
+  <!-- Ribbon left -->
+  <path d="M26 8 L20 38 L40 30 L40 8 Z" fill="#1565C0"/>
+  <!-- Ribbon right -->
+  <path d="M54 8 L60 38 L40 30 L40 8 Z" fill="#0D47A1"/>
+  <!-- Medal circle -->
+  <circle cx="40" cy="62" r="28" fill="#CFD8DC"/>
+  <circle cx="40" cy="62" r="24" fill="#B0BEC5"/>
+  <circle cx="40" cy="62" r="20" fill="#CFD8DC"/>
+  <!-- Number 2 -->
+  <path d="M33 54 C33 50 47 50 47 56 C47 62 33 68 33 74 H47" stroke="#78909C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Shine -->
+  <circle cx="32" cy="54" r="4" fill="white" opacity="0.3"/>
+</svg>
