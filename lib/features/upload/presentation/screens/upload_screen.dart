@@ -268,6 +268,8 @@ class _CaptionStep extends ConsumerStatefulWidget {
 class _CaptionStepState extends ConsumerState<_CaptionStep> {
   final _captionCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _lengthCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
   String _fish = '배스';
   String? _selectedLeagueId;
   bool _sharing = false;
@@ -278,6 +280,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   void dispose() {
     _captionCtrl.dispose();
     _locationCtrl.dispose();
+    _lengthCtrl.dispose();
+    _weightCtrl.dispose();
     super.dispose();
   }
 
@@ -293,6 +297,9 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     setState(() => _sharing = true);
 
     try {
+      final lengthVal = double.tryParse(_lengthCtrl.text.trim());
+      final weightVal = double.tryParse(_weightCtrl.text.trim());
+
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: File(widget.selectedImage.path),
@@ -300,6 +307,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         fishType: _fish,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
         leagueId: _selectedLeagueId,
+        length: lengthVal,
+        weight: weightVal,
       );
 
       ref.invalidate(feedPostsProvider);
@@ -461,6 +470,82 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                         ),
                       );
                     }).toList(),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── 사이즈 입력 ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('길이 (cm)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _lengthCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: TextStyle(fontSize: 14, color: textColor),
+                          decoration: InputDecoration(
+                            hintText: '예) 42.5',
+                            hintStyle: TextStyle(color: sub, fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            isDense: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: divColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: divColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: accent),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('무게 (g)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _weightCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: TextStyle(fontSize: 14, color: textColor),
+                          decoration: InputDecoration(
+                            hintText: '예) 980',
+                            hintStyle: TextStyle(color: sub, fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            isDense: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: divColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: divColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: accent),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

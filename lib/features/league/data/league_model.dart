@@ -19,6 +19,10 @@ abstract class League with _$League {
     @JsonKey(name: 'entry_fee') @Default(0) int entryFee,
     @JsonKey(name: 'max_participants') @Default(100) int maxParticipants,
     @Default('recruiting') String status,
+    @JsonKey(name: 'fish_types') @Default('배스') String fishTypes,
+    @Default('최대어') String rule,
+    @JsonKey(name: 'prize_info') String? prizeInfo,
+    @JsonKey(name: 'is_public') @Default(true) bool isPublic,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // 조인된 데이터
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int participantsCount,

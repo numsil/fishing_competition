@@ -12,6 +12,7 @@ import '../../features/league/presentation/screens/league_create_screen.dart';
 import '../../features/league/presentation/screens/league_manage_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_detail_screen.dart';
+import '../../features/feed/presentation/screens/post_detail_screen.dart';
 import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -37,6 +38,14 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.signup,
         builder: (context, state) => const SignupScreen(),
+      ),
+      // 피드 상세: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.postDetail,
+        pageBuilder: (context, state) {
+          final post = state.extra as dynamic;
+          return MaterialPage(child: PostDetailScreen(post: post));
+        },
       ),
       // 업로드: ShellRoute 밖 → 하단 탭 없는 풀스크린
       GoRoute(
@@ -120,4 +129,5 @@ class AppRoutes {
   static const String upload = '/upload';
   static const String ranking = '/ranking';
   static const String profile = '/profile';
+  static const String postDetail = '/post';
 }

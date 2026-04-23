@@ -20,6 +20,8 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   location: json['location'] as String?,
   lat: (json['lat'] as num?)?.toDouble(),
   lng: (json['lng'] as num?)?.toDouble(),
+  weight: (json['weight'] as num?)?.toDouble(),
+  catchCount: (json['catch_count'] as num?)?.toInt() ?? 1,
   isLunker: json['is_lunker'] as bool? ?? false,
   createdAt: DateTime.parse(json['created_at'] as String),
 );
@@ -38,6 +40,8 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'location': instance.location,
   'lat': instance.lat,
   'lng': instance.lng,
+  'weight': instance.weight,
+  'catch_count': instance.catchCount,
   'is_lunker': instance.isLunker,
   'created_at': instance.createdAt.toIso8601String(),
 };

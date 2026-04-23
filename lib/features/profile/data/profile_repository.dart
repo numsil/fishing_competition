@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../feed/data/post_model.dart';
 
 part 'profile_repository.g.dart';
 
@@ -68,6 +69,19 @@ class ProfileRepository {
       maxFishLength: maxLen,
     );
   }
+
+  Future<List<Post>> getMyPosts() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not logged in');
+
+    final response = await _supabase
+        .from('posts')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return response.map((data) => Post.fromJson(data)).toList();
+  }
 }
 
 @riverpod
@@ -78,4 +92,9 @@ ProfileRepository profileRepository(ProfileRepositoryRef ref) {
 @riverpod
 Future<UserProfile> myProfile(MyProfileRef ref) {
   return ref.watch(profileRepositoryProvider).getMyProfile();
+}
+
+@riverpod
+Future<List<Post>> myPosts(MyPostsRef ref) {
+  return ref.watch(profileRepositoryProvider).getMyPosts();
 }

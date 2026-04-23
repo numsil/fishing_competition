@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_svg.dart';
 import '../../data/ranking_repository.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
@@ -81,20 +81,20 @@ class _LeagueTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
           ),
           child: Row(
             children: [
-              Icon(Icons.emoji_events_rounded, size: 16, color: accent),
+              Icon(LucideIcons.trophy, size: 16, color: accent),
               const SizedBox(width: 8),
               Text('2026 충주호 배스 오픈', style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
               const Spacer(),
               Row(children: [
-                Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.liveRed, shape: BoxShape.circle)),
-                const SizedBox(width: 5),
+                Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.liveRed, shape: BoxShape.circle)),
+                const SizedBox(width: 6),
                 const Text('LIVE', style: TextStyle(color: AppColors.liveRed, fontSize: 11, fontWeight: FontWeight.w800)),
                 const SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: sub),
+                Icon(LucideIcons.chevronDown, size: 16, color: sub),
               ]),
             ],
           ),
@@ -144,22 +144,33 @@ class _Podium extends StatelessWidget {
         return Expanded(
           child: Column(
             children: [
-              if (rank == 1) AppSvg(AppIcons.crown, size: 20, color: AppColors.gold),
-              AppSvg(
-                rank == 1 ? AppIcons.medalGold : rank == 2 ? AppIcons.medalSilver : AppIcons.medalBronze,
-                size: rank == 1 ? 56 : 44,
+              if (rank == 1) Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Icon(LucideIcons.crown, size: 22, color: AppColors.gold),
               ),
-              const SizedBox(height: 6),
+              Container(
+                width: rank == 1 ? 48 : 38,
+                height: rank == 1 ? 48 : 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: medal.withValues(alpha: 0.15),
+                  border: Border.all(color: medal, width: 2),
+                ),
+                child: Center(
+                  child: Text('$rank', style: TextStyle(fontSize: rank == 1 ? 22 : 18, fontWeight: FontWeight.w900, color: medal)),
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(entry.username, style: TextStyle(fontWeight: FontWeight.w700, fontSize: rank == 1 ? 13 : 12), overflow: TextOverflow.ellipsis),
               Text('${entry.length}cm', style: TextStyle(fontSize: rank == 1 ? 14 : 12, fontWeight: FontWeight.w800, color: medal)),
               const SizedBox(height: 4),
               Container(
                 height: heights[pos],
-                margin: const EdgeInsets.symmetric(horizontal: 6),
+                margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
-                  color: medal.withValues(alpha: isDark ? 0.12 : 0.1),
+                  color: medal.withValues(alpha: 0.08),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  border: Border.all(color: medal.withValues(alpha: 0.3)),
+                  border: Border(top: BorderSide(color: medal.withValues(alpha: 0.4), width: 3)),
                 ),
                 child: Center(
                   child: Text('$rank위', style: TextStyle(fontWeight: FontWeight.w900, color: medal, fontSize: 16)),
@@ -194,8 +205,8 @@ class _RankRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(width: 28, child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w700, color: sub), textAlign: TextAlign.center)),
-          const SizedBox(width: 10),
+          SizedBox(width: 28, child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w800, color: sub, fontSize: 16), textAlign: TextAlign.center)),
+          const SizedBox(width: 14),
           Expanded(
             child: Row(children: [
               Text(entry.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -203,13 +214,13 @@ class _RankRow extends StatelessWidget {
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4)),
-                  child: Text('나', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: isDark ? Colors.black : Colors.white)),
+                  decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+                  child: Text('나', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent)),
                 ),
               ],
             ]),
           ),
-          Text('${entry.length}cm', style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 14)),
+          Text('${entry.length}cm', style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 15)),
         ],
       ),
     );
@@ -228,7 +239,6 @@ class _RegionTab extends StatelessWidget {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
 
-    // 간단하게 전체 데이터를 띄우도록 대체 (실제로는 location group by가 필요하지만 데모용)
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: entries.length,
@@ -243,24 +253,40 @@ class _RegionTab extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: cardBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
           ),
           child: Row(children: [
             Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: Center(child: Text('${i + 1}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: accent))),
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
+                shape: BoxShape.circle,
+              ),
+              child: Center(child: Text('${i + 1}', style: TextStyle(fontWeight: FontWeight.w800, color: i < 3 ? accent : sub))),
             ),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              Text('TOP $top · $record', style: TextStyle(fontSize: 12, color: sub)),
+              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              const SizedBox(height: 4),
+              Row(children: [
+                Icon(LucideIcons.user, size: 12, color: sub),
+                const SizedBox(width: 4),
+                Text('1위 $top ($record)', style: TextStyle(fontSize: 12, color: sub)),
+              ]),
             ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('$count명', style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
-              Text('참여', style: TextStyle(fontSize: 11, color: sub)),
-            ]),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(children: [
+                Icon(LucideIcons.users, size: 12, color: accent),
+                const SizedBox(width: 4),
+                Text('$count명 참여', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
+              ]),
+            ),
           ]),
         );
       },
@@ -275,12 +301,12 @@ class _MonthlyTab extends StatelessWidget {
   final Color accent;
 
   static const _badges = [
-    ('🏆', '런커 클럽', '50cm+'),
-    ('👑', '3연승', '3회'),
-    ('🔥', '주간 1위', '7일'),
-    ('⭐', '첫 런커', '달성'),
-    ('🎯', '면꽝 탈출', '달성'),
-    ('💎', '다이아', '등급'),
+    (LucideIcons.award, '런커 클럽', '50cm+'),
+    (LucideIcons.crown, '3연승', '3회'),
+    (LucideIcons.flame, '주간 1위', '7일'),
+    (LucideIcons.star, '첫 런커', '달성'),
+    (LucideIcons.target, '면꽝 탈출', '달성'),
+    (LucideIcons.gem, '다이아', '등급'),
   ];
 
   @override
@@ -297,13 +323,13 @@ class _MonthlyTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
           ),
           child: Column(children: [
             Text('4월의 앵글러', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             CircleAvatar(radius: 40, backgroundColor: accent.withValues(alpha: 0.1),
-                child: Text('🎣', style: const TextStyle(fontSize: 38))),
+                child: Icon(LucideIcons.user, size: 38, color: accent)),
             const SizedBox(height: 12),
             const Text('김민준', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
             const SizedBox(height: 4),
@@ -311,9 +337,9 @@ class _MonthlyTab extends StatelessWidget {
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               _MonthStat(label: '참가', value: '5회', sub: sub),
-              Container(width: 1, height: 28, color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+              Container(width: 1, height: 28, color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
               _MonthStat(label: '최대어', value: '52.3cm', sub: sub),
-              Container(width: 1, height: 28, color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+              Container(width: 1, height: 28, color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
               _MonthStat(label: '점수', value: '1,840', sub: sub),
             ]),
           ]),
@@ -333,13 +359,13 @@ class _MonthlyTab extends StatelessWidget {
             decoration: BoxDecoration(
               color: cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+              border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
             ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(b.$1, style: const TextStyle(fontSize: 26)),
-              const SizedBox(height: 4),
-              Text(b.$2, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-              Text(b.$3, style: TextStyle(fontSize: 10, color: sub)),
+              Icon(b.$1 as IconData, size: 28, color: accent.withValues(alpha: 0.8)),
+              const SizedBox(height: 8),
+              Text(b.$2 as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              Text(b.$3 as String, style: TextStyle(fontSize: 10, color: sub)),
             ]),
           )).toList(),
         ),

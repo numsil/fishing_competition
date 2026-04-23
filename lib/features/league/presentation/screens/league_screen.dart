@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/league_repository.dart';
 
@@ -28,7 +29,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
         actions: [
           TextButton.icon(
             onPressed: () => context.go('/league/create'),
-            icon: Icon(Icons.add, size: 18, color: accent),
+            icon: Icon(LucideIcons.plus, size: 18, color: accent),
             label: Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
           ),
         ],
@@ -42,7 +43,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
               decoration: InputDecoration(
                 hintText: '지역, 대회명으로 검색',
                 hintStyle: TextStyle(color: sub, fontSize: 14),
-                prefixIcon: Icon(Icons.search_rounded, color: sub, size: 20),
+                prefixIcon: Icon(LucideIcons.search, color: sub, size: 20),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -62,7 +63,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                   decoration: BoxDecoration(
                     color: _filter == i ? accent : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _filter == i ? accent : sub),
+                    border: Border.all(color: _filter == i ? accent : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider)),
                   ),
                   child: Center(
                     child: Text(
@@ -86,9 +87,19 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
             child: ref.watch(leaguesProvider).when(
               data: (leaguesData) {
                 if (leaguesData.isEmpty) {
-                  return const Center(child: Text('등록된 리그가 없습니다.', style: TextStyle(color: Colors.grey)));
+                  return RefreshIndicator(
+                    onRefresh: () async => ref.invalidate(leaguesProvider),
+                    child: ListView(
+                      children: const [
+                        SizedBox(height: 160),
+                        Center(child: Text('등록된 리그가 없습니다.', style: TextStyle(color: Colors.grey))),
+                      ],
+                    ),
+                  );
                 }
-                return ListView.builder(
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(leaguesProvider),
+                  child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: leaguesData.length,
                   itemBuilder: (context, index) {
@@ -113,10 +124,19 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                       rule: l.description ?? '',
                     );
                   },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('오류가 발생했습니다: $e')),
+              error: (e, st) => RefreshIndicator(
+                onRefresh: () async => ref.invalidate(leaguesProvider),
+                child: ListView(
+                  children: [
+                    const SizedBox(height: 160),
+                    Center(child: Text('오류가 발생했습니다: $e', style: const TextStyle(color: Colors.grey))),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -139,7 +159,7 @@ class _LeagueItem extends StatelessWidget {
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFF999999);
     final bg = isDark ? AppColors.darkSurface : Colors.white;
-    final border = isDark ? const Color(0xFF222222) : const Color(0xFFF0F0F0);
+    final border = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
     final (statusText, statusColor) = switch (status) {
       _Status.live => ('LIVE', AppColors.liveRed),
@@ -182,12 +202,12 @@ class _LeagueItem extends StatelessWidget {
             // 중간: 정보
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: sub),
-                const SizedBox(width: 3),
+                Icon(LucideIcons.mapPin, size: 12, color: sub),
+                const SizedBox(width: 4),
                 Text(location, style: TextStyle(fontSize: 12, color: sub)),
                 const SizedBox(width: 12),
-                Icon(Icons.calendar_today_outlined, size: 12, color: sub),
-                const SizedBox(width: 3),
+                Icon(LucideIcons.calendar, size: 12, color: sub),
+                const SizedBox(width: 4),
                 Text(date, style: TextStyle(fontSize: 12, color: sub)),
               ],
             ),

@@ -150,7 +150,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'FishingGram에 오신 걸 환영합니다',
+                      'HUK에 오신 걸 환영합니다',
                       style: TextStyle(fontSize: 13, color: sub),
                     ),
                   ],

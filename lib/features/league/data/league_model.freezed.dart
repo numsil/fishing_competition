@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$League {
 
- String get id;@JsonKey(name: 'host_id') String get hostId; String get title; String? get description; String get location; double? get lat; double? get lng;@JsonKey(name: 'start_time') DateTime get startTime;@JsonKey(name: 'end_time') DateTime get endTime;@JsonKey(name: 'entry_fee') int get entryFee;@JsonKey(name: 'max_participants') int get maxParticipants; String get status;@JsonKey(name: 'created_at') DateTime get createdAt;// 조인된 데이터
+ String get id;@JsonKey(name: 'host_id') String get hostId; String get title; String? get description; String get location; double? get lat; double? get lng;@JsonKey(name: 'start_time') DateTime get startTime;@JsonKey(name: 'end_time') DateTime get endTime;@JsonKey(name: 'entry_fee') int get entryFee;@JsonKey(name: 'max_participants') int get maxParticipants; String get status;@JsonKey(name: 'fish_types') String get fishTypes; String get rule;@JsonKey(name: 'prize_info') String? get prizeInfo;@JsonKey(name: 'is_public') bool get isPublic;@JsonKey(name: 'created_at') DateTime get createdAt;// 조인된 데이터
 @JsonKey(includeFromJson: false, includeToJson: false) int get participantsCount;
 /// Create a copy of League
 /// with the given fields replaced by the non-null parameter values.
@@ -29,16 +29,16 @@ $LeagueCopyWith<League> get copyWith => _$LeagueCopyWithImpl<League>(this as Lea
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is League&&(identical(other.id, id) || other.id == id)&&(identical(other.hostId, hostId) || other.hostId == hostId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.entryFee, entryFee) || other.entryFee == entryFee)&&(identical(other.maxParticipants, maxParticipants) || other.maxParticipants == maxParticipants)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.participantsCount, participantsCount) || other.participantsCount == participantsCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is League&&(identical(other.id, id) || other.id == id)&&(identical(other.hostId, hostId) || other.hostId == hostId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.entryFee, entryFee) || other.entryFee == entryFee)&&(identical(other.maxParticipants, maxParticipants) || other.maxParticipants == maxParticipants)&&(identical(other.status, status) || other.status == status)&&(identical(other.fishTypes, fishTypes) || other.fishTypes == fishTypes)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.prizeInfo, prizeInfo) || other.prizeInfo == prizeInfo)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.participantsCount, participantsCount) || other.participantsCount == participantsCount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,hostId,title,description,location,lat,lng,startTime,endTime,entryFee,maxParticipants,status,createdAt,participantsCount);
+int get hashCode => Object.hash(runtimeType,id,hostId,title,description,location,lat,lng,startTime,endTime,entryFee,maxParticipants,status,fishTypes,rule,prizeInfo,isPublic,createdAt,participantsCount);
 
 @override
 String toString() {
-  return 'League(id: $id, hostId: $hostId, title: $title, description: $description, location: $location, lat: $lat, lng: $lng, startTime: $startTime, endTime: $endTime, entryFee: $entryFee, maxParticipants: $maxParticipants, status: $status, createdAt: $createdAt, participantsCount: $participantsCount)';
+  return 'League(id: $id, hostId: $hostId, title: $title, description: $description, location: $location, lat: $lat, lng: $lng, startTime: $startTime, endTime: $endTime, entryFee: $entryFee, maxParticipants: $maxParticipants, status: $status, fishTypes: $fishTypes, rule: $rule, prizeInfo: $prizeInfo, isPublic: $isPublic, createdAt: $createdAt, participantsCount: $participantsCount)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $LeagueCopyWith<$Res>  {
   factory $LeagueCopyWith(League value, $Res Function(League) _then) = _$LeagueCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'host_id') String hostId, String title, String? description, String location, double? lat, double? lng,@JsonKey(name: 'start_time') DateTime startTime,@JsonKey(name: 'end_time') DateTime endTime,@JsonKey(name: 'entry_fee') int entryFee,@JsonKey(name: 'max_participants') int maxParticipants, String status,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) int participantsCount
+ String id,@JsonKey(name: 'host_id') String hostId, String title, String? description, String location, double? lat, double? lng,@JsonKey(name: 'start_time') DateTime startTime,@JsonKey(name: 'end_time') DateTime endTime,@JsonKey(name: 'entry_fee') int entryFee,@JsonKey(name: 'max_participants') int maxParticipants, String status,@JsonKey(name: 'fish_types') String fishTypes, String rule,@JsonKey(name: 'prize_info') String? prizeInfo,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) int participantsCount
 });
 
 
@@ -66,7 +66,7 @@ class _$LeagueCopyWithImpl<$Res>
 
 /// Create a copy of League
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? hostId = null,Object? title = null,Object? description = freezed,Object? location = null,Object? lat = freezed,Object? lng = freezed,Object? startTime = null,Object? endTime = null,Object? entryFee = null,Object? maxParticipants = null,Object? status = null,Object? createdAt = null,Object? participantsCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? hostId = null,Object? title = null,Object? description = freezed,Object? location = null,Object? lat = freezed,Object? lng = freezed,Object? startTime = null,Object? endTime = null,Object? entryFee = null,Object? maxParticipants = null,Object? status = null,Object? fishTypes = null,Object? rule = null,Object? prizeInfo = freezed,Object? isPublic = null,Object? createdAt = null,Object? participantsCount = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,hostId: null == hostId ? _self.hostId : hostId // ignore: cast_nullable_to_non_nullable
@@ -80,7 +80,11 @@ as DateTime,endTime: null == endTime ? _self.endTime : endTime // ignore: cast_n
 as DateTime,entryFee: null == entryFee ? _self.entryFee : entryFee // ignore: cast_nullable_to_non_nullable
 as int,maxParticipants: null == maxParticipants ? _self.maxParticipants : maxParticipants // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,fishTypes: null == fishTypes ? _self.fishTypes : fishTypes // ignore: cast_nullable_to_non_nullable
+as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
+as String,prizeInfo: freezed == prizeInfo ? _self.prizeInfo : prizeInfo // ignore: cast_nullable_to_non_nullable
+as String?,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,participantsCount: null == participantsCount ? _self.participantsCount : participantsCount // ignore: cast_nullable_to_non_nullable
 as int,
   ));
@@ -167,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'fish_types')  String fishTypes,  String rule, @JsonKey(name: 'prize_info')  String? prizeInfo, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _League() when $default != null:
-return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.createdAt,_that.participantsCount);case _:
+return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.fishTypes,_that.rule,_that.prizeInfo,_that.isPublic,_that.createdAt,_that.participantsCount);case _:
   return orElse();
 
 }
@@ -188,10 +192,10 @@ return $default(_that.id,_that.hostId,_that.title,_that.description,_that.locati
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'fish_types')  String fishTypes,  String rule, @JsonKey(name: 'prize_info')  String? prizeInfo, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)  $default,) {final _that = this;
 switch (_that) {
 case _League():
-return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.createdAt,_that.participantsCount);case _:
+return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.fishTypes,_that.rule,_that.prizeInfo,_that.isPublic,_that.createdAt,_that.participantsCount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -208,10 +212,10 @@ return $default(_that.id,_that.hostId,_that.title,_that.description,_that.locati
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'host_id')  String hostId,  String title,  String? description,  String location,  double? lat,  double? lng, @JsonKey(name: 'start_time')  DateTime startTime, @JsonKey(name: 'end_time')  DateTime endTime, @JsonKey(name: 'entry_fee')  int entryFee, @JsonKey(name: 'max_participants')  int maxParticipants,  String status, @JsonKey(name: 'fish_types')  String fishTypes,  String rule, @JsonKey(name: 'prize_info')  String? prizeInfo, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  int participantsCount)?  $default,) {final _that = this;
 switch (_that) {
 case _League() when $default != null:
-return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.createdAt,_that.participantsCount);case _:
+return $default(_that.id,_that.hostId,_that.title,_that.description,_that.location,_that.lat,_that.lng,_that.startTime,_that.endTime,_that.entryFee,_that.maxParticipants,_that.status,_that.fishTypes,_that.rule,_that.prizeInfo,_that.isPublic,_that.createdAt,_that.participantsCount);case _:
   return null;
 
 }
@@ -223,7 +227,7 @@ return $default(_that.id,_that.hostId,_that.title,_that.description,_that.locati
 @JsonSerializable()
 
 class _League implements League {
-  const _League({required this.id, @JsonKey(name: 'host_id') required this.hostId, required this.title, this.description, required this.location, this.lat, this.lng, @JsonKey(name: 'start_time') required this.startTime, @JsonKey(name: 'end_time') required this.endTime, @JsonKey(name: 'entry_fee') this.entryFee = 0, @JsonKey(name: 'max_participants') this.maxParticipants = 100, this.status = 'recruiting', @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeFromJson: false, includeToJson: false) this.participantsCount = 0});
+  const _League({required this.id, @JsonKey(name: 'host_id') required this.hostId, required this.title, this.description, required this.location, this.lat, this.lng, @JsonKey(name: 'start_time') required this.startTime, @JsonKey(name: 'end_time') required this.endTime, @JsonKey(name: 'entry_fee') this.entryFee = 0, @JsonKey(name: 'max_participants') this.maxParticipants = 100, this.status = 'recruiting', @JsonKey(name: 'fish_types') this.fishTypes = '배스', this.rule = '최대어', @JsonKey(name: 'prize_info') this.prizeInfo, @JsonKey(name: 'is_public') this.isPublic = true, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeFromJson: false, includeToJson: false) this.participantsCount = 0});
   factory _League.fromJson(Map<String, dynamic> json) => _$LeagueFromJson(json);
 
 @override final  String id;
@@ -238,6 +242,10 @@ class _League implements League {
 @override@JsonKey(name: 'entry_fee') final  int entryFee;
 @override@JsonKey(name: 'max_participants') final  int maxParticipants;
 @override@JsonKey() final  String status;
+@override@JsonKey(name: 'fish_types') final  String fishTypes;
+@override@JsonKey() final  String rule;
+@override@JsonKey(name: 'prize_info') final  String? prizeInfo;
+@override@JsonKey(name: 'is_public') final  bool isPublic;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 // 조인된 데이터
 @override@JsonKey(includeFromJson: false, includeToJson: false) final  int participantsCount;
@@ -255,16 +263,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _League&&(identical(other.id, id) || other.id == id)&&(identical(other.hostId, hostId) || other.hostId == hostId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.entryFee, entryFee) || other.entryFee == entryFee)&&(identical(other.maxParticipants, maxParticipants) || other.maxParticipants == maxParticipants)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.participantsCount, participantsCount) || other.participantsCount == participantsCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _League&&(identical(other.id, id) || other.id == id)&&(identical(other.hostId, hostId) || other.hostId == hostId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.entryFee, entryFee) || other.entryFee == entryFee)&&(identical(other.maxParticipants, maxParticipants) || other.maxParticipants == maxParticipants)&&(identical(other.status, status) || other.status == status)&&(identical(other.fishTypes, fishTypes) || other.fishTypes == fishTypes)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.prizeInfo, prizeInfo) || other.prizeInfo == prizeInfo)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.participantsCount, participantsCount) || other.participantsCount == participantsCount));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,hostId,title,description,location,lat,lng,startTime,endTime,entryFee,maxParticipants,status,createdAt,participantsCount);
+int get hashCode => Object.hash(runtimeType,id,hostId,title,description,location,lat,lng,startTime,endTime,entryFee,maxParticipants,status,fishTypes,rule,prizeInfo,isPublic,createdAt,participantsCount);
 
 @override
 String toString() {
-  return 'League(id: $id, hostId: $hostId, title: $title, description: $description, location: $location, lat: $lat, lng: $lng, startTime: $startTime, endTime: $endTime, entryFee: $entryFee, maxParticipants: $maxParticipants, status: $status, createdAt: $createdAt, participantsCount: $participantsCount)';
+  return 'League(id: $id, hostId: $hostId, title: $title, description: $description, location: $location, lat: $lat, lng: $lng, startTime: $startTime, endTime: $endTime, entryFee: $entryFee, maxParticipants: $maxParticipants, status: $status, fishTypes: $fishTypes, rule: $rule, prizeInfo: $prizeInfo, isPublic: $isPublic, createdAt: $createdAt, participantsCount: $participantsCount)';
 }
 
 
@@ -275,7 +283,7 @@ abstract mixin class _$LeagueCopyWith<$Res> implements $LeagueCopyWith<$Res> {
   factory _$LeagueCopyWith(_League value, $Res Function(_League) _then) = __$LeagueCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'host_id') String hostId, String title, String? description, String location, double? lat, double? lng,@JsonKey(name: 'start_time') DateTime startTime,@JsonKey(name: 'end_time') DateTime endTime,@JsonKey(name: 'entry_fee') int entryFee,@JsonKey(name: 'max_participants') int maxParticipants, String status,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) int participantsCount
+ String id,@JsonKey(name: 'host_id') String hostId, String title, String? description, String location, double? lat, double? lng,@JsonKey(name: 'start_time') DateTime startTime,@JsonKey(name: 'end_time') DateTime endTime,@JsonKey(name: 'entry_fee') int entryFee,@JsonKey(name: 'max_participants') int maxParticipants, String status,@JsonKey(name: 'fish_types') String fishTypes, String rule,@JsonKey(name: 'prize_info') String? prizeInfo,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) int participantsCount
 });
 
 
@@ -292,7 +300,7 @@ class __$LeagueCopyWithImpl<$Res>
 
 /// Create a copy of League
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? hostId = null,Object? title = null,Object? description = freezed,Object? location = null,Object? lat = freezed,Object? lng = freezed,Object? startTime = null,Object? endTime = null,Object? entryFee = null,Object? maxParticipants = null,Object? status = null,Object? createdAt = null,Object? participantsCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? hostId = null,Object? title = null,Object? description = freezed,Object? location = null,Object? lat = freezed,Object? lng = freezed,Object? startTime = null,Object? endTime = null,Object? entryFee = null,Object? maxParticipants = null,Object? status = null,Object? fishTypes = null,Object? rule = null,Object? prizeInfo = freezed,Object? isPublic = null,Object? createdAt = null,Object? participantsCount = null,}) {
   return _then(_League(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,hostId: null == hostId ? _self.hostId : hostId // ignore: cast_nullable_to_non_nullable
@@ -306,7 +314,11 @@ as DateTime,endTime: null == endTime ? _self.endTime : endTime // ignore: cast_n
 as DateTime,entryFee: null == entryFee ? _self.entryFee : entryFee // ignore: cast_nullable_to_non_nullable
 as int,maxParticipants: null == maxParticipants ? _self.maxParticipants : maxParticipants // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,fishTypes: null == fishTypes ? _self.fishTypes : fishTypes // ignore: cast_nullable_to_non_nullable
+as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
+as String,prizeInfo: freezed == prizeInfo ? _self.prizeInfo : prizeInfo // ignore: cast_nullable_to_non_nullable
+as String?,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,participantsCount: null == participantsCount ? _self.participantsCount : participantsCount // ignore: cast_nullable_to_non_nullable
 as int,
   ));

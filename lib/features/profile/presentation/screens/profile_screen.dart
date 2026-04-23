@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_svg.dart';
 import '../../data/profile_repository.dart';
+import '../../../my_league/data/my_league_repository.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -60,15 +61,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         children: [
                           Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.gold, width: 2)),
+                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: accent.withValues(alpha: 0.3), width: 1.5)),
                             child: CircleAvatar(
                               radius: 38,
                               backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0),
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: AppSvg(AppIcons.fishingRod,
-                                    color: isDark ? const Color(0xFF444444) : const Color(0xFFBBBBBB)),
-                              ),
+                              child: Icon(LucideIcons.user, size: 36, color: sub.withValues(alpha: 0.5)),
                             ),
                           ),
                           Positioned(
@@ -76,11 +73,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             child: Container(
                               width: 22, height: 22,
                               decoration: BoxDecoration(
-                                color: AppColors.gold,
+                                color: accent,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: isDark ? AppColors.darkBg : Colors.white, width: 2),
                               ),
-                              child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
+                              child: Center(child: Icon(LucideIcons.star, size: 12, color: isDark ? Colors.black : Colors.white)),
                             ),
                           ),
                         ],
@@ -115,7 +112,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('@basking_minjun', style: TextStyle(fontSize: 12, color: sub)),
+                    child: Text('@${profile.username}', style: TextStyle(fontSize: 12, color: sub)),
                   ),
                   const SizedBox(height: 14),
                   // 버튼
@@ -125,7 +122,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 36),
                         padding: EdgeInsets.zero,
-                        side: BorderSide(color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+                        side: BorderSide(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text('프로필 수정', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
@@ -136,10 +133,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(36, 36),
                         padding: EdgeInsets.zero,
-                        side: BorderSide(color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+                        side: BorderSide(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Icon(Icons.person_add_outlined, size: 18, color: isDark ? Colors.white : Colors.black),
+                      child: Icon(LucideIcons.userPlus, size: 18, color: isDark ? Colors.white : Colors.black),
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -149,7 +146,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     decoration: BoxDecoration(
                       color: cardBg,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+                      border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                     ),
                     child: Column(children: [
                       Row(children: [
@@ -159,10 +156,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       ]),
                       const SizedBox(height: 8),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: profile.mannerTemperature / 100,
-                          backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                          backgroundColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                           valueColor: AlwaysStoppedAnimation(accent),
                           minHeight: 6,
                         ),
@@ -176,12 +173,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.06),
+                        color: AppColors.gold.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
                       ),
                       child: Row(children: [
-                        AppSvg(AppIcons.trophy, size: 36, color: AppColors.gold),
+                        Icon(LucideIcons.award, size: 32, color: AppColors.gold),
                         const SizedBox(width: 12),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
@@ -189,32 +186,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           Text('2026.04.22 · 충주호', style: TextStyle(fontSize: 11, color: sub)),
                         ]),
                         const Spacer(),
-                        const Column(children: [
-                          Icon(Icons.verified_rounded, color: AppColors.gold, size: 18),
-                          Text('인증', style: TextStyle(fontSize: 10, color: AppColors.gold)),
+                        Column(children: [
+                          Icon(LucideIcons.checkCircle, color: AppColors.gold, size: 16),
+                          const SizedBox(height: 2),
+                          const Text('인증', style: TextStyle(fontSize: 10, color: AppColors.gold)),
                         ]),
                       ]),
                     ),
                   const SizedBox(height: 10),
 
                   // 통계 4칸
-                  Row(children: [
-                    _StatBox(emoji: '🎣', value: '12', label: '참가', isDark: isDark, accent: accent),
-                    const SizedBox(width: 8),
-                    _StatBox(emoji: '🥇', value: '3', label: '우승', isDark: isDark, accent: accent),
-                    const SizedBox(width: 8),
-                    _StatBox(emoji: '⭐', value: '8', label: '배지', isDark: isDark, accent: accent),
-                    const SizedBox(width: 8),
-                    _StatBox(emoji: '📊', value: '2.4K', label: '점수', isDark: isDark, accent: accent),
-                  ]),
+                  Builder(builder: (context) {
+                    final participationCount = ref.watch(myLeaguesProvider).maybeWhen(
+                      data: (map) {
+                        final participated = map['participated'] ?? [];
+                        final hosted = map['hosted'] ?? [];
+                        final allIds = {
+                          ...participated.map((l) => l.id),
+                          ...hosted.map((l) => l.id),
+                        };
+                        return allIds.length;
+                      },
+                      orElse: () => 0,
+                    );
+                    return Row(children: [
+                      _StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: isDark, accent: accent),
+                      const SizedBox(width: 8),
+                      _StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: isDark, accent: accent),
+                      const SizedBox(width: 8),
+                      _StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: isDark, accent: accent),
+                      const SizedBox(width: 8),
+                      _StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: isDark, accent: accent),
+                    ]);
+                  }),
                   const SizedBox(height: 6),
 
                   // 탭
                   TabBar(
                     controller: _tab,
+                    indicatorSize: TabBarIndicatorSize.tab,
                     tabs: const [
-                      Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
-                      Tab(icon: Icon(Icons.emoji_events_outlined, size: 22)),
+                      Tab(icon: Icon(LucideIcons.layoutGrid, size: 20)),
+                      Tab(icon: Icon(LucideIcons.list, size: 20)),
                     ],
                   ),
                 ],
@@ -246,12 +259,12 @@ class _LunkerBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.12),
+        color: AppColors.gold.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        AppSvg(AppIcons.trophy, size: 9, color: AppColors.gold),
-        const SizedBox(width: 3),
+        Icon(LucideIcons.award, size: 10, color: AppColors.gold),
+        const SizedBox(width: 4),
         const Text('런커', style: TextStyle(fontSize: 9, color: AppColors.gold, fontWeight: FontWeight.w800)),
       ]),
     );
@@ -273,8 +286,9 @@ class _Stat extends StatelessWidget {
 }
 
 class _StatBox extends StatelessWidget {
-  const _StatBox({required this.emoji, required this.value, required this.label, required this.isDark, required this.accent});
-  final String emoji, value, label;
+  const _StatBox({required this.icon, required this.value, required this.label, required this.isDark, required this.accent});
+  final IconData icon;
+  final String value, label;
   final bool isDark;
   final Color accent;
 
@@ -286,100 +300,179 @@ class _StatBox extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+          border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
         ),
         child: Column(children: [
-          Text(emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(height: 4),
+          Icon(icon, size: 18, color: subColor(isDark)),
+          const SizedBox(height: 6),
           Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: accent)),
-          Text(label, style: TextStyle(fontSize: 10, color: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA))),
+          Text(label, style: TextStyle(fontSize: 10, color: subColor(isDark))),
         ]),
       ),
     );
   }
+  
+  Color subColor(bool isDark) => isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
 }
 
-class _Grid extends StatelessWidget {
+class _Grid extends ConsumerWidget {
   const _Grid({required this.isDark});
   final bool isDark;
 
-  static const _items = ['🎣', '🐟', '🐠', '🎏', '🦈', '🐡', '🎣', '🐟', '🐠', '🎏', '🦈', '🐡'];
-
   @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(2),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
-      ),
-      itemCount: _items.length,
-      itemBuilder: (_, i) => Container(
-        color: isDark ? const Color(0xFF111111) : const Color(0xFFF5F5F5),
-        child: Stack(children: [
-          Center(child: Text(_items[i], style: const TextStyle(fontSize: 40))),
-          if (i == 0) Positioned(
-            bottom: 6, right: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
-              child: const Text('52.3cm', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black)),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(myPostsProvider).when(
+      data: (posts) {
+        if (posts.isEmpty) {
+          return Center(
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(LucideIcons.image, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+              const SizedBox(height: 12),
+              Text('아직 게시물이 없어요', style: TextStyle(color: isDark ? const Color(0xFF71717A) : const Color(0xFFA1A1AA), fontSize: 14)),
+            ]),
+          );
+        }
+        return GridView.builder(
+          padding: const EdgeInsets.all(2),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
           ),
-        ]),
-      ),
+          itemCount: posts.length,
+          itemBuilder: (_, i) {
+            final post = posts[i];
+            return GestureDetector(
+              onTap: () => context.push(AppRoutes.postDetail, extra: post),
+              child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  post.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                    child: Icon(LucideIcons.image, size: 24, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+                  ),
+                ),
+                if (post.isLunker)
+                  Positioned(
+                    bottom: 4, right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
+                      child: Text(
+                        post.length != null ? '${post.length}cm' : '런커',
+                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('불러오기 실패: $e')),
     );
   }
 }
 
-class _History extends StatelessWidget {
+class _History extends ConsumerWidget {
   const _History({required this.isDark, required this.accent, required this.sub, required this.cardBg});
   final bool isDark;
   final Color accent, sub, cardBg;
 
-  static const _records = [
-    ('충주호 배스 오픈', '🥇 1위', '52.3cm', '+300'),
-    ('소양강 챔피언십', '🥈 2위', '38.5cm', '+200'),
-    ('팔당 주말 모임', '4위', '32.1cm', '+50'),
-    ('가평 계곡 대회', '🥇 1위', '44.8cm', '+300'),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _records.length,
-      itemBuilder: (_, i) {
-        final (title, rank, size, score) = _records[i];
-        final isWin = rank.contains('1위');
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
-          ),
-          child: Row(children: [
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                color: isWin ? AppColors.gold.withValues(alpha: 0.1) : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5)),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(child: Text(isWin ? '🥇' : '🎣', style: const TextStyle(fontSize: 18))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              Text(size, style: TextStyle(fontSize: 12, color: sub)),
-            ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(rank, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              Text(score, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w700)),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(myLeaguesProvider).when(
+      data: (myLeaguesMap) {
+        final participated = myLeaguesMap['participated'] ?? [];
+        final hosted = myLeaguesMap['hosted'] ?? [];
+        // 전체 참가 리그 (호스트 포함) 중복 제거
+        final allLeagues = [...participated];
+        for (final h in hosted) {
+          if (!allLeagues.any((l) => l.id == h.id)) allLeagues.add(h);
+        }
+        allLeagues.sort((a, b) => b.startTime.compareTo(a.startTime));
+
+        if (allLeagues.isEmpty) {
+          return Center(
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(LucideIcons.fish, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+              const SizedBox(height: 12),
+              Text('참가한 리그가 없어요', style: TextStyle(color: sub, fontSize: 14)),
             ]),
-          ]),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: allLeagues.length,
+          itemBuilder: (_, i) {
+            final league = allLeagues[i];
+            final isCompleted = league.status == 'completed';
+            final isLive = league.status == 'in_progress';
+            final statusLabel = isLive ? '진행중' : isCompleted ? '종료' : '모집중';
+            final statusColor = isLive ? AppColors.liveRed : isCompleted ? sub : accent;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isLive
+                      ? accent.withValues(alpha: 0.3)
+                      : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                ),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? (isDark ? AppColors.darkSurface2 : AppColors.lightBg)
+                        : accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      isCompleted ? LucideIcons.award : LucideIcons.trophy,
+                      size: 18,
+                      color: isCompleted ? sub : accent,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(league.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Icon(LucideIcons.mapPin, size: 11, color: sub),
+                    const SizedBox(width: 3),
+                    Text(league.location, style: TextStyle(fontSize: 11, color: sub)),
+                  ]),
+                ])),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${league.participantsCount}명 참가', style: TextStyle(fontSize: 11, color: sub)),
+                ]),
+              ]),
+            );
+          },
         );
       },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('불러오기 실패', style: TextStyle(color: sub))),
     );
   }
 }

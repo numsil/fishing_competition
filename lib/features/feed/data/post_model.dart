@@ -20,6 +20,8 @@ abstract class Post with _$Post {
     String? location,
     double? lat,
     double? lng,
+    double? weight,
+    @JsonKey(name: 'catch_count') @Default(1) int catchCount,
     @JsonKey(name: 'is_lunker') @Default(false) bool isLunker,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // Joined user data (can be populated after fetch)

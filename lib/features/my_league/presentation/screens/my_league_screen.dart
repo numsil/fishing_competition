@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_svg.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
+import '../../../league/data/league_repository.dart';
+import '../../../auth/data/auth_repository.dart';
 
 class MyLeagueScreen extends ConsumerStatefulWidget {
   const MyLeagueScreen({super.key});
@@ -37,7 +39,7 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final divColor = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
     return ref.watch(myLeaguesProvider).when(
       data: (myLeaguesMap) {
@@ -146,15 +148,15 @@ class _MySummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: divColor),
+        border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              AppSvg(AppIcons.trophy, size: 16, color: AppColors.gold),
-              const SizedBox(width: 6),
+              Icon(LucideIcons.trophy, size: 16, color: AppColors.gold),
+              const SizedBox(width: 8),
               Text('내 시즌 현황', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
             ],
           ),
@@ -205,7 +207,7 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _ActiveLeagueCard extends StatelessWidget {
+class _ActiveLeagueCard extends ConsumerWidget {
   const _ActiveLeagueCard({
     required this.league,
     required this.isDark,
@@ -219,13 +221,31 @@ class _ActiveLeagueCard extends StatelessWidget {
   final Color accent, sub, cardBg, divColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isLive = league.status == 'in_progress';
     final isUpcoming = league.status == 'recruiting';
     final type = isLive ? 'live' : isUpcoming ? 'upcoming' : 'history';
-    
+
     final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
     final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
+
+    // 순위 데이터 가져오기
+    final rankingAsync = ref.watch(leagueRankingProvider(league.id));
+    final currentUserId = ref.watch(currentUserProvider)?.id;
+
+    String myRank = '-';
+    String myBest = '-';
+
+    rankingAsync.whenData((entries) {
+      if (currentUserId != null) {
+        final idx = entries.indexWhere((e) => e.userId == currentUserId);
+        if (idx >= 0) {
+          myRank = '${idx + 1}위';
+          final best = entries[idx].bestLength;
+          if (best != null) myBest = '${best.toStringAsFixed(1)}cm';
+        }
+      }
+    });
 
     return GestureDetector(
       onTap: () => context.push(
@@ -237,7 +257,7 @@ class _ActiveLeagueCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLive ? accent.withValues(alpha: 0.4) : divColor,
+          color: isLive ? accent.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
           width: isLive ? 1.5 : 1,
         ),
       ),
@@ -304,12 +324,12 @@ class _ActiveLeagueCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
             child: Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 13, color: sub),
-                const SizedBox(width: 3),
+                Icon(LucideIcons.mapPin, size: 13, color: sub),
+                const SizedBox(width: 4),
                 Text(league.location, style: TextStyle(fontSize: 12, color: sub)),
                 const SizedBox(width: 12),
-                Icon(Icons.calendar_today_outlined, size: 12, color: sub),
-                const SizedBox(width: 3),
+                Icon(LucideIcons.calendar, size: 12, color: sub),
+                const SizedBox(width: 4),
                 Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
               ],
             ),
@@ -323,27 +343,24 @@ class _ActiveLeagueCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Row(
               children: [
-                // 내 순위
                 _RecordChip(
                   label: '내 순위',
-                  value: '-',
+                  value: myRank,
                   color: accent,
                   sub: sub,
                   isDark: isDark,
                   divColor: divColor,
                 ),
                 const SizedBox(width: 10),
-                // 내 최대어
                 _RecordChip(
                   label: '내 최대어',
-                  value: '-',
+                  value: myBest,
                   color: accent,
                   sub: sub,
                   isDark: isDark,
                   divColor: divColor,
                 ),
                 const SizedBox(width: 10),
-                // 참가자
                 _RecordChip(
                   label: '참가자',
                   value: '${league.participantsCount}명',
@@ -353,7 +370,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                   divColor: divColor,
                 ),
                 const Spacer(),
-                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: sub),
+                Icon(LucideIcons.chevronRight, size: 14, color: sub),
               ],
             ),
           ),
@@ -445,8 +462,8 @@ class _HistoryTab extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.history_rounded, size: 16, color: sub),
-                  const SizedBox(width: 6),
+                  Icon(LucideIcons.history, size: 16, color: sub),
+                  const SizedBox(width: 8),
                   Text('전체 기록 요약', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
                 ],
               ),
@@ -516,9 +533,7 @@ class _HistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: divColor,
-        ),
+        border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
       ),
       child: Row(
         children: [
@@ -530,7 +545,7 @@ class _HistoryCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text(_rankEmoji, style: const TextStyle(fontSize: 22)),
+              child: Icon(LucideIcons.award, size: 22, color: sub),
             ),
           ),
           const SizedBox(width: 12),
@@ -548,8 +563,8 @@ class _HistoryCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 11, color: sub),
-                    const SizedBox(width: 2),
+                    Icon(LucideIcons.mapPin, size: 11, color: sub),
+                    const SizedBox(width: 3),
                     Text(league.location, style: TextStyle(fontSize: 11, color: sub)),
                     const SizedBox(width: 8),
                     Text('$startStr ~ $endStr', style: TextStyle(fontSize: 11, color: sub)),
@@ -614,8 +629,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppSvg(AppIcons.trophy, size: 64,
-              color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+          Icon(LucideIcons.search, size: 56, color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
           const SizedBox(height: 16),
           Text(message, style: TextStyle(fontSize: 15, color: sub)),
           const SizedBox(height: 20),
@@ -744,7 +758,7 @@ class _MyLeagueCard extends StatelessWidget {
           color: cardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : divColor,
+            color: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
             width: isLive ? 1.5 : 1,
           ),
         ),
@@ -801,7 +815,7 @@ class _MyLeagueCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.settings_outlined, size: 12, color: accent),
+                        Icon(LucideIcons.settings, size: 12, color: accent),
                         const SizedBox(width: 4),
                         Text('관리', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
                       ],

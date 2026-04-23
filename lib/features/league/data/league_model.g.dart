@@ -19,6 +19,10 @@ _League _$LeagueFromJson(Map<String, dynamic> json) => _League(
   entryFee: (json['entry_fee'] as num?)?.toInt() ?? 0,
   maxParticipants: (json['max_participants'] as num?)?.toInt() ?? 100,
   status: json['status'] as String? ?? 'recruiting',
+  fishTypes: json['fish_types'] as String? ?? '배스',
+  rule: json['rule'] as String? ?? '최대어',
+  prizeInfo: json['prize_info'] as String?,
+  isPublic: json['is_public'] as bool? ?? true,
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 
@@ -35,5 +39,9 @@ Map<String, dynamic> _$LeagueToJson(_League instance) => <String, dynamic>{
   'entry_fee': instance.entryFee,
   'max_participants': instance.maxParticipants,
   'status': instance.status,
+  'fish_types': instance.fishTypes,
+  'rule': instance.rule,
+  'prize_info': instance.prizeInfo,
+  'is_public': instance.isPublic,
   'created_at': instance.createdAt.toIso8601String(),
 };

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../../auth/data/auth_repository.dart';
+import '../../data/league_repository.dart';
 
-class LeagueCreateScreen extends StatefulWidget {
+class LeagueCreateScreen extends ConsumerStatefulWidget {
   const LeagueCreateScreen({super.key});
 
   @override
-  State<LeagueCreateScreen> createState() => _LeagueCreateScreenState();
+  ConsumerState<LeagueCreateScreen> createState() => _LeagueCreateScreenState();
 }
 
-class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
+class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
@@ -44,6 +47,8 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
   // 소개 이미지 (URL 리스트)
   final List<String> _introImages = [];
 
+  bool _creating = false;
+
   static const _rules = ['최대어', '합산 길이', '마릿수', '최대어 + 마릿수'];
   static const _freshFish = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '향어', '가물치', '메기', '강준치', '피라미'];
   static const _saltFish = ['광어', '볼락', '우럭', '참돔', '감성돔', '삼치', '고등어', '방어', '농어', '무늬오징어'];
@@ -57,6 +62,75 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
     _introCtrl.dispose();
     _etcPrizeCtrl.dispose();
     super.dispose();
+  }
+
+  // ── 리그 개설 ──
+  Future<void> _createLeague() async {
+    if (_formKey.currentState?.validate() != true) return;
+    if (_dateRange == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('일정을 선택해주세요.')),
+      );
+      return;
+    }
+    if (_locationCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('장소를 입력해주세요.')),
+      );
+      return;
+    }
+
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인이 필요합니다.')),
+      );
+      return;
+    }
+
+    setState(() => _creating = true);
+    try {
+      await ref.read(leagueRepositoryProvider).createLeague(
+        hostId: user.id,
+        title: _nameCtrl.text.trim(),
+        description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
+        location: _locationCtrl.text.trim(),
+        lat: _selectedLatLng?.latitude,
+        lng: _selectedLatLng?.longitude,
+        startTime: _dateRange!.start,
+        endTime: _dateRange!.end,
+        entryFee: int.tryParse(_feeCtrl.text) ?? 0,
+        maxParticipants: int.tryParse(_maxCtrl.text) ?? 100,
+        fishTypes: _selectedFish.isEmpty ? '미정' : _selectedFish.join(', '),
+        rule: _rule,
+        prizeInfo: _buildPrizeInfo(),
+        isPublic: _isPublic,
+      );
+      ref.invalidate(leaguesProvider);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _creating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('개설 실패: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  // ── 시상 정보 문자열 생성 ──
+  String? _buildPrizeInfo() {
+    if (_prizeType == '기타') {
+      final t = _etcPrizeCtrl.text.trim();
+      return t.isEmpty ? null : t;
+    }
+    final lines = _prizes
+        .where((p) => p.value.trim().isNotEmpty)
+        .map((p) => _prizeType == '상금'
+            ? '${p.rank}: ${p.value}원'
+            : '${p.rank}: ${p.value}')
+        .toList();
+    return lines.isEmpty ? null : lines.join('\n');
   }
 
   // ── 날짜 선택 ──
@@ -134,7 +208,7 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
                           children: [
                             TileLayer(
                               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'com.fishinggram.app',
+                              userAgentPackageName: 'com.huk.app',
                             ),
                             MarkerLayer(
                               markers: [
@@ -387,10 +461,10 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: TextButton(
-              onPressed: () {
-                if (_formKey.currentState?.validate() == true) context.pop();
-              },
-              child: Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
+              onPressed: _creating ? null : _createLeague,
+              child: _creating
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                  : Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
         ],
@@ -492,7 +566,7 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
                             children: [
                               TileLayer(
                                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.fishinggram.app',
+                                userAgentPackageName: 'com.huk.app',
                               ),
                               MarkerLayer(
                                 markers: [
@@ -925,10 +999,10 @@ class _LeagueCreateScreenState extends State<LeagueCreateScreen> {
             SizedBox(
               height: 52,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState?.validate() == true) context.pop();
-                },
-                child: const Text('리그 개설하기'),
+                onPressed: _creating ? null : _createLeague,
+                child: _creating
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Text('리그 개설하기'),
               ),
             ),
           ],

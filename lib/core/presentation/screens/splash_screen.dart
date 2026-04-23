@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'FishingGram',
+                  'HUK',
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,

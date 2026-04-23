@@ -70,6 +70,8 @@ class FeedRepository {
     String? location,
     String? leagueId,
     double? length,
+    double? weight,
+    int catchCount = 1,
   }) async {
     // 1. Supabase Storage에 이미지 업로드
     final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -93,6 +95,8 @@ class FeedRepository {
       'location': location,
       'league_id': leagueId,
       'length': length,
+      'weight': weight,
+      'catch_count': catchCount,
       'is_lunker': length != null && length >= 50.0,
     });
   }

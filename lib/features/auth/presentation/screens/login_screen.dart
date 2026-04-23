@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 18),
                     const Text(
-                      'FishingGram',
+                      'HUK',
                       style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                     ),
                     const SizedBox(height: 4),

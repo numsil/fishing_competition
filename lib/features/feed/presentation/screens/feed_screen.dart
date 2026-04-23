@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
@@ -19,7 +19,9 @@ class FeedScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: _FeedAppBar(isDark: isDark, accent: accent),
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(feedPostsProvider),
+        child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _FavoritesBar(isDark: isDark, accent: accent)),
           SliverToBoxAdapter(
@@ -57,6 +59,7 @@ class FeedScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -79,7 +82,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       title: Text(
-        'FishingGram',
+        'HUK',
         style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w900,
@@ -102,7 +105,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add_rounded,
+                Icon(LucideIcons.plus,
                     color: isDark ? Colors.black : Colors.white, size: 18),
                 const SizedBox(width: 4),
                 Text(
@@ -120,14 +123,14 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
         const SizedBox(width: 4),
         IconButton(
           onPressed: () {},
-          icon: Icon(Icons.favorite_border_rounded,
-              color: isDark ? Colors.white : Colors.black, size: 26),
+          icon: Icon(LucideIcons.heart,
+              color: isDark ? Colors.white : Colors.black, size: 24),
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () {},
-          icon: Icon(Icons.send_outlined,
-              color: isDark ? Colors.white : Colors.black, size: 24),
+          icon: Icon(LucideIcons.send,
+              color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
         ),
         const SizedBox(width: 4),
@@ -161,7 +164,7 @@ class _FavoritesBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 10, 0, 8),
           child: Row(
             children: [
-              Icon(Icons.star_rounded, size: 14,
+              Icon(LucideIcons.star, size: 14,
                   color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888)),
               const SizedBox(width: 4),
               Text(
@@ -262,9 +265,10 @@ class _StoryItem extends StatelessWidget {
                 child: isLeague
                     ? Padding(
                         padding: const EdgeInsets.all(13),
-                        child: AppSvg(
-                          AppIcons.trophy,
+                        child: Icon(
+                          LucideIcons.trophy,
                           color: isLive ? AppColors.liveRed : accent,
+                          size: 28,
                         ),
                       )
                     : Center(
@@ -309,7 +313,7 @@ class _StoryItem extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: Icon(Icons.emoji_events_rounded, size: 12, color: accent),
+                      child: Icon(LucideIcons.award, size: 12, color: accent),
                     ),
                   ),
                 ),
@@ -499,7 +503,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                         ),
                         if (p.isLunker) ...[
                           const SizedBox(width: 4),
-                          Icon(Icons.verified_rounded, size: 13, color: accent),
+                          Icon(LucideIcons.checkCircle, size: 13, color: accent),
                         ],
                       ],
                     ),
@@ -510,13 +514,65 @@ class _InstaPostState extends ConsumerState<_InstaPost>
               ),
               IconButton(
                 onPressed: _openMoreMenu,
-                icon: Icon(Icons.more_horiz, color: iconColor, size: 20),
+                icon: Icon(LucideIcons.moreHorizontal, color: iconColor, size: 20),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               ),
             ],
           ),
         ),
+
+        // ── 어종 정보 칩 ──
+        if (p.length != null || p.weight != null || p.catchCount > 1)
+          Container(
+            color: bgColor,
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
+            child: Row(
+              children: [
+                if (p.length != null) ...[
+                  Icon(LucideIcons.ruler, size: 12, color: accent),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${p.length!.toStringAsFixed(1)}cm',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                if (p.weight != null) ...[
+                  Icon(LucideIcons.scale, size: 12, color: subColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${(p.weight! / 1000).toStringAsFixed(p.weight! >= 1000 ? 2 : 1)}kg',
+                    style: TextStyle(fontSize: 13, color: subColor),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                if (p.catchCount > 1) ...[
+                  Icon(LucideIcons.fish, size: 12, color: subColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${p.catchCount}마리',
+                    style: TextStyle(fontSize: 13, color: subColor),
+                  ),
+                ],
+                if (p.isLunker)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(LucideIcons.award, size: 10, color: AppColors.gold),
+                      const SizedBox(width: 3),
+                      const Text('런커', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.gold)),
+                    ]),
+                  ),
+              ],
+            ),
+          ),
 
         // ── 이미지 ──
         GestureDetector(
@@ -546,10 +602,10 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                       );
                     },
                     errorBuilder: (_, __, ___) => Center(
-                      child: AppSvg(
-                        AppIcons.fish,
-                        width: MediaQuery.of(context).size.width * 0.55,
-                        color: isDark ? const Color(0xFF1A3026) : const Color(0xFFC8E6D4),
+                      child: Icon(
+                        LucideIcons.image,
+                        size: MediaQuery.of(context).size.width * 0.3,
+                        color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA),
                       ),
                     ),
                   ),
@@ -567,7 +623,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AppSvg(AppIcons.trophy, size: 10, color: AppColors.gold),
+                            Icon(LucideIcons.trophy, size: 10, color: AppColors.gold),
                             const SizedBox(width: 5),
                             Text(
                               '리그 게시물',
@@ -612,9 +668,9 @@ class _InstaPostState extends ConsumerState<_InstaPost>
               IconButton(
                 onPressed: _toggleLike,
                 icon: Icon(
-                  _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  _liked ? LucideIcons.heart : LucideIcons.heart,
                   color: _liked ? AppColors.error : iconColor,
-                  size: 26,
+                  size: 24,
                 ),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
@@ -623,7 +679,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
               // 댓글
               IconButton(
                 onPressed: _openComments,
-                icon: Icon(Icons.chat_bubble_outline_rounded, color: iconColor, size: 24),
+                icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               ),
@@ -631,7 +687,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
               // 링크 복사
               IconButton(
                 onPressed: () {
-                  final link = 'https://fishinggram.app/p/${p.id}';
+                  final link = 'https://huk.app/p/${p.id}';
                   Clipboard.setData(ClipboardData(text: link));
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -643,7 +699,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                     ),
                   );
                 },
-                icon: Icon(Icons.link_rounded, color: iconColor, size: 24),
+                icon: Icon(LucideIcons.link2, color: iconColor, size: 24),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               ),
@@ -783,12 +839,12 @@ class _MoreMenu extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _MenuItem(
-            icon: Icons.link_rounded,
+            icon: LucideIcons.link2,
             label: '링크 복사',
             color: textColor,
             onTap: () {
               Navigator.pop(context);
-              final link = 'https://fishinggram.app/p/$postId';
+              final link = 'https://huk.app/p/$postId';
               Clipboard.setData(ClipboardData(text: link));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -803,21 +859,21 @@ class _MoreMenu extends StatelessWidget {
           ),
           Divider(height: 1, color: divColor),
           _MenuItem(
-            icon: Icons.share_outlined,
+            icon: LucideIcons.share,
             label: '공유하기',
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
           Divider(height: 1, color: divColor),
           _MenuItem(
-            icon: Icons.person_add_outlined,
+            icon: LucideIcons.userPlus,
             label: '팔로우',
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
           Divider(height: 1, color: divColor),
           _MenuItem(
-            icon: Icons.flag_outlined,
+            icon: LucideIcons.flag,
             label: '신고하기',
             color: AppColors.error,
             onTap: () => Navigator.pop(context),
@@ -1014,7 +1070,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () => setState(() => _replyTo = null),
-                        child: Icon(Icons.close, size: 16, color: subColor),
+                        child: Icon(LucideIcons.x, size: 16, color: subColor),
                       ),
                     ],
                   ),
@@ -1200,7 +1256,7 @@ class _CommentTileState extends State<_CommentTile> {
           GestureDetector(
             onTap: () => setState(() => _liked = !_liked),
             child: Icon(
-              _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              _liked ? LucideIcons.heart : LucideIcons.heart,
               size: 16,
               color: _liked ? AppColors.error : widget.subColor,
             ),
