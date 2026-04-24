@@ -118,7 +118,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
-          onPressed: () {},
+          onPressed: () => context.push(AppRoutes.dm),
           icon: Icon(LucideIcons.send,
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
@@ -452,7 +452,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
     final iconColor = isDark ? Colors.white : Colors.black;
     final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = isDark ? AppColors.darkBg : Colors.white;
-    final avatarBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFEFEFEF);
     final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
     final commentCount = p.commentsCount;
 
@@ -465,32 +464,38 @@ class _InstaPostState extends ConsumerState<_InstaPost>
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              UserAvatar(
-                username: p.username,
-                avatarUrl: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
-                radius: 16,
-                isDark: isDark,
+              GestureDetector(
+                onTap: () => context.push('${AppRoutes.userProfile}/${p.userId}'),
+                child: UserAvatar(
+                  username: p.username,
+                  avatarUrl: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
+                  radius: 16,
+                  isDark: isDark,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          p.username,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                        ),
-                        if (p.isLunker) ...[
-                          const SizedBox(width: 4),
-                          Icon(LucideIcons.checkCircle, size: 13, color: accent),
+                child: GestureDetector(
+                  onTap: () => context.push('${AppRoutes.userProfile}/${p.userId}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            p.username,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                          if (p.isLunker) ...[
+                            const SizedBox(width: 4),
+                            Icon(LucideIcons.checkCircle, size: 13, color: accent),
+                          ],
                         ],
-                      ],
-                    ),
-                    if (p.location != null)
-                      Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
-                  ],
+                      ),
+                      if (p.location != null)
+                        Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
+                    ],
+                  ),
                 ),
               ),
               IconButton(

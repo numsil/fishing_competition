@@ -131,6 +131,53 @@ class ProfileRepository {
 
     return response.map((data) => Post.fromJson(data)).toList();
   }
+
+  Future<UserProfile> getUserProfile(String userId) async {
+    final userRes = await _supabase.from('users').select().eq('id', userId).single();
+
+    final postsRes = await _supabase
+        .from('posts')
+        .select('length, is_lunker')
+        .eq('user_id', userId)
+        .isFilter('league_id', null)
+        .eq('is_personal_record', false);
+
+    int postCount = postsRes.length;
+    int lunkerCount = 0;
+    double? maxLen;
+
+    for (var post in postsRes) {
+      if (post['is_lunker'] == true) lunkerCount++;
+      if (post['length'] != null) {
+        final double len = (post['length'] as num).toDouble();
+        if (maxLen == null || len > maxLen) maxLen = len;
+      }
+    }
+
+    return UserProfile(
+      id: userRes['id'],
+      email: userRes['email'] ?? '',
+      username: userRes['username'],
+      avatarUrl: userRes['avatar_url'],
+      mannerTemperature: (userRes['manner_temperature'] as num).toDouble(),
+      isLunkerClub: userRes['is_lunker_club'] ?? false,
+      postCount: postCount,
+      lunkerCount: lunkerCount,
+      maxFishLength: maxLen,
+    );
+  }
+
+  Future<List<Post>> getUserPosts(String userId) async {
+    final response = await _supabase
+        .from('posts')
+        .select()
+        .eq('user_id', userId)
+        .isFilter('league_id', null)
+        .eq('is_personal_record', false)
+        .order('created_at', ascending: false);
+
+    return response.map((data) => Post.fromJson(data)).toList();
+  }
 }
 
 @riverpod
@@ -151,4 +198,14 @@ Future<List<Post>> myPosts(MyPostsRef ref) {
 @riverpod
 Future<List<Post>> myPersonalRecords(MyPersonalRecordsRef ref) {
   return ref.watch(profileRepositoryProvider).getMyPersonalRecords();
+}
+
+@riverpod
+Future<UserProfile> userProfile(UserProfileRef ref, String userId) {
+  return ref.watch(profileRepositoryProvider).getUserProfile(userId);
+}
+
+@riverpod
+Future<List<Post>> userPosts(UserPostsRef ref, String userId) {
+  return ref.watch(profileRepositoryProvider).getUserPosts(userId);
 }

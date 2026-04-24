@@ -18,6 +18,10 @@ import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/league/presentation/screens/league_participant_detail_screen.dart';
+import '../../features/profile/presentation/screens/user_profile_screen.dart';
+import '../../features/dm/data/dm_repository.dart';
+import '../../features/dm/presentation/screens/dm_list_screen.dart';
+import '../../features/dm/presentation/screens/dm_chat_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 
@@ -63,6 +67,28 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
           child: PersonalCatchScreen(),
+        ),
+      ),
+      // DM 목록: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.dm,
+        pageBuilder: (context, state) => const MaterialPage(child: DmListScreen()),
+      ),
+      // DM 채팅: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.dmChat,
+        pageBuilder: (context, state) {
+          final conv = state.extra as DmConversation;
+          return MaterialPage(child: DmChatScreen(conversation: conv));
+        },
+      ),
+      // 다른 유저 프로필: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: '/user/:userId',
+        pageBuilder: (context, state) => MaterialPage(
+          child: UserProfileScreen(
+            userId: state.pathParameters['userId']!,
+          ),
         ),
       ),
       // 리그 참가자 상세: ShellRoute 밖 → 하단 탭 없음
@@ -157,4 +183,7 @@ class AppRoutes {
   static const String ranking = '/ranking';
   static const String profile = '/profile';
   static const String postDetail = '/post';
+  static const String userProfile = '/user';
+  static const String dm = '/dm';
+  static const String dmChat = '/dm/chat';
 }
