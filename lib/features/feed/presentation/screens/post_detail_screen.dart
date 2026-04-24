@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../league/data/league_repository.dart';
+import '../../../profile/data/profile_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 
@@ -100,6 +102,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
     try {
       await ref.read(feedRepositoryProvider).deletePost(widget.post.id);
       ref.invalidate(feedPostsProvider);
+      ref.invalidate(myPostsProvider);
+      if (widget.post.leagueId != null) {
+        ref.invalidate(leagueUserPostsProvider((widget.post.leagueId!, widget.post.userId)));
+        ref.invalidate(leagueRankingProvider(widget.post.leagueId!));
+      }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
