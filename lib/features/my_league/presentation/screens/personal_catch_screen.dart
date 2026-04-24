@@ -8,60 +8,82 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
-import '../../data/league_model.dart';
-import '../../data/league_repository.dart';
 
-class LeagueCatchScreen extends ConsumerStatefulWidget {
-  const LeagueCatchScreen({super.key, required this.league});
-  final League league;
+class PersonalCatchScreen extends ConsumerStatefulWidget {
+  const PersonalCatchScreen({super.key});
 
   @override
-  ConsumerState<LeagueCatchScreen> createState() => _LeagueCatchScreenState();
+  ConsumerState<PersonalCatchScreen> createState() => _PersonalCatchScreenState();
 }
 
-class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
+class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   File? _image;
-  late String _fishType;
-  final _measureCtrl = TextEditingController(); // 길이 or 무게 (룰에 따라)
+  String _fishType = '배스';
+  final _lengthCtrl = TextEditingController();
+  final _locationCtrl = TextEditingController();
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
 
-  // 무게 기준 대회인지 (rule이 '무게'인 경우)
-  bool get _isWeightRule => widget.league.rule == '무게';
-
-  // 계측 단위 표시 (길이 기준이면 cm, 무게 기준이면 g)
-  String get _measureUnit => _isWeightRule ? 'g' : 'cm';
-
-  List<String> get _fishOptions {
-    final opts = widget.league.fishTypes
-        .split(',')
-        .map((f) => f.trim())
-        .where((f) => f.isNotEmpty)
-        .toList();
-    return opts.isEmpty ? ['배스'] : opts;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fishType = _fishOptions.first;
-  }
+  static const _fishOptions = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '기타'];
 
   @override
   void dispose() {
-    _measureCtrl.dispose();
+    _lengthCtrl.dispose();
+    _locationCtrl.dispose();
     _captionCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _takePhoto() async {
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
-      source: ImageSource.camera,
+      source: source,
       imageQuality: 85,
       maxWidth: 1280,
     );
     if (picked != null) setState(() => _image = File(picked.path));
+  }
+
+  Future<void> _showSourceSheet() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
+
+    final choice = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.camera_alt_rounded, color: accent),
+              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_rounded, color: accent),
+              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (choice != null) await _pickImage(choice);
   }
 
   Future<void> _submit() async {
@@ -71,39 +93,29 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
       );
       return;
     }
-    final val = double.tryParse(_measureCtrl.text.trim());
-    if (val == null || val <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isWeightRule ? '무게를 입력해주세요' : '길이를 입력해주세요'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     final user = ref.read(currentUserProvider);
     if (user == null) return;
+
+    final lengthVal = double.tryParse(_lengthCtrl.text.trim());
 
     setState(() => _submitting = true);
     try {
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: _image!,
-        leagueId: widget.league.id,
         fishType: _fishType,
-        length: _isWeightRule ? null : val,
-        weight: _isWeightRule ? val : null,
-        catchCount: 1,
+        length: lengthVal,
+        location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
         caption: _captionCtrl.text.trim().isEmpty ? null : _captionCtrl.text.trim(),
+        catchCount: 1,
+        isPersonalRecord: true,
       );
-      ref.invalidate(leagueRankingProvider(widget.league.id));
-      ref.invalidate(feedPostsProvider);
-      ref.invalidate(myPostsProvider);
+      ref.invalidate(myPersonalRecordsProvider);
+      ref.invalidate(myProfileProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('조과가 등록되었습니다! 🎣'),
+            content: const Text('조과가 기록되었습니다! 🎣'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -114,8 +126,11 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('등록 실패: $e'), backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating),
+          SnackBar(
+            content: Text('등록 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
@@ -131,21 +146,17 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
-    final measureLabel = _isWeightRule ? '무게 (g)' : '길이 (cm)';
-    final measureHint = _isWeightRule ? '예) 1250' : '예) 42.5';
-    final measureSuffix = _isWeightRule ? 'g' : 'cm';
-
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
         elevation: 0,
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('조과 등록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-            Text(widget.league.title,
-                style: TextStyle(fontSize: 11, color: sub, fontWeight: FontWeight.w400)),
+            Text('개인 기록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            Text('내 조과 앨범에 저장',
+                style: TextStyle(fontSize: 11, color: Color(0xFF888888), fontWeight: FontWeight.w400)),
           ],
         ),
         leading: IconButton(
@@ -160,8 +171,8 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
               child: _submitting
                   ? SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: accent))
-                  : Text('등록', style: TextStyle(
-                      color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text('등록',
+                      style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
         ],
@@ -169,10 +180,9 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         children: [
-
           // ── 사진 촬영 영역 ──────────────────────────
           GestureDetector(
-            onTap: _takePhoto,
+            onTap: _showSourceSheet,
             child: Container(
               height: 260,
               width: double.infinity,
@@ -193,7 +203,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
                       Positioned(
                         bottom: 12, right: 12,
                         child: GestureDetector(
-                          onTap: _takePhoto,
+                          onTap: _showSourceSheet,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
@@ -203,8 +213,9 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
                             child: const Row(mainAxisSize: MainAxisSize.min, children: [
                               Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
                               SizedBox(width: 6),
-                              Text('다시 촬영', style: TextStyle(color: Colors.white,
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                              Text('다시 촬영',
+                                  style: TextStyle(color: Colors.white,
+                                      fontSize: 13, fontWeight: FontWeight.w600)),
                             ]),
                           ),
                         ),
@@ -223,45 +234,43 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
                       Text('탭하여 촬영하기',
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: accent)),
                       const SizedBox(height: 4),
-                      Text('잡은 물고기를 카메라로 촬영해주세요',
+                      Text('잡은 물고기를 촬영하거나 갤러리에서 선택하세요',
                           style: TextStyle(fontSize: 12, color: sub)),
                     ]),
             ),
           ),
           const SizedBox(height: 24),
 
-          // ── 어종 선택 (여러 종류일 때만) ───────────
-          if (_fishOptions.length > 1) ...[
-            _Label(text: '어종', accent: accent),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8, runSpacing: 8,
-              children: _fishOptions.map((fish) {
-                final sel = _fishType == fish;
-                return GestureDetector(
-                  onTap: () => setState(() => _fishType = fish),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: sel ? accent : cardBg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: sel ? accent : divColor),
-                    ),
-                    child: Text(fish,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                          color: sel ? (isDark ? Colors.black : Colors.white) : sub,
-                        )),
+          // ── 어종 선택 ──────────────────────────
+          _Label(text: '어종', accent: accent),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: _fishOptions.map((fish) {
+              final sel = _fishType == fish;
+              return GestureDetector(
+                onTap: () => setState(() => _fishType = fish),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: sel ? accent : cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: sel ? accent : divColor),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-          ],
+                  child: Text(fish,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                        color: sel ? (isDark ? Colors.black : Colors.white) : sub,
+                      )),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
 
-          // ── 계측값 입력 (룰에 따라 하나만) ─────────
-          _Label(text: measureLabel, accent: accent),
+          // ── 길이 입력 ──────────────────────────
+          _Label(text: '길이 (cm)', accent: accent),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -275,29 +284,51 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _measureCtrl,
-                    autofocus: false,
+                    controller: _lengthCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                     ],
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
                     decoration: InputDecoration(
-                      hintText: measureHint,
+                      hintText: '예) 42.5',
                       hintStyle: TextStyle(fontSize: 28, color: divColor, fontWeight: FontWeight.w800),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-                Text(measureSuffix,
+                Text('cm',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: sub)),
               ],
             ),
           ),
           const SizedBox(height: 24),
 
-          // ── 메모 ──────────────────────────────────
+          // ── 장소 ──────────────────────────
+          _Label(text: '장소 (선택)', accent: accent),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: divColor),
+            ),
+            child: TextField(
+              controller: _locationCtrl,
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: '예) 충주호, 소양강 등',
+                hintStyle: TextStyle(color: sub, fontSize: 13),
+                border: InputBorder.none,
+                prefixIcon: Icon(LucideIcons.mapPin, size: 18, color: sub),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── 메모 ──────────────────────────
           _Label(text: '메모 (선택)', accent: accent),
           const SizedBox(height: 8),
           Container(
@@ -320,23 +351,23 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── 런커 안내 (길이 기준 대회만) ────────────
-          if (!_isWeightRule)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
-              ),
-              child: Row(children: [
-                Icon(LucideIcons.award, size: 16, color: AppColors.gold),
-                const SizedBox(width: 8),
-                Text('50cm 이상이면 자동으로 런커 배지가 부여됩니다',
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
+            ),
+            child: Row(children: [
+              Icon(LucideIcons.award, size: 16, color: AppColors.gold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('50cm 이상이면 자동으로 런커 배지가 부여됩니다',
                     style: TextStyle(fontSize: 12, color: AppColors.gold,
                         fontWeight: FontWeight.w600)),
-              ]),
-            ),
+              ),
+            ]),
+          ),
         ],
       ),
 
@@ -352,7 +383,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
                   ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.camera_alt_rounded, size: 22),
-              label: Text(_submitting ? '등록 중...' : '조과 등록하기',
+              label: Text(_submitting ? '등록 중...' : '조과 기록하기',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -365,7 +396,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   }
 }
 
-// ── 라벨 ─────────────────────────────────────────────────
 class _Label extends StatelessWidget {
   const _Label({required this.text, required this.accent});
   final String text;

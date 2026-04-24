@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 
@@ -17,6 +20,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -28,6 +32,84 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void dispose() {
     _tab.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
+
+    // 카메라 / 갤러리 선택
+    final choice = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.camera_alt_rounded, color: accent),
+              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_rounded, color: accent),
+              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: choice,
+      imageQuality: 85,
+      maxWidth: 400,
+    );
+    if (picked == null) return;
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      await ref.read(profileRepositoryProvider).uploadAvatar(File(picked.path));
+      ref.invalidate(myProfileProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('프로필 사진이 업데이트되었습니다!'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('업로드 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
   }
 
   @override
@@ -57,30 +139,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   // 프로필 행
                   Row(
                     children: [
-                      Stack(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: accent.withValues(alpha: 0.3), width: 1.5)),
-                            child: CircleAvatar(
-                              radius: 38,
-                              backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0),
-                              child: Icon(LucideIcons.user, size: 36, color: sub.withValues(alpha: 0.5)),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0, right: 0,
-                            child: Container(
-                              width: 22, height: 22,
+                      GestureDetector(
+                        onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: accent,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: isDark ? AppColors.darkBg : Colors.white, width: 2),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: accent.withValues(alpha: 0.35), width: 2),
                               ),
-                              child: Center(child: Icon(LucideIcons.star, size: 12, color: isDark ? Colors.black : Colors.white)),
+                              child: _uploadingAvatar
+                                  ? SizedBox(
+                                      width: 76, height: 76,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5, color: accent),
+                                    )
+                                  : UserAvatar(
+                                      username: profile.username,
+                                      avatarUrl: profile.avatarUrl,
+                                      radius: 38,
+                                      isDark: isDark,
+                                    ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              bottom: 2, right: 2,
+                              child: Container(
+                                width: 24, height: 24,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDark ? AppColors.darkBg : Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 12,
+                                  color: isDark ? Colors.black : Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
@@ -386,16 +488,10 @@ class _History extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(myLeaguesProvider).when(
       data: (myLeaguesMap) {
-        final participated = myLeaguesMap['participated'] ?? [];
-        final hosted = myLeaguesMap['hosted'] ?? [];
-        // 전체 참가 리그 (호스트 포함) 중복 제거
-        final allLeagues = [...participated];
-        for (final h in hosted) {
-          if (!allLeagues.any((l) => l.id == h.id)) allLeagues.add(h);
-        }
-        allLeagues.sort((a, b) => b.startTime.compareTo(a.startTime));
+        final participated = [...(myLeaguesMap['participated'] ?? [])];
+        participated.sort((a, b) => b.startTime.compareTo(a.startTime));
 
-        if (allLeagues.isEmpty) {
+        if (participated.isEmpty) {
           return Center(
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(LucideIcons.fish, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
@@ -407,9 +503,9 @@ class _History extends ConsumerWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: allLeagues.length,
+          itemCount: participated.length,
           itemBuilder: (_, i) {
-            final league = allLeagues[i];
+            final league = participated[i];
             final isCompleted = league.status == 'completed';
             final isLive = league.status == 'in_progress';
             final statusLabel = isLive ? '진행중' : isCompleted ? '종료' : '모집중';

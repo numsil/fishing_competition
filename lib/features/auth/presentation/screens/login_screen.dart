@@ -72,32 +72,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: AppSvg(
-                        AppIcons.fishingRod,
-                        color: isDark ? Colors.black : Colors.white,
-                      ),
+                    Image.asset(
+                      'assets/images/huk_logo.png',
+                      width: 110,
+                      height: 110,
                     ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'HUK',
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -0.5),
-                    ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       '우리 동네 낚시 리그 & 조과 SNS',
                       style: TextStyle(fontSize: 13, color: sub),

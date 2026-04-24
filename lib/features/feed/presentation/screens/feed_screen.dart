@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
@@ -81,14 +83,13 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: isDark ? AppColors.darkBg : Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
-      title: Text(
-        'HUK',
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w900,
-          color: isDark ? Colors.white : Colors.black,
-          letterSpacing: -0.8,
-          fontFamily: 'serif',
+      title: SvgPicture.asset(
+        'assets/images/huk_logo.svg',
+        height: 26,
+        fit: BoxFit.contain,
+        colorFilter: ColorFilter.mode(
+          isDark ? Colors.white : Colors.black,
+          BlendMode.srcIn,
         ),
       ),
       actions: [
@@ -96,31 +97,20 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
         GestureDetector(
           onTap: () => context.push(AppRoutes.upload),
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            width: 32,
+            height: 32,
+            margin: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: accent,
-              borderRadius: BorderRadius.circular(10),
+              shape: BoxShape.circle,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.plus,
-                    color: isDark ? Colors.black : Colors.white, size: 18),
-                const SizedBox(width: 4),
-                Text(
-                  '올리기',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.black : Colors.white,
-                  ),
-                ),
-              ],
+            child: Icon(
+              LucideIcons.plus,
+              color: isDark ? Colors.black : Colors.white,
+              size: 20,
             ),
           ),
         ),
-        const SizedBox(width: 4),
         IconButton(
           onPressed: () {},
           icon: Icon(LucideIcons.heart,
@@ -475,20 +465,11 @@ class _InstaPostState extends ConsumerState<_InstaPost>
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: avatarBg),
-                child: Center(
-                  child: Text(
-                    p.username[0],
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                ),
+              UserAvatar(
+                username: p.username,
+                avatarUrl: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
+                radius: 16,
+                isDark: isDark,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1196,16 +1177,19 @@ class _CommentTileState extends State<_CommentTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 아바타
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: avatarBg),
-            child: Center(
-              child: Text(
-                c.user[0],
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              width: 32, height: 32,
+              color: avatarBg,
+              child: Center(
+                child: Text(
+                  c.user[0],
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
               ),
             ),

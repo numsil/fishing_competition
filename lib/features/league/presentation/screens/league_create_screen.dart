@@ -26,6 +26,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   DateTimeRange? _dateRange;
   String _rule = '최대어';
+  int _catchLimit = 1; // 0=전체, 1,3,5,10
   bool _isPublic = true;
 
   // 어종
@@ -49,7 +50,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   bool _creating = false;
 
-  static const _rules = ['최대어', '합산 길이', '마릿수', '최대어 + 마릿수'];
+  static const _rules = ['최대어', '합산 길이', '마릿수', '무게'];
   static const _freshFish = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '향어', '가물치', '메기', '강준치', '피라미'];
   static const _saltFish = ['광어', '볼락', '우럭', '참돔', '감성돔', '삼치', '고등어', '방어', '농어', '무늬오징어'];
 
@@ -103,6 +104,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         maxParticipants: int.tryParse(_maxCtrl.text) ?? 100,
         fishTypes: _selectedFish.isEmpty ? '미정' : _selectedFish.join(', '),
         rule: _rule,
+        catchLimit: _catchLimit,
         prizeInfo: _buildPrizeInfo(),
         isPublic: _isPublic,
       );
@@ -116,6 +118,42 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         );
       }
     }
+  }
+
+  // ── 룰 미리보기 텍스트 ──
+  String get _rulePreview {
+    if (_rule == '마릿수') return '마릿수 기준으로 순위를 결정합니다';
+    final limitStr = _catchLimit == 0 ? '전체' : '$_catchLimit마리';
+    switch (_rule) {
+      case '최대어': return '상위 $limitStr 중 가장 큰 물고기 기준';
+      case '합산 길이': return '상위 $limitStr 길이(cm) 합산 기준';
+      case '무게': return '상위 $limitStr 무게(g) 합산 기준';
+      default: return '$limitStr $_rule 기준';
+    }
+  }
+
+  // ── catch_limit 칩 ──
+  Widget _buildLimitChip(int limit, String label, Color accent, Color divColor, Color sub, bool isDark) {
+    final sel = _catchLimit == limit;
+    return GestureDetector(
+      onTap: () => setState(() => _catchLimit = limit),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: sel ? accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: sel ? accent : divColor),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+            color: sel ? (isDark ? Colors.black : Colors.white) : sub,
+          ),
+        ),
+      ),
+    );
   }
 
   // ── 시상 정보 문자열 생성 ──
@@ -454,17 +492,26 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       appBar: AppBar(
         title: const Text('리그 개설', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: TextButton(
+            child: ElevatedButton(
               onPressed: _creating ? null : _createLeague,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 0,
+              ),
               child: _creating
-                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
-                  : Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
+                  ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Text('개설', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
             ),
           ),
         ],
@@ -476,12 +523,40 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           children: [
 
             // ── 대회명 ──
-            _Section(
-              title: '대회명',
-              accent: accent,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
               child: TextFormField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(hintText: '예) 2026 충주호 배스 오픈'),
+                decoration: InputDecoration(
+                  labelText: '대회명',
+                  labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
+                  hintText: '예) 2026 충주호 배스 오픈',
+                  hintStyle: TextStyle(color: sub, fontSize: 14),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: divColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: accent),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: accent, width: 2),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.error),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.error, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF111111) : Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
                 validator: (v) => v?.isEmpty == true ? '대회명을 입력해주세요' : null,
               ),
             ),
@@ -641,7 +716,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: sel ? accent.withValues(alpha: 0.15) : Colors.transparent,
+                            color: sel ? accent : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: sel ? accent : divColor,
@@ -652,7 +727,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                              color: sel ? accent : sub,
+                              color: sel ? Colors.black : sub,
                             ),
                           ),
                         ),
@@ -662,7 +737,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   if (_selectedFish.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '선택됨: ${_selectedFish.join(', ')}',
+                      '선택팅: ${_selectedFish.join(', ')}',
                       style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -674,30 +749,77 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             _Section(
               title: '순위 결정 방식',
               accent: accent,
-              child: Wrap(
-                spacing: 8, runSpacing: 8,
-                children: _rules.map((rule) {
-                  final sel = _rule == rule;
-                  return GestureDetector(
-                    onTap: () => setState(() => _rule = rule),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: sel ? accent.withValues(alpha: 0.15) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: sel ? accent : divColor),
-                      ),
-                      child: Text(
-                        rule,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                          color: sel ? accent : sub,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Step 1: 기본 방식
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: _rules.map((rule) {
+                      final sel = _rule == rule;
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          _rule = rule;
+                          // 마릿수는 catchLimit 의미 없음
+                          if (rule == '마릿수') _catchLimit = 0;
+                          else if (_catchLimit == 0) _catchLimit = 1;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: sel ? accent : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: sel ? accent : divColor),
+                          ),
+                          child: Text(
+                            rule,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                              color: sel ? (isDark ? Colors.black : Colors.white) : sub,
+                            ),
+                          ),
                         ),
-                      ),
+                      );
+                    }).toList(),
+                  ),
+
+                  // Step 2: 마릿수 제한 (마릿수 룰 제외)
+                  if (_rule != '마릿수') ...[
+                    const SizedBox(height: 14),
+                    Text('몇 마리 기준으로 점수를 계산하나요?',
+                        style: TextStyle(fontSize: 12, color: sub)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: [
+                        _buildLimitChip(1, '1마리', accent, divColor, sub, isDark),
+                        _buildLimitChip(3, '3마리', accent, divColor, sub, isDark),
+                        _buildLimitChip(5, '5마리', accent, divColor, sub, isDark),
+                        _buildLimitChip(10, '10마리', accent, divColor, sub, isDark),
+                        _buildLimitChip(0, '전체', accent, divColor, sub, isDark),
+                      ],
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(height: 8),
+                    // 현재 설정 미리보기
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.info_outline_rounded, size: 14, color: accent),
+                        const SizedBox(width: 6),
+                        Text(
+                          _rulePreview,
+                          style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600),
+                        ),
+                      ]),
+                    ),
+                  ],
+                ],
               ),
             ),
 

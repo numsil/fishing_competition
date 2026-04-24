@@ -15,6 +15,7 @@ class FeedRepository {
         .from('posts')
         .select('*, users(username, avatar_url), post_likes(count), post_comments(count)')
         .isFilter('league_id', null)
+        .eq('is_personal_record', false)
         .order('created_at', ascending: false);
 
     return response.map((data) {
@@ -68,7 +69,7 @@ class FeedRepository {
     await _supabase.from('posts').delete().eq('id', postId);
   }
 
-  // 리그 조과를 일반 피드에 공유 (league_id 없는 복사본 생성)
+  // 리그 조과 / 개인 기록을 일반 피드에 공유 (league_id 없고 is_personal_record=false 복사본)
   Future<void> sharePostToFeed(Post post) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
@@ -80,6 +81,7 @@ class FeedRepository {
       'lure_type': post.lureType,
       'location': post.location,
       'league_id': null,
+      'is_personal_record': false,
       'length': post.length,
       'weight': post.weight,
       'catch_count': post.catchCount,
@@ -98,6 +100,7 @@ class FeedRepository {
     double? length,
     double? weight,
     int catchCount = 1,
+    bool isPersonalRecord = false,
   }) async {
     // 1. Supabase Storage에 이미지 업로드
     final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -120,6 +123,7 @@ class FeedRepository {
       'lure_type': lureType,
       'location': location,
       'league_id': leagueId,
+      'is_personal_record': isPersonalRecord,
       'length': length,
       'weight': weight,
       'catch_count': catchCount,

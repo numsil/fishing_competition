@@ -328,8 +328,14 @@ class _MonthlyTab extends StatelessWidget {
           child: Column(children: [
             Text('4월의 앵글러', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
-            CircleAvatar(radius: 40, backgroundColor: accent.withValues(alpha: 0.1),
-                child: Icon(LucideIcons.user, size: 38, color: accent)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 80, height: 80,
+                color: accent.withValues(alpha: 0.1),
+                child: Icon(LucideIcons.user, size: 38, color: accent),
+              ),
+            ),
             const SizedBox(height: 12),
             const Text('김민준', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
             const SizedBox(height: 4),

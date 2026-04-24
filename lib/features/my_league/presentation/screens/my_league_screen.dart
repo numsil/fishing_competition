@@ -9,6 +9,8 @@ import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../league/data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../feed/data/post_model.dart';
+import '../../../profile/data/profile_repository.dart';
 
 class MyLeagueScreen extends ConsumerStatefulWidget {
   const MyLeagueScreen({super.key});
@@ -46,9 +48,8 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
       data: (myLeaguesMap) {
         final hosted = myLeaguesMap['hosted'] ?? [];
         final participated = myLeaguesMap['participated'] ?? [];
-        
+
         final activeLeagues = participated.where((l) => l.status != 'completed' && l.status != 'canceled').toList();
-        final historyLeagues = participated.where((l) => l.status == 'completed' || l.status == 'canceled').toList();
 
         return Scaffold(
           appBar: AppBar(
@@ -62,7 +63,7 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
               unselectedLabelColor: sub,
               tabs: const [
                 Tab(text: '참여중'),
-                Tab(text: '참여 기록'),
+                Tab(text: '개인 기록'),
                 Tab(text: '개설한 리그'),
               ],
             ),
@@ -71,7 +72,7 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
             controller: _tab,
             children: [
               _ActiveTab(leagues: activeLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-              _HistoryTab(leagues: historyLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+              _PersonalRecordTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
               _MyLeaguesTab(leagues: hosted, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
             ],
           ),
@@ -416,41 +417,198 @@ class _RecordChip extends StatelessWidget {
   }
 }
 
-// ── 참여 기록 탭 ─────────────────────────────────────────
-class _HistoryTab extends StatelessWidget {
-  const _HistoryTab({
-    required this.leagues,
+// ── 개인 기록 탭 ─────────────────────────────────────────
+class _PersonalRecordTab extends ConsumerWidget {
+  const _PersonalRecordTab({
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
-  final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
   @override
-  Widget build(BuildContext context) {
-    if (leagues.isEmpty) {
-      return _EmptyState(
-        isDark: isDark,
-        accent: accent,
-        sub: sub,
-        message: '참여한 리그 기록이 없습니다',
-        buttonLabel: '리그 참여하기',
-        onTap: () => context.go(AppRoutes.league),
-      );
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(myProfileProvider);
+    final postsAsync = ref.watch(myPersonalRecordsProvider);
 
-    // 총 통계
-    final totalScore = 0;
-    final wins = 0;
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Stack(
       children: [
-        // 통계 요약 카드
+        RefreshIndicator(
+          color: accent,
+          onRefresh: () async {
+            ref.invalidate(myProfileProvider);
+            ref.invalidate(myPersonalRecordsProvider);
+          },
+          child: postsAsync.when(
+            skipLoadingOnReload: true,
+            data: (posts) {
+              final totalCatches = posts.fold<int>(0, (s, p) => s + p.catchCount);
+              final lunkerCount = posts.where((p) => p.isLunker).length;
+              final speciesCount = posts.map((p) => p.fishType).toSet().length;
+              double? maxLen;
+              Post? maxPost;
+              for (final p in posts) {
+                if (p.length != null && (maxLen == null || p.length! > maxLen)) {
+                  maxLen = p.length;
+                  maxPost = p;
+                }
+              }
+
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: _CatchDashboard(
+                        isDark: isDark,
+                        accent: accent,
+                        sub: sub,
+                        cardBg: cardBg,
+                        divColor: divColor,
+                        postsCount: posts.length,
+                        totalCatches: totalCatches,
+                        lunkerCount: lunkerCount,
+                        speciesCount: speciesCount,
+                        maxLength: maxLen,
+                        maxPost: maxPost,
+                        mannerTemperature: profileAsync.valueOrNull?.mannerTemperature,
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.image, size: 14, color: sub),
+                          const SizedBox(width: 6),
+                          Text('내 조과 앨범 ${posts.length}장',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (posts.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _EmptyCatchAlbum(isDark: isDark, sub: sub),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(2, 0, 2, 16),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (_, i) {
+                            final post = posts[i];
+                            return GestureDetector(
+                              onTap: () => context.push(AppRoutes.postDetail, extra: post),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.network(
+                                    post.imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                                      child: Icon(LucideIcons.image, size: 24, color: sub),
+                                    ),
+                                  ),
+                                  if (post.isLunker)
+                                    Positioned(
+                                      bottom: 4, right: 4,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.gold,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          post.length != null ? '${post.length}cm' : '런커',
+                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                          childCount: posts.length,
+                        ),
+                      ),
+                    ),
+                  // 하단 버튼 영역 확보
+                  const SliverToBoxAdapter(child: SizedBox(height: 90)),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('불러오기 실패: $e', style: TextStyle(color: sub))),
+          ),
+        ),
+        // ── 하단 고정 "사진 촬영하기" 버튼 ──
+        Positioned(
+          left: 16, right: 16, bottom: 16,
+          child: SizedBox(
+            height: 54,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                await context.push(AppRoutes.personalCatch);
+              },
+              icon: const Icon(Icons.camera_alt_rounded, size: 22),
+              label: const Text('사진 촬영하기',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                elevation: 6,
+                shadowColor: accent.withValues(alpha: 0.4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CatchDashboard extends StatelessWidget {
+  const _CatchDashboard({
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.cardBg,
+    required this.divColor,
+    required this.postsCount,
+    required this.totalCatches,
+    required this.lunkerCount,
+    required this.speciesCount,
+    required this.maxLength,
+    required this.maxPost,
+    required this.mannerTemperature,
+  });
+
+  final bool isDark;
+  final Color accent, sub, cardBg, divColor;
+  final int postsCount, totalCatches, lunkerCount, speciesCount;
+  final double? maxLength;
+  final Post? maxPost;
+  final double? mannerTemperature;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 메인 통계
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -463,147 +621,139 @@ class _HistoryTab extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(LucideIcons.history, size: 16, color: sub),
+                  Icon(LucideIcons.fish, size: 16, color: accent),
                   const SizedBox(width: 8),
-                  Text('전체 기록 요약', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+                  Text('조과 대시보드',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
                 ],
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
-                  _SummaryItem(value: '${leagues.length}회', label: '총 참여', accent: accent),
+                  _SummaryItem(value: '$postsCount', label: '기록', accent: accent),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '$wins회', label: '우승', accent: AppColors.gold),
+                  _SummaryItem(value: '$totalCatches', label: '총 마릿수', accent: accent),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '-', label: '최대어', accent: accent),
+                  _SummaryItem(value: '$lunkerCount', label: '런커', accent: AppColors.gold),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '$totalScore', label: '총 점수', accent: accent),
+                  _SummaryItem(value: '$speciesCount', label: '어종', accent: accent),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        Text('참여 기록 ${leagues.length}건',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
         const SizedBox(height: 10),
-        ...leagues.reversed.map((e) => _HistoryCard(
-              league: e,
-              isDark: isDark,
-              accent: accent,
-              sub: sub,
-              cardBg: cardBg,
-              divColor: divColor,
-            )),
+        // 최대어 카드
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: maxLength != null ? AppColors.gold.withValues(alpha: 0.06) : cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: maxLength != null ? AppColors.gold.withValues(alpha: 0.25) : divColor,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(LucideIcons.award, color: AppColors.gold, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
+                    const SizedBox(height: 2),
+                    Text(
+                      maxLength != null
+                          ? '${maxPost?.fishType ?? "물고기"} ${maxLength!.toStringAsFixed(1)}cm'
+                          : '아직 기록 없음',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: maxLength != null ? AppColors.gold : sub,
+                      ),
+                    ),
+                    if (maxPost != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${DateFormat('yyyy.MM.dd').format(maxPost!.createdAt)}${maxPost!.location != null ? " · ${maxPost!.location}" : ""}',
+                        style: TextStyle(fontSize: 11, color: sub),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (mannerTemperature != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: divColor),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(LucideIcons.thermometer, size: 14, color: sub),
+                    const SizedBox(width: 6),
+                    Text('앵글러 온도',
+                        style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Text('${mannerTemperature!.toStringAsFixed(1)}°',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (mannerTemperature! / 100).clamp(0.0, 1.0),
+                    backgroundColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                    valueColor: AlwaysStoppedAnimation(accent),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
-class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({
-    required this.league,
-    required this.isDark,
-    required this.accent,
-    required this.sub,
-    required this.cardBg,
-    required this.divColor,
-  });
-  final League league;
+class _EmptyCatchAlbum extends StatelessWidget {
+  const _EmptyCatchAlbum({required this.isDark, required this.sub});
   final bool isDark;
-  final Color accent, sub, cardBg, divColor;
-
-  Color get _rankColor {
-    return sub;
-  }
-
-  String get _rankEmoji {
-    return '🎣';
-  }
+  final Color sub;
 
   @override
   Widget build(BuildContext context) {
-    final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
-    final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
-
-    return GestureDetector(
-      onTap: () => context.push('${AppRoutes.myLeagueDetail}/${league.id}?type=history'),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Column(
         children: [
-          // 순위 아이콘
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Icon(LucideIcons.award, size: 22, color: sub),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // 정보
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  league.title,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Icon(LucideIcons.mapPin, size: 11, color: sub),
-                    const SizedBox(width: 3),
-                    Text(league.location, style: TextStyle(fontSize: 11, color: sub)),
-                    const SizedBox(width: 8),
-                    Text('$startStr ~ $endStr', style: TextStyle(fontSize: 11, color: sub)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _rankColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '-위 / ${league.participantsCount}명',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _rankColor),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text('-',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accent)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // 점수
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('+0',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
-              Text('점수', style: TextStyle(fontSize: 10, color: sub)),
-            ],
-          ),
+          Icon(LucideIcons.camera,
+              size: 52, color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+          const SizedBox(height: 16),
+          Text('아직 조과 기록이 없어요',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sub)),
+          const SizedBox(height: 6),
+          Text('아래 "사진 촬영하기"로 첫 조과를 남겨보세요',
+              textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: sub)),
         ],
-      ),
       ),
     );
   }

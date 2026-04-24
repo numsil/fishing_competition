@@ -175,6 +175,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                 builder: (_) => _MoreMenu(
                   isDark: isDark,
                   postId: p.id,
+                  post: p,
                   isOwner: currentUserId != null && currentUserId == p.userId,
                   onDelete: () {
                     Navigator.pop(context); // 바텀시트 닫기
@@ -454,22 +455,57 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
 }
 
 // ── 더보기 메뉴 ──────────────────────────────────────────
-class _MoreMenu extends StatelessWidget {
+class _MoreMenu extends ConsumerWidget {
   const _MoreMenu({
     required this.isDark,
     required this.postId,
+    required this.post,
     required this.isOwner,
     required this.onDelete,
   });
   final bool isDark;
   final String postId;
+  final Post post;
   final bool isOwner;
   final VoidCallback onDelete;
 
+  bool get _canShareToFeed =>
+      isOwner && (post.leagueId != null || post.isPersonalRecord);
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textColor = isDark ? Colors.white : Colors.black;
     final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
+
+    Future<void> handleShareToFeed() async {
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      await Future.delayed(const Duration(milliseconds: 300));
+      try {
+        await ref.read(feedRepositoryProvider).sharePostToFeed(post);
+        ref.invalidate(feedPostsProvider);
+        ref.invalidate(myPostsProvider);
+        ref.invalidate(myProfileProvider);
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('내 피드에 공유되었습니다.'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      } catch (e) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('공유 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
 
     return SafeArea(
       child: Column(
@@ -484,6 +520,15 @@ class _MoreMenu extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (_canShareToFeed) ...[
+            _MenuItem(
+              icon: LucideIcons.send,
+              label: '내 피드에 공유하기',
+              color: accent,
+              onTap: handleShareToFeed,
+            ),
+            Divider(height: 1, color: divColor),
+          ],
           _MenuItem(
             icon: LucideIcons.link2, label: '링크 복사', color: textColor,
             onTap: () {

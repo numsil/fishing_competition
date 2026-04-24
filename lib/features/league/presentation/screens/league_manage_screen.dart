@@ -45,15 +45,14 @@ List<_Participant> _rankEntriesToParticipants(List<LeagueRankEntry> entries) {
   return entries.asMap().entries.map((e) {
     final idx = e.key;
     final entry = e.value;
+    final hasRecord = entry.bestLength != null && entry.bestLength! > 0;
     return _Participant(
       id: entry.userId,
       name: entry.username,
       username: entry.username,
       joinDate: '-',
-      record: entry.bestLength != null
-          ? '${entry.bestLength!.toStringAsFixed(1)}cm'
-          : null,
-      rank: entry.bestLength != null ? idx + 1 : null,
+      record: hasRecord ? '${entry.bestLength!.toStringAsFixed(1)}cm' : null,
+      rank: hasRecord ? idx + 1 : null,
     );
   }).toList();
 }
@@ -99,7 +98,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
   // ── DB 액션들 ──────────────────────────────────────────────────
 
   void _startLeague() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -168,7 +166,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('참가자 추방', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Text('${p.name}(@${p.username}) 님을\n대회에서 추방하시겠습니까?'),
+        content: Text('${p.name} 님을\n대회에서 추방하시겠습니까?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
           ElevatedButton(
@@ -489,6 +487,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final bg = isDark ? AppColors.darkBg : AppColors.lightBg;
 
     final leagueAsync = ref.watch(leagueDetailProvider(widget.leagueId));
     final rankingAsync = ref.watch(leagueRankingProvider(widget.leagueId));
@@ -514,61 +513,24 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
             '${DateFormat('yyyy.MM.dd').format(league.startTime)} ~ ${DateFormat('MM.dd').format(league.endTime)}';
 
         return Scaffold(
+          backgroundColor: bg,
           appBar: AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('대회 관리',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                Text(league.title,
-                    style: TextStyle(fontSize: 11, color: sub, fontWeight: FontWeight.w400)),
-              ],
-            ),
+            backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+            elevation: 0,
+            title: const Text('대회 관리',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             actions: [
-              TextButton.icon(
+              TextButton(
                 onPressed: () => _showEditSheet(context, league, accent, isDark),
-                icon: Icon(Icons.edit_outlined, size: 16, color: accent),
-                label: Text('수정',
-                    style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 13)),
+                child: Text('수정',
+                    style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 14)),
               ),
             ],
-            bottom: TabBar(
-              controller: _tab,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-              indicatorColor: accent,
-              labelColor: accent,
-              unselectedLabelColor: sub,
-              tabs: [
-                Tab(text: '참가자 관리 (${participants.length}명)'),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('참가 신청'),
-                      if (pending.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.liveRed,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${pending.length}',
-                            style: const TextStyle(
-                                fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
           body: Column(
             children: [
+
+              // ── 대회 정보 카드 ──────────────────────────────────
               _StatusCard(
                 status: status,
                 name: league.title,
@@ -578,7 +540,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 rule: league.rule,
                 maxParticipants: league.maxParticipants,
                 fee: league.entryFee,
-                prize: league.prizeInfo ?? '-',
                 currentParticipants: participants.length,
                 isDark: isDark,
                 accent: accent,
@@ -588,7 +549,77 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 onStart: _startLeague,
                 onEnd: _endLeague,
               ),
-              const SizedBox(height: 4),
+
+              // ── 참가자 초대 버튼 ────────────────────────────────
+              if (status != LeagueManageStatus.ended)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: accent,
+                        side: BorderSide(color: accent.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: Icon(Icons.person_add_outlined, size: 18, color: accent),
+                      label: Text('+ 참가자 초대',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: accent)),
+                      onPressed: () => _showInviteSheet(context, accent, isDark),
+                    ),
+                  ),
+                ),
+
+              // ── 탭바 ───────────────────────────────────────────
+              Container(
+                color: isDark ? AppColors.darkBg : AppColors.lightBg,
+                child: TabBar(
+                  controller: _tab,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle:
+                      const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+                  indicatorColor: accent,
+                  labelColor: accent,
+                  unselectedLabelColor: sub,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  tabs: [
+                    Tab(text: '참가자 관리 (${participants.length}명)'),
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('참가 신청'),
+                          if (pending.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.liveRed,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${pending.length}',
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── 탭 콘텐츠 ──────────────────────────────────────
               Expanded(
                 child: TabBarView(
                   controller: _tab,
@@ -602,7 +633,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       cardBg: cardBg,
                       divColor: divColor,
                       onKick: _kickParticipant,
-                      onInvite: () => _showInviteSheet(context, accent, isDark),
                     ),
                     _PendingTab(
                       pending: pending,
@@ -639,7 +669,6 @@ class _StatusCard extends StatelessWidget {
     required this.rule,
     required this.maxParticipants,
     required this.fee,
-    required this.prize,
     required this.currentParticipants,
     required this.isDark,
     required this.accent,
@@ -651,7 +680,7 @@ class _StatusCard extends StatelessWidget {
   });
 
   final LeagueManageStatus status;
-  final String name, location, dateRange, fish, rule, prize;
+  final String name, location, dateRange, fish, rule;
   final int maxParticipants, fee, currentParticipants;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
@@ -661,75 +690,85 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final (statusLabel, statusColor) = switch (status) {
       LeagueManageStatus.upcoming => ('진행 예정', accent),
-      LeagueManageStatus.live => ('진행중', AppColors.liveRed),
-      LeagueManageStatus.ended => ('종료', sub),
+      LeagueManageStatus.live     => ('진행중', AppColors.liveRed),
+      LeagueManageStatus.ended    => ('종료', sub),
     };
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: status == LeagueManageStatus.live
-              ? AppColors.liveRed.withValues(alpha: 0.4)
+              ? AppColors.liveRed.withValues(alpha: 0.35)
               : divColor,
           width: status == LeagueManageStatus.live ? 1.5 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
+          // 상태 뱃지 + 대회명
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (status == LeagueManageStatus.live) ...[
-                      Container(
-                        width: 6, height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppColors.liveRed,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(statusLabel,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: statusColor)),
-                  ],
-                ),
-              ),
+              _StatusBadge(label: statusLabel, color: statusColor,
+                  showDot: status == LeagueManageStatus.live),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(name,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
+
+          // 장소 + 날짜
+          Text('$location  ·  $dateRange',
+              style: TextStyle(fontSize: 11, color: sub),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 14),
+
+          // 정보 칩 3개
           Row(
             children: [
-              _StatChip(label: '참가자', value: '$currentParticipants/$maxParticipants명', accent: accent),
+              _InfoChip(
+                icon: Icons.people_outline_rounded,
+                label: '$currentParticipants/$maxParticipants명',
+                accent: accent,
+                isDark: isDark,
+              ),
               const SizedBox(width: 8),
-              _StatChip(label: '어종', value: fish, accent: accent),
+              _InfoChip(
+                icon: Icons.set_meal_rounded,
+                label: fish,
+                accent: accent,
+                isDark: isDark,
+              ),
               const SizedBox(width: 8),
-              _StatChip(label: '참가비', value: fee == 0 ? '무료' : '${fee ~/ 1000}천원', accent: accent),
+              _InfoChip(
+                icon: Icons.payments_outlined,
+                label: fee == 0 ? '무료' : '${fee ~/ 1000}천원',
+                accent: accent,
+                isDark: isDark,
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
+          // 액션 버튼
           if (status == LeagueManageStatus.upcoming)
             SizedBox(
               width: double.infinity,
@@ -737,12 +776,14 @@ class _StatusCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.liveRed,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
-                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                icon: const Icon(Icons.play_arrow_rounded, size: 22),
                 label: const Text('대회 시작',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 onPressed: onStart,
               ),
             )
@@ -754,7 +795,8 @@ class _StatusCard extends StatelessWidget {
                   foregroundColor: sub,
                   side: BorderSide(color: divColor),
                   padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.stop_rounded, size: 20),
                 label: const Text('대회 종료',
@@ -765,14 +807,17 @@ class _StatusCard extends StatelessWidget {
           else
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 13),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text('대회가 종료되었습니다',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sub)),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: sub)),
               ),
             ),
         ],
@@ -781,24 +826,75 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value, required this.accent});
-  final String label, value;
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.label,
+    required this.color,
+    required this.showDot,
+  });
+  final String label;
+  final Color color;
+  final bool showDot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showDot) ...[
+            Container(
+              width: 6, height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+          ],
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.accent,
+    required this.isDark,
+  });
+  final IconData icon;
+  final String label;
   final Color accent;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
+        color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: TextStyle(fontSize: 9, color: accent.withValues(alpha: 0.7))),
-          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
+          Icon(icon, size: 13, color: accent),
+          const SizedBox(width: 5),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: accent)),
         ],
       ),
     );
@@ -819,7 +915,6 @@ class _ParticipantsTab extends StatelessWidget {
     required this.cardBg,
     required this.divColor,
     required this.onKick,
-    required this.onInvite,
   });
 
   final List<_Participant> participants;
@@ -827,63 +922,52 @@ class _ParticipantsTab extends StatelessWidget {
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
   final void Function(_Participant) onKick;
-  final VoidCallback onInvite;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (status != LeagueManageStatus.ended)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: accent,
-                  side: BorderSide(color: accent.withValues(alpha: 0.5)),
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: Icon(Icons.person_add_outlined, size: 18, color: accent),
-                label: Text('참가자 초대',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
-                onPressed: onInvite,
+    if (participants.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(
+                color: sub.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.group_outlined, size: 36, color: sub),
             ),
-          ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: participants.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.group_outlined, size: 48, color: sub),
-                      const SizedBox(height: 12),
-                      Text('참가자가 없습니다', style: TextStyle(color: sub)),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: participants.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: divColor),
-                  itemBuilder: (_, i) {
-                    final p = participants[i];
-                    return _ParticipantRow(
-                      participant: p,
-                      status: status,
-                      isDark: isDark,
-                      accent: accent,
-                      sub: sub,
-                      cardBg: cardBg,
-                      onKick: () => onKick(p),
-                    );
-                  },
-                ),
+            const SizedBox(height: 16),
+            Text('참가자가 없습니다',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: sub)),
+            const SizedBox(height: 6),
+            Text('초대 버튼을 눌러 참가자를 초대해보세요',
+                style: TextStyle(fontSize: 12, color: sub.withValues(alpha: 0.7))),
+          ],
         ),
-      ],
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: participants.length,
+      separatorBuilder: (_, __) => Divider(height: 1, color: divColor),
+      itemBuilder: (_, i) {
+        final p = participants[i];
+        return _ParticipantRow(
+          participant: p,
+          rank: i + 1,
+          status: status,
+          isDark: isDark,
+          accent: accent,
+          sub: sub,
+          onKick: () => onKick(p),
+        );
+      },
     );
   }
 }
@@ -891,54 +975,57 @@ class _ParticipantsTab extends StatelessWidget {
 class _ParticipantRow extends StatelessWidget {
   const _ParticipantRow({
     required this.participant,
+    required this.rank,
     required this.status,
     required this.isDark,
     required this.accent,
     required this.sub,
-    required this.cardBg,
     required this.onKick,
   });
 
   final _Participant participant;
+  final int rank;
   final LeagueManageStatus status;
   final bool isDark;
-  final Color accent, sub, cardBg;
+  final Color accent, sub;
   final VoidCallback onKick;
 
   Color get _rankColor {
-    if (participant.rank == 1) return AppColors.gold;
-    if (participant.rank == 2) return AppColors.silver;
-    if (participant.rank == 3) return AppColors.bronze;
+    if (rank == 1) return AppColors.gold;
+    if (rank == 2) return AppColors.silver;
+    if (rank == 3) return AppColors.bronze;
     return accent;
   }
 
   String get _rankEmoji {
-    if (participant.rank == 1) return '🥇';
-    if (participant.rank == 2) return '🥈';
-    if (participant.rank == 3) return '🥉';
-    return '🎣';
+    if (rank == 1) return '🥇';
+    if (rank == 2) return '🥈';
+    if (rank == 3) return '🥉';
+    return '${rank}위';
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                participant.rank != null ? _rankEmoji : participant.name[0],
-                style: TextStyle(
-                  fontSize: participant.rank != null ? 18 : 16,
-                  fontWeight: FontWeight.w800,
-                  color: participant.rank == null ? accent : null,
-                ),
+          // 순위 아바타
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: 44, height: 44,
+              color: _rankColor.withValues(alpha: 0.1),
+              child: Center(
+                child: rank <= 3
+                    ? Text(_rankEmoji, style: const TextStyle(fontSize: 20))
+                    : Text(
+                        participant.name.isNotEmpty ? participant.name[0] : '?',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: accent),
+                      ),
               ),
             ),
           ),
@@ -948,41 +1035,41 @@ class _ParticipantRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(participant.name,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    if (participant.record != null) ...[
-                      Text(participant.record!,
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _rankColor)),
-                    ] else
-                      Text('조과 없음', style: TextStyle(fontSize: 11, color: sub)),
-                  ],
-                ),
+                participant.record != null
+                    ? Text(participant.record!,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _rankColor))
+                    : Text('조과 없음',
+                        style: TextStyle(fontSize: 11, color: sub)),
               ],
             ),
           ),
-          if (participant.rank != null)
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _rankColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '${participant.rank}위',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _rankColor),
-              ),
+          // 순위 칩
+          Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _rankColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
             ),
+            child: Text(
+              rank <= 3 ? _rankEmoji : '$rank위',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: _rankColor),
+            ),
+          ),
           if (status != LeagueManageStatus.ended)
             IconButton(
               onPressed: onKick,
               icon: const Icon(Icons.person_remove_outlined, size: 20),
-              color: Colors.red.withValues(alpha: 0.7),
+              color: Colors.red.withValues(alpha: 0.6),
               tooltip: '추방',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -1022,9 +1109,20 @@ class _PendingTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 48, color: sub),
-            const SizedBox(height: 12),
-            Text('대기 중인 참가 신청이 없습니다', style: TextStyle(color: sub)),
+            Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(
+                color: sub.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.inbox_outlined, size: 36, color: sub),
+            ),
+            const SizedBox(height: 16),
+            Text('대기 중인 참가 신청이 없습니다',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: sub)),
           ],
         ),
       );
@@ -1038,16 +1136,20 @@ class _PendingTab extends StatelessWidget {
           child: Row(
             children: [
               Text('${pending.length}건 대기 중',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  for (final p in List.from(pending)) {
-                    onApprove(p as _Participant);
+                  for (final p in List<_Participant>.from(pending)) {
+                    onApprove(p);
                   }
                 },
                 child: Text('전체 수락',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: accent)),
               ),
             ],
           ),
@@ -1063,16 +1165,19 @@ class _PendingTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   children: [
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          p.name[0],
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: accent),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 44, height: 44,
+                        color: accent.withValues(alpha: 0.1),
+                        child: Center(
+                          child: Text(
+                            p.name.isNotEmpty ? p.name[0] : '?',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: accent),
+                          ),
                         ),
                       ),
                     ),
@@ -1082,7 +1187,8 @@ class _PendingTab extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.name,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700)),
                           Text('신청 ${p.joinDate}',
                               style: TextStyle(fontSize: 11, color: sub)),
                         ],
@@ -1092,28 +1198,34 @@ class _PendingTab extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: sub,
                         side: BorderSide(color: divColor),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () => onReject(p),
                       child: const Text('거절',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: accent,
                         foregroundColor: isDark ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () => onApprove(p),
                       child: const Text('수락',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
@@ -1151,18 +1263,23 @@ class _EditField extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF888888))),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
           maxLines: maxLines,
           decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                  color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+                  color: isDark
+                      ? const Color(0xFF333333)
+                      : const Color(0xFFDDDDDD)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1187,7 +1304,9 @@ class _EditSection extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF888888))),
         const SizedBox(height: 8),
         child,
       ],
@@ -1196,7 +1315,8 @@ class _EditSection extends StatelessWidget {
 }
 
 class _CounterBtn extends StatelessWidget {
-  const _CounterBtn({required this.icon, required this.onTap, required this.accent});
+  const _CounterBtn(
+      {required this.icon, required this.onTap, required this.accent});
   final IconData icon;
   final VoidCallback onTap;
   final Color accent;
@@ -1206,7 +1326,8 @@ class _CounterBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36, height: 36,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.1),
           shape: BoxShape.circle,

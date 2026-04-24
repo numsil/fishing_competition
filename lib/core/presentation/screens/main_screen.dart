@@ -22,111 +22,144 @@ class MainScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final idx = _tabIndex(context);
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final bg = isDark ? AppColors.darkSurface : Colors.white;
     final inactive = isDark ? const Color(0xFF555555) : const Color(0xFFAAAAAA);
+    final navBg = isDark ? const Color(0xFF111111) : Colors.white;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    const navBarH = 60.0;
+    const fabSize = 68.0;
+    final totalNavH = navBarH + bottomPad;
+    // ★ 이 숫자만 바꾸면 됩니다: 크면 위로, 작으면 아래로
+    const fabOffsetFromBottom = 8.0;
 
     return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? const Color(0xFF222222) : const Color(0xFFF0F0F0),
-              width: 0.5,
-            ),
+      body: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // ── 콘텐츠 ──
+          Positioned.fill(
+            bottom: totalNavH,
+            child: child,
           ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              children: [
-                _Tab(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: '홈',
-                  active: idx == 0,
-                  accent: accent,
-                  inactive: inactive,
-                  onTap: () => context.go(AppRoutes.feed),
-                ),
-                _Tab(
-                  icon: Icons.explore_outlined,
-                  activeIcon: Icons.explore_rounded,
-                  label: '리그',
-                  active: idx == 1,
-                  accent: accent,
-                  inactive: inactive,
-                  onTap: () => context.go(AppRoutes.league),
-                ),
-                // 나의 리그 (중앙 강조)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => context.go(AppRoutes.myLeague),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: idx == 2
-                                ? accent
-                                : accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(16),
+
+          // ── 바텀 네비 + HUK! 버튼 ──
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: totalNavH + fabSize,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // 다크 네비바
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: totalNavH,
+                      decoration: BoxDecoration(
+                        color: navBg,
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF252525)
+                                : const Color(0xFFE0E0E0),
+                            width: 0.5,
                           ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: bottomPad),
+                        child: SizedBox(
+                          height: navBarH,
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.workspace_premium_rounded,
-                                size: 16,
-                                color: idx == 2
-                                    ? (isDark ? Colors.black : Colors.white)
-                                    : accent,
+                              // 홈
+                              _Tab(
+                                icon: Icons.home_outlined,
+                                activeIcon: Icons.home_rounded,
+                                label: '홈',
+                                active: idx == 0,
+                                accent: accent,
+                                inactive: inactive,
+                                onTap: () => context.go(AppRoutes.feed),
+                              ),
+                              // 리그
+                              _Tab(
+                                icon: Icons.explore_outlined,
+                                activeIcon: Icons.explore_rounded,
+                                label: '리그',
+                                active: idx == 1,
+                                accent: accent,
+                                inactive: inactive,
+                                onTap: () => context.go(AppRoutes.league),
+                              ),
+                              // 중앙 FAB 공간
+                              const Expanded(child: SizedBox()),
+                              // 랭킹
+                              _Tab(
+                                icon: Icons.leaderboard_outlined,
+                                activeIcon: Icons.leaderboard_rounded,
+                                label: '랭킹',
+                                active: idx == 3,
+                                accent: accent,
+                                inactive: inactive,
+                                onTap: () => context.go(AppRoutes.ranking),
+                              ),
+                              // 프로필
+                              _Tab(
+                                icon: Icons.person_outline_rounded,
+                                activeIcon: Icons.person_rounded,
+                                label: '프로필',
+                                active: idx == 4,
+                                accent: accent,
+                                inactive: inactive,
+                                onTap: () => context.go(AppRoutes.profile),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '나의리그',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: accent,
-                            fontWeight: idx == 2 ? FontWeight.w700 : FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                _Tab(
-                  icon: Icons.leaderboard_outlined,
-                  activeIcon: Icons.leaderboard_rounded,
-                  label: '랭킹',
-                  active: idx == 3,
-                  accent: accent,
-                  inactive: inactive,
-                  onTap: () => context.go(AppRoutes.ranking),
-                ),
-                _Tab(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: '프로필',
-                  active: idx == 4,
-                  accent: accent,
-                  inactive: inactive,
-                  onTap: () => context.go(AppRoutes.profile),
-                ),
-              ],
+
+                  // ── HUK! 플로팅 원형 버튼 ──
+                  Positioned(
+                    bottom: bottomPad + fabOffsetFromBottom,
+                    child: GestureDetector(
+                      onTap: () => context.go(AppRoutes.myLeague),
+                      child: Container(
+                        width: fabSize,
+                        height: fabSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.neonGreen.withValues(alpha: 0.5),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/huk_logo.png',
+                            width: fabSize,
+                            height: fabSize,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -142,6 +175,7 @@ class _Tab extends StatelessWidget {
     required this.inactive,
     required this.onTap,
   });
+
   final IconData icon, activeIcon;
   final String label;
   final bool active;
@@ -158,9 +192,12 @@ class _Tab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(active ? activeIcon : icon,
-                color: active ? accent : inactive, size: 22),
-            const SizedBox(height: 2),
+            Icon(
+              active ? activeIcon : icon,
+              color: active ? accent : inactive,
+              size: 24,
+            ),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(

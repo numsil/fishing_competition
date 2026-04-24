@@ -21,6 +21,7 @@ abstract class League with _$League {
     @Default('recruiting') String status,
     @JsonKey(name: 'fish_types') @Default('배스') String fishTypes,
     @Default('최대어') String rule,
+    @JsonKey(name: 'catch_limit') @Default(1) int catchLimit,
     @JsonKey(name: 'prize_info') String? prizeInfo,
     @JsonKey(name: 'is_public') @Default(true) bool isPublic,
     @JsonKey(name: 'created_at') required DateTime createdAt,
