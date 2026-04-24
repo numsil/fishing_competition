@@ -11,6 +11,7 @@ abstract class Post with _$Post {
     @JsonKey(name: 'user_id') required String userId,
     @JsonKey(name: 'league_id') String? leagueId,
     @JsonKey(name: 'image_url') required String imageUrl,
+    @JsonKey(name: 'video_url') String? videoUrl,
     String? caption,
     @JsonKey(name: 'fish_type') @Default('배스') String fishType,
     double? length,

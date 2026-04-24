@@ -455,6 +455,13 @@ class _Grid extends ConsumerWidget {
                     child: Icon(LucideIcons.image, size: 24, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
                   ),
                 ),
+                if (post.videoUrl != null)
+                  const Positioned(
+                    top: 6, right: 6,
+                    child: Icon(Icons.videocam, color: Colors.white, size: 16, shadows: [
+                      Shadow(color: Colors.black54, blurRadius: 4),
+                    ]),
+                  ),
                 if (post.isLunker)
                   Positioned(
                     bottom: 4, right: 4,

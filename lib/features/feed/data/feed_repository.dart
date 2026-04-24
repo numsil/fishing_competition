@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'post_model.dart';
@@ -16,6 +17,7 @@ class FeedRepository {
         .select('*, users(username, avatar_url), post_likes(count), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
+        .eq('is_deleted', false)
         .order('created_at', ascending: false);
 
     return response.map((data) {
@@ -91,7 +93,9 @@ class FeedRepository {
 
   Future<void> createPost({
     required String userId,
-    required File imageFile,
+    File? imageFile,
+    File? videoFile,
+    Uint8List? videoThumbnailBytes,
     String? caption,
     String fishType = '배스',
     String? lureType,
@@ -102,22 +106,48 @@ class FeedRepository {
     int catchCount = 1,
     bool isPersonalRecord = false,
   }) async {
-    // 1. Supabase Storage에 이미지 업로드
-    final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final storagePath = 'posts/$fileName';
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    String imageUrl;
+    String? videoUrl;
 
-    await _supabase.storage.from('post_images').upload(
-      storagePath,
-      imageFile,
-      fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
-    );
+    if (videoFile != null) {
+      // 썸네일 → post_images 버킷에 업로드
+      if (videoThumbnailBytes != null) {
+        final thumbPath = 'posts/${userId}_${ts}_thumb.jpg';
+        await _supabase.storage.from('post_images').uploadBinary(
+          thumbPath,
+          videoThumbnailBytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+        );
+        imageUrl = _supabase.storage.from('post_images').getPublicUrl(thumbPath);
+      } else {
+        imageUrl = '';
+      }
 
-    final imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
+      // 압축된 동영상 → post_videos 버킷에 업로드
+      final videoPath = 'posts/${userId}_$ts.mp4';
+      await _supabase.storage.from('post_videos').upload(
+        videoPath,
+        videoFile,
+        fileOptions: const FileOptions(contentType: 'video/mp4', upsert: false),
+      );
+      videoUrl = _supabase.storage.from('post_videos').getPublicUrl(videoPath);
+    } else if (imageFile != null) {
+      final storagePath = 'posts/${userId}_$ts.jpg';
+      await _supabase.storage.from('post_images').upload(
+        storagePath,
+        imageFile,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+      );
+      imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
+    } else {
+      throw Exception('이미지 또는 동영상을 선택해주세요');
+    }
 
-    // 2. posts 테이블에 insert
     await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': imageUrl,
+      'video_url': videoUrl,
       'caption': caption,
       'fish_type': fishType,
       'lure_type': lureType,

@@ -11,6 +11,7 @@ import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
+import '../widgets/feed_video_player.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.post});
@@ -263,35 +264,38 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               ]),
             ),
 
-            // 이미지
+            // 미디어 (이미지 or 동영상)
             GestureDetector(
-              onDoubleTap: _doubleTapLike,
+              onDoubleTap: p.videoUrl != null ? null : _doubleTapLike,
               child: Container(
                 width: double.infinity,
                 color: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
                 child: AspectRatio(
                   aspectRatio: 1,
                   child: Stack(fit: StackFit.expand, children: [
-                    Image.network(
-                      p.imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (_, child, progress) {
-                        if (progress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: progress.expectedTotalBytes != null
-                                ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                                : null,
-                            strokeWidth: 2,
-                            color: accent,
-                          ),
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => Center(
-                        child: Icon(LucideIcons.image, size: 60,
-                            color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+                    if (p.videoUrl != null)
+                      FeedVideoPlayer(post: p, accent: accent)
+                    else
+                      Image.network(
+                        p.imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                              color: accent,
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Icon(LucideIcons.image, size: 60,
+                              color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+                        ),
                       ),
-                    ),
                     if (p.leagueId != null)
                       Positioned(
                         top: 12, left: 12,

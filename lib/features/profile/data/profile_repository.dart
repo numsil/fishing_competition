@@ -47,8 +47,9 @@ class ProfileRepository {
         .select('length, is_lunker')
         .eq('user_id', userId)
         .isFilter('league_id', null)
-        .eq('is_personal_record', false);
-    
+        .eq('is_personal_record', false)
+        .eq('is_deleted', false);
+
     int postCount = postsRes.length;
     int lunkerCount = 0;
     double? maxLen;
@@ -112,6 +113,7 @@ class ProfileRepository {
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
+        .eq('is_deleted', false)
         .order('created_at', ascending: false);
 
     return response.map((data) => _mapPost(data)).toList();
@@ -127,6 +129,7 @@ class ProfileRepository {
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', true)
+        .eq('is_deleted', false)
         .order('created_at', ascending: false);
 
     return response.map((data) => _mapPost(data)).toList();
@@ -152,7 +155,8 @@ class ProfileRepository {
         .select('length, is_lunker')
         .eq('user_id', userId)
         .isFilter('league_id', null)
-        .eq('is_personal_record', false);
+        .eq('is_personal_record', false)
+        .eq('is_deleted', false);
 
     int postCount = postsRes.length;
     int lunkerCount = 0;
@@ -186,6 +190,7 @@ class ProfileRepository {
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
+        .eq('is_deleted', false)
         .order('created_at', ascending: false);
 
     return response.map((data) => Post.fromJson(data)).toList();

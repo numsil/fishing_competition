@@ -160,12 +160,14 @@ class LeagueRepository {
       posts = await _supabase
           .from('posts')
           .select('user_id, length, weight, fish_type, is_lunker')
-          .eq('league_id', leagueId);
+          .eq('league_id', leagueId)
+          .eq('is_deleted', false);
     } catch (_) {
       posts = await _supabase
           .from('posts')
           .select('user_id, length, fish_type, is_lunker')
-          .eq('league_id', leagueId);
+          .eq('league_id', leagueId)
+          .eq('is_deleted', false);
     }
 
     // 4. 유저별 측정값 목록 구성
@@ -255,6 +257,7 @@ class LeagueRepository {
         .select('*, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('user_id', userId)
+        .eq('is_deleted', false)
         .order('created_at', ascending: false);
 
     return data.map<Post>((d) {

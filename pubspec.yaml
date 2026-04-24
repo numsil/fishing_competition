@@ -41,8 +41,10 @@ dependencies:
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
 
-  # 이미지 피커
+  # 이미지/동영상 피커
   image_picker: ^1.1.2
+  video_compress: ^3.1.2
+  video_player: ^2.9.2
 
   # SVG
   flutter_svg: ^2.0.17

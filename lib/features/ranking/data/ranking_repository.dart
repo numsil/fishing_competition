@@ -28,6 +28,7 @@ class RankingRepository {
     final res = await _supabase
         .from('posts')
         .select('*, users!inner(username)')
+        .eq('is_deleted', false)
         .order('length', ascending: false)
         .limit(10);
         

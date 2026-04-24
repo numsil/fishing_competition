@@ -11,7 +11,22 @@ ALTER TABLE users
 
 -- 2. posts 테이블 컬럼 추가
 ALTER TABLE posts
-  ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false NOT NULL;
+  ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false NOT NULL,
+  ADD COLUMN IF NOT EXISTS video_url TEXT;
+
+-- post_videos 스토리지 버킷 생성 (공개)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('post_videos', 'post_videos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- post_videos 버킷 접근 정책
+CREATE POLICY IF NOT EXISTS "Anyone can read post videos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'post_videos');
+
+CREATE POLICY IF NOT EXISTS "Authenticated users can upload post videos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'post_videos' AND auth.role() = 'authenticated');
 
 -- 3. reports 테이블 (신고)
 CREATE TABLE IF NOT EXISTS reports (

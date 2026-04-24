@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_compress/video_compress.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -18,56 +20,97 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   int _step = 0;
-  XFile? _selectedImage;
+  XFile? _selectedFile;
+  bool _isVideo = false;
+  Uint8List? _thumbnailBytes;
+  bool _generatingThumb = false;
 
-  void _onImageSelected(XFile image) {
-    setState(() {
-      _selectedImage = image;
-      _step = 1;
-    });
+  Future<void> _onMediaSelected(XFile file, bool isVideo) async {
+    if (isVideo) {
+      setState(() => _generatingThumb = true);
+      final bytes = await VideoCompress.getByteThumbnail(file.path, quality: 80);
+      if (!mounted) return;
+      setState(() {
+        _selectedFile = file;
+        _isVideo = true;
+        _thumbnailBytes = bytes;
+        _generatingThumb = false;
+        _step = 1;
+      });
+    } else {
+      setState(() {
+        _selectedFile = file;
+        _isVideo = false;
+        _thumbnailBytes = null;
+        _step = 1;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_generatingThumb) {
+      final accent = isDark ? AppColors.neonGreen : AppColors.navy;
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Scaffold(
+          backgroundColor: isDark ? AppColors.darkBg : Colors.black,
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: accent),
+                const SizedBox(height: 16),
+                const Text('동영상 처리 중...', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return _step == 0
-        ? _PhotoPickerStep(
-            isDark: isDark,
-            onImageSelected: _onImageSelected,
-          )
+        ? _MediaPickerStep(isDark: isDark, onMediaSelected: _onMediaSelected)
         : _CaptionStep(
             isDark: isDark,
-            selectedImage: _selectedImage!,
+            selectedFile: _selectedFile!,
+            isVideo: _isVideo,
+            thumbnailBytes: _thumbnailBytes,
             onBack: () => setState(() => _step = 0),
           );
   }
 }
 
-// ── Step 1: 사진 선택 ─────────────────────────────────────
-class _PhotoPickerStep extends StatefulWidget {
-  const _PhotoPickerStep({
-    required this.isDark,
-    required this.onImageSelected,
-  });
+// ── Step 1: 미디어 선택 ───────────────────────────────────
+class _MediaPickerStep extends StatefulWidget {
+  const _MediaPickerStep({required this.isDark, required this.onMediaSelected});
   final bool isDark;
-  final ValueChanged<XFile> onImageSelected;
+  final Future<void> Function(XFile, bool isVideo) onMediaSelected;
 
   @override
-  State<_PhotoPickerStep> createState() => _PhotoPickerStepState();
+  State<_MediaPickerStep> createState() => _MediaPickerStepState();
 }
 
-class _PhotoPickerStepState extends State<_PhotoPickerStep> {
+class _MediaPickerStepState extends State<_MediaPickerStep> {
   final _picker = ImagePicker();
+  bool _videoMode = false;
 
   Future<void> _pickFromGallery() async {
     try {
-      final image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-        maxWidth: 1080,
-        maxHeight: 1080,
-      );
-      if (image != null) widget.onImageSelected(image);
+      if (_videoMode) {
+        final video = await _picker.pickVideo(source: ImageSource.gallery);
+        if (video != null) await widget.onMediaSelected(video, true);
+      } else {
+        final image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 80,
+          maxWidth: 1080,
+          maxHeight: 1080,
+        );
+        if (image != null) await widget.onMediaSelected(image, false);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,13 +125,18 @@ class _PhotoPickerStepState extends State<_PhotoPickerStep> {
 
   Future<void> _pickFromCamera() async {
     try {
-      final image = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-        maxWidth: 1080,
-        maxHeight: 1080,
-      );
-      if (image != null) widget.onImageSelected(image);
+      if (_videoMode) {
+        final video = await _picker.pickVideo(source: ImageSource.camera);
+        if (video != null) await widget.onMediaSelected(video, true);
+      } else {
+        final image = await _picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 80,
+          maxWidth: 1080,
+          maxHeight: 1080,
+        );
+        if (image != null) await widget.onMediaSelected(image, false);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,15 +177,39 @@ class _PhotoPickerStepState extends State<_PhotoPickerStep> {
                       child: Text(
                         '새 게시물',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 48),
                   ],
+                ),
+              ),
+
+              // ── 사진/동영상 탭 ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      _ModeTab(
+                        label: '사진',
+                        selected: !_videoMode,
+                        accent: accent,
+                        onTap: () => setState(() => _videoMode = false),
+                      ),
+                      _ModeTab(
+                        label: '동영상',
+                        selected: _videoMode,
+                        accent: accent,
+                        onTap: () => setState(() => _videoMode = true),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -154,41 +226,36 @@ class _PhotoPickerStepState extends State<_PhotoPickerStep> {
                         shape: BoxShape.circle,
                       ),
                       child: Center(
-                        child: AppSvg(
-                          AppIcons.fish,
-                          size: 48,
-                          color: Colors.white.withValues(alpha: 0.3),
-                        ),
+                        child: _videoMode
+                            ? Icon(Icons.videocam_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3))
+                            : AppSvg(AppIcons.fish, size: 48, color: Colors.white.withValues(alpha: 0.3)),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      '사진을 선택해주세요',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Text(
+                      _videoMode ? '동영상을 선택해주세요' : '사진을 선택해주세요',
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '갤러리에서 선택하거나 카메라로 촬영하세요',
+                      _videoMode
+                          ? '갤러리에서 선택하거나 카메라로 촬영하세요'
+                          : '갤러리에서 선택하거나 카메라로 촬영하세요',
                       style: TextStyle(color: sub, fontSize: 13),
                     ),
                     const SizedBox(height: 40),
-                    // ── 버튼 ──
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _PickButton(
-                          icon: Icons.collections_outlined,
-                          label: '사진 보관함',
+                          icon: _videoMode ? Icons.video_library_outlined : Icons.collections_outlined,
+                          label: '보관함',
                           accent: accent,
                           onTap: _pickFromGallery,
                         ),
                         const SizedBox(width: 20),
                         _PickButton(
-                          icon: Icons.camera_alt_outlined,
+                          icon: _videoMode ? Icons.videocam_outlined : Icons.camera_alt_outlined,
                           label: '카메라',
                           accent: accent,
                           onTap: _pickFromCamera,
@@ -206,13 +273,43 @@ class _PhotoPickerStepState extends State<_PhotoPickerStep> {
   }
 }
 
+class _ModeTab extends StatelessWidget {
+  const _ModeTab({required this.label, required this.selected, required this.accent, required this.onTap});
+  final String label;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 40,
+          decoration: BoxDecoration(
+            color: selected ? accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.black : Colors.white.withValues(alpha: 0.6),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PickButton extends StatelessWidget {
-  const _PickButton({
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.onTap,
-  });
+  const _PickButton({required this.icon, required this.label, required this.accent, required this.onTap});
   final IconData icon;
   final String label;
   final Color accent;
@@ -235,14 +332,7 @@ class _PickButton extends StatelessWidget {
           children: [
             Icon(icon, color: accent, size: 32),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -254,11 +344,15 @@ class _PickButton extends StatelessWidget {
 class _CaptionStep extends ConsumerStatefulWidget {
   const _CaptionStep({
     required this.isDark,
-    required this.selectedImage,
+    required this.selectedFile,
+    required this.isVideo,
+    required this.thumbnailBytes,
     required this.onBack,
   });
   final bool isDark;
-  final XFile selectedImage;
+  final XFile selectedFile;
+  final bool isVideo;
+  final Uint8List? thumbnailBytes;
   final VoidCallback onBack;
 
   @override
@@ -273,6 +367,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   String _fish = '배스';
   String? _selectedLeagueId;
   bool _sharing = false;
+  double _compressProgress = 0.0;
+  dynamic _compressSub;
 
   static const _fishList = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '기타'];
 
@@ -282,6 +378,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     _locationCtrl.dispose();
     _lengthCtrl.dispose();
     _weightCtrl.dispose();
+    _compressSub?.unsubscribe();
+    VideoCompress.cancelCompression();
     super.dispose();
   }
 
@@ -294,15 +392,36 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       return;
     }
 
-    setState(() => _sharing = true);
+    setState(() { _sharing = true; _compressProgress = 0.0; });
 
     try {
+      File? compressedVideo;
+
+      if (widget.isVideo) {
+        _compressSub = VideoCompress.compressProgress$.subscribe((progress) {
+          if (mounted) setState(() => _compressProgress = progress / 100.0);
+        });
+
+        final info = await VideoCompress.compressVideo(
+          widget.selectedFile.path,
+          quality: VideoQuality.MediumQuality,
+          deleteOrigin: false,
+          includeAudio: true,
+        );
+
+        _compressSub?.unsubscribe();
+        _compressSub = null;
+        compressedVideo = info?.file;
+      }
+
       final lengthVal = double.tryParse(_lengthCtrl.text.trim());
       final weightVal = double.tryParse(_weightCtrl.text.trim());
 
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
-        imageFile: File(widget.selectedImage.path),
+        imageFile: widget.isVideo ? null : File(widget.selectedFile.path),
+        videoFile: compressedVideo,
+        videoThumbnailBytes: widget.thumbnailBytes,
         caption: _captionCtrl.text.trim().isEmpty ? null : _captionCtrl.text.trim(),
         fishType: _fish,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
@@ -312,9 +431,10 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       );
 
       ref.invalidate(feedPostsProvider);
-
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      _compressSub?.unsubscribe();
+      _compressSub = null;
       if (mounted) {
         setState(() => _sharing = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -325,6 +445,21 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         );
       }
     }
+  }
+
+  Widget _buildPreview() {
+    if (widget.isVideo && widget.thumbnailBytes != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(widget.thumbnailBytes!, fit: BoxFit.cover),
+          const Center(
+            child: Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 36),
+          ),
+        ],
+      );
+    }
+    return Image.file(File(widget.selectedFile.path), fit: BoxFit.cover);
   }
 
   @override
@@ -343,7 +478,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          onPressed: widget.onBack,
+          onPressed: _sharing ? null : widget.onBack,
           icon: Icon(Icons.arrow_back_ios_rounded, color: textColor, size: 20),
         ),
         title: Text(
@@ -374,19 +509,49 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         child: ListView(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 40),
           children: [
+            // ── 압축 진행률 (동영상만) ──
+            if (_sharing && widget.isVideo)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _compressProgress < 1.0
+                              ? '동영상 압축 중... ${(_compressProgress * 100).toInt()}%'
+                              : '업로드 중...',
+                          style: TextStyle(fontSize: 12, color: accent),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _compressProgress < 1.0 ? _compressProgress : null,
+                        backgroundColor: divColor,
+                        color: accent,
+                        minHeight: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+
             // ── 썸네일 + 캡션 ──
             Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 선택된 실제 이미지 썸네일
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: Image.file(
-                      File(widget.selectedImage.path),
+                    child: SizedBox(
                       width: 72, height: 72,
-                      fit: BoxFit.cover,
+                      child: _buildPreview(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -462,9 +627,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: selected
-                                  ? (isDark ? Colors.black : Colors.white)
-                                  : sub,
+                              color: selected ? (isDark ? Colors.black : Colors.white) : sub,
                             ),
                           ),
                         ),
@@ -497,18 +660,9 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             hintStyle: TextStyle(color: sub, fontSize: 14),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             isDense: true,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: divColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: divColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: accent),
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
                           ),
                         ),
                       ],
@@ -530,18 +684,9 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             hintStyle: TextStyle(color: sub, fontSize: 14),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             isDense: true,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: divColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: divColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: accent),
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
                           ),
                         ),
                       ],
@@ -554,7 +699,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             const SizedBox(height: 20),
             Divider(height: 1, color: divColor),
 
-            // ── 리그 태그 (DB에서 가져오기) ──
+            // ── 리그 태그 ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Column(
@@ -562,15 +707,13 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 children: [
                   Text('리그 태그', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
                   const SizedBox(height: 10),
-                  // 없음 옵션
                   InkWell(
                     onTap: () => setState(() => _selectedLeagueId = null),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Row(
                         children: [
-                          Icon(Icons.block_rounded, size: 14,
-                              color: _selectedLeagueId == null ? accent : sub),
+                          Icon(Icons.block_rounded, size: 14, color: _selectedLeagueId == null ? accent : sub),
                           const SizedBox(width: 10),
                           Text('없음',
                               style: TextStyle(
@@ -579,13 +722,11 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                                 fontWeight: _selectedLeagueId == null ? FontWeight.w600 : FontWeight.w400,
                               )),
                           const Spacer(),
-                          if (_selectedLeagueId == null)
-                            Icon(Icons.check_rounded, size: 18, color: accent),
+                          if (_selectedLeagueId == null) Icon(Icons.check_rounded, size: 18, color: accent),
                         ],
                       ),
                     ),
                   ),
-                  // DB 리그 목록
                   ref.watch(leaguesProvider).when(
                     data: (leagues) => Column(
                       children: leagues
@@ -628,15 +769,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             const SizedBox(height: 8),
             Divider(height: 1, color: divColor),
 
-            _SettingRow(
-              label: '사람 태그',
-              sub: sub, textColor: textColor, divColor: divColor,
-            ),
-            _SettingRow(
-              label: '공개 범위',
-              value: '전체 공개',
-              sub: sub, textColor: textColor, divColor: divColor,
-            ),
+            _SettingRow(label: '사람 태그', sub: sub, textColor: textColor, divColor: divColor),
+            _SettingRow(label: '공개 범위', value: '전체 공개', sub: sub, textColor: textColor, divColor: divColor),
           ],
         ),
       ),
