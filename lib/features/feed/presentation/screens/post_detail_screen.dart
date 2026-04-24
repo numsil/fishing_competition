@@ -74,6 +74,47 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
     return caption.split(RegExp(r'\s+')).where((w) => w.startsWith('#') && w.length > 1).toList();
   }
 
+  Future<void> _deletePost() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('게시물 삭제', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text('이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(feedRepositoryProvider).deletePost(widget.post.id);
+      ref.invalidate(feedPostsProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('삭제 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+
   void _openComments() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
@@ -117,13 +158,22 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
           IconButton(
             icon: Icon(LucideIcons.moreHorizontal, color: iconColor),
             onPressed: () {
+              final currentUserId = ref.read(currentUserProvider)?.id;
               showModalBottomSheet(
                 context: context,
                 backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-                builder: (_) => _MoreMenu(isDark: isDark, postId: p.id),
+                builder: (_) => _MoreMenu(
+                  isDark: isDark,
+                  postId: p.id,
+                  isOwner: currentUserId != null && currentUserId == p.userId,
+                  onDelete: () {
+                    Navigator.pop(context); // 바텀시트 닫기
+                    _deletePost();
+                  },
+                ),
               );
             },
           ),
@@ -138,14 +188,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               color: bgColor,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: avatarBg),
-                  child: Center(
-                    child: Text(
-                      p.username.isNotEmpty ? p.username[0] : '?',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: Container(
+                    width: 36, height: 36,
+                    color: avatarBg,
+                    child: Center(
+                      child: Text(
+                        p.username.isNotEmpty ? p.username[0] : '?',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black),
+                      ),
                     ),
                   ),
                 ),
@@ -395,9 +448,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
 
 // ── 더보기 메뉴 ──────────────────────────────────────────
 class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.isDark, required this.postId});
+  const _MoreMenu({
+    required this.isDark,
+    required this.postId,
+    required this.isOwner,
+    required this.onDelete,
+  });
   final bool isDark;
   final String postId;
+  final bool isOwner;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -436,9 +496,19 @@ class _MoreMenu extends StatelessWidget {
           Divider(height: 1, color: divColor),
           _MenuItem(icon: LucideIcons.share, label: '공유하기', color: textColor,
               onTap: () => Navigator.pop(context)),
-          Divider(height: 1, color: divColor),
-          _MenuItem(icon: LucideIcons.flag, label: '신고하기', color: AppColors.error,
-              onTap: () => Navigator.pop(context)),
+          if (isOwner) ...[
+            Divider(height: 1, color: divColor),
+            _MenuItem(
+              icon: LucideIcons.trash2,
+              label: '게시물 삭제',
+              color: AppColors.error,
+              onTap: onDelete,
+            ),
+          ] else ...[
+            Divider(height: 1, color: divColor),
+            _MenuItem(icon: LucideIcons.flag, label: '신고하기', color: AppColors.error,
+                onTap: () => Navigator.pop(context)),
+          ],
           const SizedBox(height: 8),
         ],
       ),
@@ -562,13 +632,15 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Container(
-                              width: 32, height: 32,
-                              decoration: BoxDecoration(shape: BoxShape.circle,
-                                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
-                              child: Center(child: Text(c.user[0],
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : Colors.black))),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                width: 32, height: 32,
+                                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                                child: Center(child: Text(c.user[0],
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : Colors.black))),
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(child: Text.rich(TextSpan(children: [

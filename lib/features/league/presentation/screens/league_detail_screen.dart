@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_catch_screen.dart';
+import 'league_participant_detail_screen.dart';
 
 // ── 단건 리그 provider ──────────────────────────────────
 final leagueDetailProvider = FutureProvider.family<League, String>((ref, id) {
@@ -55,6 +59,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     with SingleTickerProviderStateMixin {
   TabController? _tab;
   bool _joining = false;
+  bool _cancelling = false;
 
   bool get _hasTabs =>
       widget.league.status == 'in_progress' ||
@@ -127,6 +132,72 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     }
   }
 
+  Future<void> _cancelJoin() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('참가 취소', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text('정말 참가를 취소하시겠습니까?\n취소 후 재신청이 가능합니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('돌아가기'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('참가 취소'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _cancelling = true);
+    try {
+      await ref.read(leagueRepositoryProvider).leaveLeague(widget.league.id);
+      ref.invalidate(isJoinedProvider(widget.league.id));
+      ref.invalidate(leagueDetailProvider(widget.league.id));
+      ref.invalidate(leagueRankingProvider(widget.league.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('참가가 취소되었습니다.'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('취소 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
+
+  void _shareLeague(BuildContext context) {
+    final link = 'huk:///league/detail/${widget.league.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('초대 링크가 복사되었습니다'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final league = widget.league;
@@ -134,12 +205,13 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     final accent = widget.accent;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── 헤더 ──────────────────────────────────────
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          // ── 상단 이미지 헤더 ──────────────────────────
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
+            forceElevated: innerBoxIsScrolled,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
@@ -165,19 +237,20 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
               ),
             ),
             actions: [
-              IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-              IconButton(icon: const Icon(Icons.bookmark_border_rounded), onPressed: () {}),
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () => _shareLeague(context),
+              ),
             ],
           ),
 
-          // ── 리그 기본 정보 ──────────────────────────────
+          // ── 리그 기본 정보 ──────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 상태 배지
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -209,54 +282,77 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                           color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
                     ),
                   ]),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
           ),
 
-          // ── 탭 or 단일 뷰 ───────────────────────────────
-          if (_hasTabs) ...[
-            SliverToBoxAdapter(
-              child: TabBar(
-                controller: _tab,
-                tabs: [
-                  Tab(text: league.status == 'completed' ? '최종 순위' : '실시간 순위'),
-                  const Tab(text: '대회 정보'),
-                ],
+          // ── 탭바 (고정) ─────────────────────────────
+          if (_hasTabs)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyTabBarDelegate(
+                tabBar: TabBar(
+                  controller: _tab,
+                  tabs: [
+                    Tab(text: league.status == 'completed' ? '최종 순위' : '실시간 순위'),
+                    const Tab(text: '대회 정보'),
+                  ],
+                ),
+                isDark: isDark,
               ),
             ),
-            SliverFillRemaining(
-              child: TabBarView(
+        ],
+
+        // ── 탭 바디 ─────────────────────────────────
+        body: _hasTabs
+            ? TabBarView(
                 controller: _tab,
                 children: [
-                  _RankingTab(
-                    league: league,
-                    isDark: isDark,
-                    accent: accent,
-                  ),
+                  _RankingTab(league: league, isDark: isDark, accent: accent),
                   _InfoTab(league: league, isDark: isDark, accent: accent),
                 ],
-              ),
-            ),
-          ] else ...[
-            SliverToBoxAdapter(
-              child: _InfoTab(league: league, isDark: isDark, accent: accent),
-            ),
-          ],
-        ],
+              )
+            : _InfoTab(league: league, isDark: isDark, accent: accent),
       ),
 
-      // ── 하단 버튼 ────────────────────────────────────
+      // ── 하단 버튼 ──────────────────────────────────
       bottomNavigationBar: _BottomBar(
         league: league,
         isDark: isDark,
         accent: accent,
         joining: _joining,
+        cancelling: _cancelling,
         onJoin: _join,
+        onCancelJoin: _cancelJoin,
       ),
     );
   }
+}
+
+// ── 탭바 고정 헤더 delegate ──────────────────────────────
+class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
+  const _StickyTabBarDelegate({required this.tabBar, required this.isDark});
+  final TabBar tabBar;
+  final bool isDark;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: isDark ? AppColors.darkBg : Colors.white,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar || isDark != oldDelegate.isDark;
 }
 
 // ── 순위표 탭 ───────────────────────────────────────────
@@ -276,71 +372,38 @@ class _RankingTab extends ConsumerWidget {
 
     return ref.watch(leagueRankingProvider(league.id)).when(
       data: (entries) {
-        return Stack(
-          children: [
-            entries.isEmpty
-                ? Center(
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(LucideIcons.fish, size: 48,
-                          color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
-                      const SizedBox(height: 12),
-                      Text('아직 조과 기록이 없습니다',
-                          style: TextStyle(fontSize: 14,
-                              color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
-                      if (isInProgress) ...[
-                        const SizedBox(height: 8),
-                        Text('첫 조과를 등록해보세요!',
-                            style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w600)),
-                      ],
-                    ]),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () async => ref.invalidate(leagueRankingProvider(league.id)),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                      itemCount: entries.length,
-                      itemBuilder: (_, i) => _RankCard(
-                        rank: i + 1,
-                        entry: entries[i],
-                        rule: league.rule,
-                        isDark: isDark,
-                        accent: accent,
-                      ),
-                    ),
-                  ),
-
-            // ── 조과 등록 FAB (진행중 + 참가중) ──────────
-            if (isInProgress)
-              ref.watch(isJoinedProvider(league.id)).when(
-                data: (joined) => joined
-                    ? Positioned(
-                        bottom: 20, right: 20,
-                        child: FloatingActionButton.extended(
-                          heroTag: 'catch_fab',
-                          onPressed: () async {
-                            final result = await Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                fullscreenDialog: true,
-                                builder: (_) => LeagueCatchScreen(league: league),
-                              ),
-                            );
-                            if (result == true) {
-                              ref.invalidate(leagueRankingProvider(league.id));
-                            }
-                          },
-                          backgroundColor: accent,
-                          foregroundColor: isDark ? Colors.black : Colors.white,
-                          icon: const Icon(LucideIcons.fish, size: 20),
-                          label: const Text('조과 등록',
-                              style: TextStyle(fontWeight: FontWeight.w800)),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-          ],
+        if (entries.isEmpty) {
+          return Center(
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(LucideIcons.fish, size: 48,
+                  color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
+              const SizedBox(height: 12),
+              Text('아직 조과 기록이 없습니다',
+                  style: TextStyle(fontSize: 14,
+                      color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
+              if (isInProgress) ...[
+                const SizedBox(height: 8),
+                Text('아래 버튼으로 첫 조과를 등록해보세요!',
+                    style: TextStyle(fontSize: 13, color: accent,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ]),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(leagueRankingProvider(league.id)),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+            itemCount: entries.length,
+            itemBuilder: (_, i) => _RankCard(
+              rank: i + 1,
+              entry: entries[i],
+              leagueId: league.id,
+              rule: league.rule,
+              isDark: isDark,
+              accent: accent,
+            ),
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -354,12 +417,14 @@ class _RankCard extends StatelessWidget {
   const _RankCard({
     required this.rank,
     required this.entry,
+    required this.leagueId,
     required this.rule,
     required this.isDark,
     required this.accent,
   });
   final int rank;
   final LeagueRankEntry entry;
+  final String leagueId;
   final String rule;
   final bool isDark;
   final Color accent;
@@ -371,22 +436,24 @@ class _RankCard extends StatelessWidget {
     return isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
   }
 
-  // 룰에 따른 메인 점수 표시
   String get _mainValue {
     switch (rule) {
-      case '합산 길이':
-        return entry.totalLength > 0 ? '${entry.totalLength.toStringAsFixed(1)}cm' : '-';
       case '마릿수':
         return '${entry.totalCount}마리';
-      default: // 최대어, 최대어 + 마릿수
+      case '무게':
+        return entry.totalLength > 0 ? '${entry.totalLength.toStringAsFixed(0)}g' : '-';
+      case '합산 길이':
+        return entry.totalLength > 0 ? '${entry.totalLength.toStringAsFixed(1)}cm' : '-';
+      default: // 최대어
         return entry.bestLength != null ? '${entry.bestLength}cm' : '-';
     }
   }
 
   String get _mainLabel {
     switch (rule) {
-      case '합산 길이': return '합산';
       case '마릿수': return '마릿수';
+      case '무게': return '무게합산';
+      case '합산 길이': return '합산길이';
       default: return '최대어';
     }
   }
@@ -396,7 +463,12 @@ class _RankCard extends StatelessWidget {
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push(
+        '/league/participant/$leagueId/${entry.userId}',
+        extra: LeagueParticipantArgs(entry: entry, rule: rule, rank: rank),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -409,20 +481,43 @@ class _RankCard extends StatelessWidget {
         ),
       ),
       child: Row(children: [
-        // 순위 뱃지
-        Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(
-            color: _rankColor.withValues(alpha: rank <= 3 ? 0.12 : 0.06),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: rank <= 3
-              ? Center(child: Icon(LucideIcons.medal, size: 20, color: _rankColor))
-              : Center(child: Text('$rank',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: sub))),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            UserAvatar(
+              username: entry.username,
+              avatarUrl: entry.avatarUrl,
+              radius: 21,
+              isDark: isDark,
+            ),
+            if (rank <= 3)
+              Positioned(
+                bottom: -3, right: -3,
+                child: Container(
+                  width: 18, height: 18,
+                  decoration: BoxDecoration(
+                    color: _rankColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? AppColors.darkBg : Colors.white,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(width: 12),
-        // 유저 정보
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -440,18 +535,16 @@ class _RankCard extends StatelessWidget {
               ],
             ]),
             const SizedBox(height: 4),
-            // 서브 지표들
             Wrap(spacing: 8, children: [
               _SubStat(icon: LucideIcons.fish, value: '${entry.totalCount}마리', sub: sub),
-              if (entry.bestLength != null && rule != '최대어' && rule != '최대어 + 마릿수')
+              if (rule == '합산 길이' && entry.bestLength != null)
                 _SubStat(icon: LucideIcons.ruler, value: '최대 ${entry.bestLength}cm', sub: sub),
-              if (rule == '최대어 + 마릿수' && entry.totalCount > 0)
-                _SubStat(icon: LucideIcons.list, value: '${entry.totalCount}마리', sub: sub),
+              if (rule == '무게' && entry.bestLength != null)
+                _SubStat(icon: LucideIcons.scale, value: '최대 ${entry.bestLength}g', sub: sub),
             ]),
           ]),
         ),
         const SizedBox(width: 8),
-        // 메인 점수
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text(
             _mainValue,
@@ -464,6 +557,7 @@ class _RankCard extends StatelessWidget {
           Text(_mainLabel, style: TextStyle(fontSize: 10, color: sub)),
         ]),
       ]),
+      ),
     );
   }
 }
@@ -499,11 +593,10 @@ class _InfoTab extends StatelessWidget {
     final cardBg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // ── 핵심 스탯 4칸 ─────────────────────────────────
+      children: [
+        // ── 핵심 스탯 4칸 ─────────────────────────────
         Row(children: [
           _StatBox(
             label: '참가자',
@@ -515,7 +608,7 @@ class _InfoTab extends StatelessWidget {
         ]),
         const SizedBox(height: 10),
         Row(children: [
-          _StatBox(label: '순위 방식', value: league.rule, accent: accent),
+          _StatBox(label: '순위 방식', value: _ruleLabel(league), accent: accent),
           const SizedBox(width: 10),
           _StatBox(
             label: '공개',
@@ -525,7 +618,7 @@ class _InfoTab extends StatelessWidget {
         ]),
         const SizedBox(height: 20),
 
-        // ── 참가 현황 바 ──────────────────────────────────
+        // ── 참가 현황 바 ─────────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -551,7 +644,7 @@ class _InfoTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        // ── 대상 어종 ─────────────────────────────────────
+        // ── 대상 어종 ─────────────────────────────────
         _InfoSection(
           title: '대상 어종',
           icon: LucideIcons.fish,
@@ -575,7 +668,7 @@ class _InfoTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── 순위 결정 방식 ───────────────────────────────
+        // ── 순위 결정 방식 ────────────────────────────
         _InfoSection(
           title: '순위 결정 방식',
           icon: LucideIcons.trophy,
@@ -592,14 +685,13 @@ class _InfoTab extends StatelessWidget {
             child: Row(children: [
               Icon(LucideIcons.barChart2, size: 16, color: accent),
               const SizedBox(width: 8),
-              Text(league.rule,
+              Text(_ruleLabel(league),
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
             ]),
           ),
         ),
         const SizedBox(height: 16),
 
-        // ── 시상 ─────────────────────────────────────────
         if (league.prizeInfo != null && league.prizeInfo!.isNotEmpty) ...[
           _InfoSection(
             title: '시상',
@@ -633,7 +725,6 @@ class _InfoTab extends StatelessWidget {
           const SizedBox(height: 16),
         ],
 
-        // ── 대회 소개 ─────────────────────────────────────
         if (league.description != null && league.description!.isNotEmpty) ...[
           _InfoSection(
             title: '대회 소개',
@@ -659,7 +750,7 @@ class _InfoTab extends StatelessWidget {
             ),
           ),
         ],
-      ]),
+      ],
     );
   }
 }
@@ -701,94 +792,137 @@ class _BottomBar extends ConsumerWidget {
     required this.isDark,
     required this.accent,
     required this.joining,
+    required this.cancelling,
     required this.onJoin,
+    required this.onCancelJoin,
   });
   final League league;
   final bool isDark;
   final Color accent;
   final bool joining;
+  final bool cancelling;
   final VoidCallback onJoin;
+  final VoidCallback onCancelJoin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 종료된 리그는 하단 버튼 없음
     if (league.status == 'completed' || league.status == 'canceled') {
       return const SizedBox.shrink();
     }
 
+    // ── 진행중: 참가자에게만 카메라 버튼 ─────────────
+    if (league.status == 'in_progress') {
+      return ref.watch(isJoinedProvider(league.id)).when(
+        data: (joined) {
+          if (!joined) return const SizedBox.shrink();
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) => LeagueCatchScreen(league: league),
+                      ),
+                    );
+                    if (result == true) {
+                      ref.invalidate(leagueRankingProvider(league.id));
+                    }
+                  },
+                  icon: const Icon(Icons.camera_alt_rounded, size: 22),
+                  label: const Text('조과 사진 등록',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+      );
+    }
+
+    // ── 모집중: 참가 신청 / 참가 취소 ────────────────
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () {},
-              icon: Icon(Icons.share, color: accent),
-              label: Text('초대 링크', style: TextStyle(color: accent)),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 50),
-                side: BorderSide(color: accent),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: ref.watch(isJoinedProvider(league.id)).when(
-              data: (joined) {
-                if (joined) {
-                  return ElevatedButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('참가 완료'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                }
-                final canJoin = league.status == 'recruiting';
-                return ElevatedButton.icon(
-                  onPressed: canJoin && !joining ? onJoin : null,
-                  icon: joining
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: ref.watch(isJoinedProvider(league.id)).when(
+          data: (joined) {
+            if (joined) {
+              // 참가 완료 상태 → 취소 버튼
+              return SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: !cancelling ? onCancelJoin : null,
+                  icon: cancelling
                       ? const SizedBox(
                           width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.how_to_reg_rounded),
-                  label: Text(
-                    joining ? '신청 중...'
-                    : canJoin ? '참가 신청하기'
-                    : league.status == 'in_progress' ? '진행중'
-                    : '마감',
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cancel_outlined),
+                  label: Text(cancelling ? '처리 중...' : '참가 취소'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
-              },
-              loading: () => ElevatedButton(
-                onPressed: null,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-              ),
-              error: (_, __) => ElevatedButton(
-                onPressed: onJoin,
+              );
+            }
+            // 미참가 → 신청 버튼
+            return SizedBox(
+              height: 54,
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: !joining ? onJoin : null,
+                icon: joining
+                    ? const SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.how_to_reg_rounded),
+                label: Text(joining ? '신청 중...' : '참가 신청하기',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('참가 신청하기'),
               ),
+            );
+          },
+          loading: () => SizedBox(
+            height: 54,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const SizedBox(
+                width: 18, height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
             ),
           ),
-        ]),
+          error: (_, __) => SizedBox(
+            height: 54,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onJoin,
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('참가 신청하기'),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -821,5 +955,18 @@ class _StatBox extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+// ── 룰 레이블 헬퍼 ───────────────────────────────────────
+String _ruleLabel(League league) {
+  if (league.rule == '마릿수') return '마릿수';
+  final limit = league.catchLimit;
+  final limitStr = limit == 0 ? '전체' : '${limit}마리';
+  switch (league.rule) {
+    case '최대어':   return '$limitStr 최대어';
+    case '합산 길이': return '$limitStr 합산 길이';
+    case '무게':     return '$limitStr 무게 합산';
+    default:        return '$limitStr ${league.rule}';
   }
 }

@@ -42,6 +42,7 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
     final divColor = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
     return ref.watch(myLeaguesProvider).when(
+      skipLoadingOnReload: true,
       data: (myLeaguesMap) {
         final hosted = myLeaguesMap['hosted'] ?? [];
         final participated = myLeaguesMap['participated'] ?? [];
@@ -726,7 +727,7 @@ class _MyLeaguesTab extends StatelessWidget {
   }
 }
 
-class _MyLeagueCard extends StatelessWidget {
+class _MyLeagueCard extends ConsumerWidget {
   const _MyLeagueCard({
     required this.league,
     required this.isDark,
@@ -739,8 +740,59 @@ class _MyLeagueCard extends StatelessWidget {
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('리그 삭제', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Text('"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.\n정말 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              // 다이얼로그 닫힘 애니메이션 완료 후 실행
+              await Future.delayed(const Duration(milliseconds: 300));
+              try {
+                await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: const Text('리그가 삭제되었습니다.'),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+                ref.invalidate(myLeaguesProvider);
+                ref.invalidate(leaguesProvider);
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('삭제 실패: $e'),
+                    backgroundColor: AppColors.error,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              }
+            },
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isLive = league.status == 'in_progress';
     final isUpcoming = league.status == 'recruiting';
     
@@ -805,6 +857,15 @@ class _MyLeagueCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // 삭제 버튼
+                  GestureDetector(
+                    onTap: () => _confirmDelete(context, ref),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Icon(LucideIcons.trash2, size: 15, color: AppColors.error),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   // 관리 버튼
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
@@ -41,7 +42,7 @@ class ProfileRepository {
     final userRes = await _supabase.from('users').select().eq('id', userId).single();
     
     // Get posts stats
-    final postsRes = await _supabase.from('posts').select('length, is_lunker').eq('user_id', userId);
+    final postsRes = await _supabase.from('posts').select('length, is_lunker').eq('user_id', userId).isFilter('league_id', null);
     
     int postCount = postsRes.length;
     int lunkerCount = 0;
@@ -70,6 +71,32 @@ class ProfileRepository {
     );
   }
 
+  Future<String> uploadAvatar(File imageFile) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not logged in');
+
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    final storagePath = '$userId/avatar.$ext';
+
+    await _supabase.storage.from('avatars').upload(
+      storagePath,
+      imageFile,
+      fileOptions: FileOptions(
+        contentType: 'image/$ext',
+        upsert: true,
+      ),
+    );
+
+    final url = _supabase.storage.from('avatars').getPublicUrl(storagePath);
+
+    await _supabase
+        .from('users')
+        .update({'avatar_url': url})
+        .eq('id', userId);
+
+    return url;
+  }
+
   Future<List<Post>> getMyPosts() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
@@ -78,6 +105,7 @@ class ProfileRepository {
         .from('posts')
         .select()
         .eq('user_id', userId)
+        .isFilter('league_id', null)
         .order('created_at', ascending: false);
 
     return response.map((data) => Post.fromJson(data)).toList();

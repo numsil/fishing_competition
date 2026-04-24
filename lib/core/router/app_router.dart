@@ -16,6 +16,7 @@ import '../../features/feed/presentation/screens/post_detail_screen.dart';
 import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/league/presentation/screens/league_participant_detail_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 
@@ -54,6 +55,22 @@ GoRouter appRouter(Ref ref) {
           fullscreenDialog: true,
           child: UploadScreen(),
         ),
+      ),
+      // 리그 참가자 상세: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: '/league/participant/:leagueId/:userId',
+        pageBuilder: (context, state) {
+          final args = state.extra as LeagueParticipantArgs;
+          return MaterialPage(
+            child: LeagueParticipantDetailScreen(
+              leagueId: state.pathParameters['leagueId']!,
+              userId: state.pathParameters['userId']!,
+              entry: args.entry,
+              rule: args.rule,
+              rank: args.rank,
+            ),
+          );
+        },
       ),
       // 리그 관리: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
