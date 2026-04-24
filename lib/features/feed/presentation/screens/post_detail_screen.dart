@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -76,6 +79,37 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
     return caption.split(RegExp(r'\s+')).where((w) => w.startsWith('#') && w.length > 1).toList();
   }
 
+  Future<void> _sharePostToFeed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(feedRepositoryProvider).sharePostToFeed(widget.post);
+      ref.invalidate(feedPostsProvider);
+      ref.invalidate(myPostsProvider);
+      ref.invalidate(myProfileProvider);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('내 피드에 공유되었습니다.'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('공유 실패: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _deletePost() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -147,7 +181,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
     final iconColor = isDark ? Colors.white : Colors.black;
     final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = isDark ? AppColors.darkBg : Colors.white;
-    final avatarBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFEFEFEF);
     final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
 
     return Scaffold(
@@ -181,6 +214,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                     Navigator.pop(context); // 바텀시트 닫기
                     _deletePost();
                   },
+                  onShareToFeed: () {
+                    Navigator.pop(context);
+                    _sharePostToFeed();
+                  },
                 ),
               );
             },
@@ -196,34 +233,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               color: bgColor,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Container(
-                    width: 36, height: 36,
-                    color: avatarBg,
-                    child: Center(
-                      child: Text(
-                        p.username.isNotEmpty ? p.username[0] : '?',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black),
-                      ),
-                    ),
+                GestureDetector(
+                  onTap: () => context.push('${AppRoutes.userProfile}/${p.userId}'),
+                  child: UserAvatar(
+                    username: p.username,
+                    avatarUrl: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
+                    radius: 18,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Text(p.username,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                      if (p.isLunker) ...[
-                        const SizedBox(width: 4),
-                        Icon(LucideIcons.checkCircle, size: 13, color: accent),
-                      ],
+                  child: GestureDetector(
+                    onTap: () => context.push('${AppRoutes.userProfile}/${p.userId}'),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Text(p.username,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        if (p.isLunker) ...[
+                          const SizedBox(width: 4),
+                          Icon(LucideIcons.checkCircle, size: 13, color: accent),
+                        ],
+                      ]),
+                      if (p.location != null)
+                        Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
                     ]),
-                    if (p.location != null)
-                      Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
-                  ]),
+                  ),
                 ),
               ]),
             ),
@@ -455,57 +490,30 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
 }
 
 // ── 더보기 메뉴 ──────────────────────────────────────────
-class _MoreMenu extends ConsumerWidget {
+class _MoreMenu extends StatelessWidget {
   const _MoreMenu({
     required this.isDark,
     required this.postId,
     required this.post,
     required this.isOwner,
     required this.onDelete,
+    required this.onShareToFeed,
   });
   final bool isDark;
   final String postId;
   final Post post;
   final bool isOwner;
   final VoidCallback onDelete;
+  final VoidCallback onShareToFeed;
 
   bool get _canShareToFeed =>
       isOwner && (post.leagueId != null || post.isPersonalRecord);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : Colors.black;
     final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-
-    Future<void> handleShareToFeed() async {
-      final messenger = ScaffoldMessenger.of(context);
-      Navigator.pop(context);
-      await Future.delayed(const Duration(milliseconds: 300));
-      try {
-        await ref.read(feedRepositoryProvider).sharePostToFeed(post);
-        ref.invalidate(feedPostsProvider);
-        ref.invalidate(myPostsProvider);
-        ref.invalidate(myProfileProvider);
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('내 피드에 공유되었습니다.'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      } catch (e) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('공유 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    }
 
     return SafeArea(
       child: Column(
@@ -525,7 +533,7 @@ class _MoreMenu extends ConsumerWidget {
               icon: LucideIcons.send,
               label: '내 피드에 공유하기',
               color: accent,
-              onTap: handleShareToFeed,
+              onTap: onShareToFeed,
             ),
             Divider(height: 1, color: divColor),
           ],

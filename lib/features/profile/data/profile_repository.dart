@@ -108,13 +108,13 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select()
+        .select('*, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .order('created_at', ascending: false);
 
-    return response.map((data) => Post.fromJson(data)).toList();
+    return response.map((data) => _mapPost(data)).toList();
   }
 
   Future<List<Post>> getMyPersonalRecords() async {
@@ -123,13 +123,25 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select()
+        .select('*, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', true)
         .order('created_at', ascending: false);
 
-    return response.map((data) => Post.fromJson(data)).toList();
+    return response.map((data) => _mapPost(data)).toList();
+  }
+
+  Post _mapPost(Map<String, dynamic> data) {
+    final post = Post.fromJson(data);
+    final usersData = data['users'];
+    final String username = (usersData != null && usersData is Map)
+        ? usersData['username'] ?? 'Unknown'
+        : 'Unknown';
+    final String avatarUrl = (usersData != null && usersData is Map)
+        ? usersData['avatar_url'] ?? ''
+        : '';
+    return post.copyWith(username: username, avatarUrl: avatarUrl);
   }
 
   Future<UserProfile> getUserProfile(String userId) async {

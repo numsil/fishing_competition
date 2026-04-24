@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
@@ -481,7 +482,9 @@ class _RankCard extends StatelessWidget {
         ),
       ),
       child: Row(children: [
-        Stack(
+        GestureDetector(
+          onTap: () => context.push('${AppRoutes.userProfile}/${entry.userId}'),
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             UserAvatar(
@@ -516,6 +519,7 @@ class _RankCard extends StatelessWidget {
                 ),
               ),
           ],
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(

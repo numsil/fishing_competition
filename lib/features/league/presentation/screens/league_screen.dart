@@ -28,7 +28,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
         title: const Text('리그', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/league/create'),
+            onPressed: () => context.push('/league/create'),
             icon: Icon(LucideIcons.plus, size: 18, color: accent),
             label: Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
           ),
@@ -169,7 +169,7 @@ class _LeagueItem extends StatelessWidget {
     };
 
     return GestureDetector(
-      onTap: () => context.go('/league/detail/$id'),
+      onTap: () => context.push('/league/detail/$id'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),

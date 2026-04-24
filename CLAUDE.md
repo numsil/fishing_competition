@@ -76,3 +76,5 @@ ref.watch(someProvider).when(
 - 다른 유저 프로필 조회
 - 푸시 알림
 - 참가 승인 플로우 (현재 즉시 approved)
+- **[어드민]** Flutter 앱에 신고/문의 UI 추가 (현재 앱에 해당 화면 없음)
+- **[어드민]** Vercel 배포
