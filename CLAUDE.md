@@ -40,6 +40,7 @@ lib/
 | `stat_widgets.dart` | `StatNumber`, `StatBox` | 통계 숫자/박스 |
 | `info_chip.dart` | `InfoChip`, `InfoChipFilled` | 아이콘+텍스트 칩 |
 | `empty_state.dart` | `EmptyState` | 빈 목록 화면 |
+| `slide_to_confirm.dart` | `SlideToConfirm`, `showDeleteConfirmSheet()` | 슬라이드 삭제 확인 |
 | `user_avatar.dart` | `UserAvatar` | 유저 아바타 |
 
 ### 현재 공용 테마 (`lib/core/theme/`)

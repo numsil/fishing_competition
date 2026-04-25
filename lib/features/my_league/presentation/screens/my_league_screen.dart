@@ -5,7 +5,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../league/data/league_repository.dart';
@@ -902,65 +904,9 @@ class _MyLeagueCard extends ConsumerWidget {
     final statusLabel = isLive ? '진행중' : isUpcoming ? '진행 예정' : '종료';
     final statusColor = isLive ? AppColors.liveRed : isUpcoming ? accent : sub;
 
-    final messenger = ScaffoldMessenger.of(context);
-
-    return Dismissible(
-      key: Key(league.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.error,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.trash2, color: Colors.white, size: 22),
-            SizedBox(height: 4),
-            Text('삭제', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-      confirmDismiss: (direction) async {
-        final confirmed = await showConfirmDialog(
-          context,
-          title: '리그 삭제',
-          content: '"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.\n정말 삭제하시겠습니까?',
-          confirmText: '삭제',
-        );
-        if (!confirmed) return false;
-        try {
-          await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
-          messenger.showSnackBar(
-            SnackBar(
-              content: const Text('리그가 삭제되었습니다.'),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-          ref.invalidate(myLeaguesProvider);
-          ref.invalidate(leaguesProvider);
-          return true;
-        } catch (e) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('삭제 실패: $e'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-          return false;
-        }
-      },
-      child: GestureDetector(
-        onTap: () => context.push('${AppRoutes.leagueManage}/${league.id}'),
-        child: Container(
+    return GestureDetector(
+      onTap: () => context.push('${AppRoutes.leagueManage}/${league.id}'),
+      child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: cardBg,
@@ -1013,6 +959,29 @@ class _MyLeagueCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // 삭제 버튼
+                  GestureDetector(
+                    onTap: () => showDeleteConfirmSheet(
+                      context,
+                      title: '리그 삭제',
+                      content: '"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.',
+                      onConfirmed: () async {
+                        try {
+                          await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
+                          AppSnackBar.success(context, '리그가 삭제되었습니다.');
+                          ref.invalidate(myLeaguesProvider);
+                          ref.invalidate(leaguesProvider);
+                        } catch (e) {
+                          AppSnackBar.error(context, '삭제 실패: $e');
+                        }
+                      },
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Icon(LucideIcons.trash2, size: 15, color: AppColors.error),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   // 관리 버튼
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1076,7 +1045,6 @@ class _MyLeagueCard extends ConsumerWidget {
           ],
         ),
       ),
-    ),
     );
   }
 }

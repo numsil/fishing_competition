@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../league/data/league_repository.dart';
@@ -114,6 +115,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
 
   Future<void> _deletePost() async {
     if (!mounted) return;
+    await showDeleteConfirmSheet(
+      context,
+      title: '게시물 삭제',
+      content: '이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.',
+      onConfirmed: _doDeletePost,
+    );
+  }
+
+  void _doDeletePost() async {
     try {
       await ref.read(feedRepositoryProvider).deletePost(widget.post.id);
       ref.invalidate(feedPostsProvider);
@@ -542,28 +552,11 @@ class _MoreMenu extends StatelessWidget {
               onTap: () => Navigator.pop(context)),
           if (isOwner) ...[
             Divider(height: 1, color: divColor),
-            Dismissible(
-              key: const Key('delete_post'),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                color: AppColors.error.withValues(alpha: 0.12),
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                child: const Icon(LucideIcons.trash2, color: AppColors.error, size: 22),
-              ),
-              confirmDismiss: (direction) => showConfirmDialog(
-                context,
-                title: '게시물 삭제',
-                content: '이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.',
-                confirmText: '삭제',
-              ),
-              onDismissed: (direction) => onDelete(),
-              child: _MenuItem(
-                icon: LucideIcons.trash2,
-                label: '게시물 삭제',
-                color: AppColors.error,
-                onTap: () {},
-              ),
+            _MenuItem(
+              icon: LucideIcons.trash2,
+              label: '게시물 삭제',
+              color: AppColors.error,
+              onTap: onDelete,
             ),
           ] else ...[
             Divider(height: 1, color: divColor),

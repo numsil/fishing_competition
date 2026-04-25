@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_detail_screen.dart';
@@ -1034,39 +1035,27 @@ class _ParticipantRow extends StatelessWidget {
                   color: _rankColor),
             ),
           ),
+          if (canKick) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: () => showDeleteConfirmSheet(
+                context,
+                title: '참가자 추방',
+                content: '${participant.name} 님을\n대회에서 추방하시겠습니까?',
+                slideLabel: '밀어서 추방',
+                onConfirmed: onKick,
+              ),
+              icon: const Icon(Icons.person_remove_outlined, size: 20),
+              color: Colors.red.withValues(alpha: 0.6),
+              tooltip: '추방',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          ],
         ],
       ),
     );
-
-    if (!canKick) return row;
-
-    return Dismissible(
-      key: Key(participant.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: Colors.red.withValues(alpha: 0.1),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.person_remove_outlined, color: Colors.red, size: 20),
-            SizedBox(height: 4),
-            Text('추방', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-      confirmDismiss: (direction) => showConfirmDialog(
-        context,
-        title: '참가자 추방',
-        content: '${participant.name} 님을\n대회에서 추방하시겠습니까?',
-        confirmText: '추방',
-        confirmColor: Colors.red,
-      ),
-      onDismissed: (direction) => onKick(),
-      child: row,
-    );
+    return row;
   }
 }
 
