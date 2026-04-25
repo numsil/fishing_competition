@@ -15,8 +15,8 @@ lib/
   core/
     presentation/screens/  # splash, main
     router/app_router.dart  # GoRouter 전체 라우트 정의
-    theme/                  # AppColors, AppTheme
-    widgets/                # UserAvatar, AppSvg
+    theme/                  # AppColors, AppTheme, AppTextStyles
+    widgets/                # UserAvatar, AppSvg, ConfirmDialog, AppSnackBar, SectionLabel, StatWidgets, InfoChip, EmptyState
   features/
     auth/       # 로그인/회원가입, currentUserProvider
     feed/       # 홈 피드, 게시물 상세, 좋아요, 댓글
@@ -26,6 +26,32 @@ lib/
     ranking/    # 전체 랭킹
     upload/     # 일반 피드 업로드
 ```
+
+## 공용 컴포넌트 원칙 (필수)
+
+**여러 곳에서 반복되는 UI는 반드시 공용 컴포넌트로 만들고 import해서 사용한다. 절대 복붙 금지.**
+
+### 현재 공용 위젯 목록 (`lib/core/widgets/`)
+| 파일 | 클래스 | 용도 |
+|---|---|---|
+| `confirm_dialog.dart` | `ConfirmDialog`, `showConfirmDialog()` | 확인/취소 다이얼로그 |
+| `app_snack_bar.dart` | `AppSnackBar.success/error/info()` | 스낵바 |
+| `section_label.dart` | `SectionLabel` | 섹션 제목 (컬러 바 + 텍스트) |
+| `stat_widgets.dart` | `StatNumber`, `StatBox` | 통계 숫자/박스 |
+| `info_chip.dart` | `InfoChip`, `InfoChipFilled` | 아이콘+텍스트 칩 |
+| `empty_state.dart` | `EmptyState` | 빈 목록 화면 |
+| `user_avatar.dart` | `UserAvatar` | 유저 아바타 |
+
+### 현재 공용 테마 (`lib/core/theme/`)
+| 파일 | 클래스 | 용도 |
+|---|---|---|
+| `app_colors.dart` | `AppColors` | 색상 상수 |
+| `app_text_styles.dart` | `AppTextStyles` | 텍스트 스타일 상수 |
+
+### 새 컴포넌트가 필요한 경우
+1. `lib/core/widgets/` 또는 `lib/core/theme/`에 파일 생성
+2. 기존 코드에서 중복 클래스 제거하고 import로 교체
+3. 이 목록 업데이트
 
 ## 핵심 규칙
 

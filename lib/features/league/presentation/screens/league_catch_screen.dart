@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -232,7 +233,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
 
           // ── 어종 선택 (여러 종류일 때만) ───────────
           if (_fishOptions.length > 1) ...[
-            _Label(text: '어종', accent: accent),
+            SectionLabel(text: '어종', color: accent),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8, runSpacing: 8,
@@ -261,7 +262,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
           ],
 
           // ── 계측값 입력 (룰에 따라 하나만) ─────────
-          _Label(text: measureLabel, accent: accent),
+          SectionLabel(text: measureLabel, color: accent),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -298,7 +299,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 메모 ──────────────────────────────────
-          _Label(text: '메모 (선택)', accent: accent),
+          SectionLabel(text: '메모 (선택)', color: accent),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
@@ -365,19 +366,3 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   }
 }
 
-// ── 라벨 ─────────────────────────────────────────────────
-class _Label extends StatelessWidget {
-  const _Label({required this.text, required this.accent});
-  final String text;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Container(width: 3, height: 14,
-          decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
-      const SizedBox(width: 6),
-      Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-    ]);
-  }
-}

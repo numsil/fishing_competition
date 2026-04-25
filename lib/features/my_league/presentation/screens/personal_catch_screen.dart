@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -242,7 +243,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 어종 선택 ──────────────────────────
-          _Label(text: '어종', accent: accent),
+          SectionLabel(text: '어종', color: accent),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8, runSpacing: 8,
@@ -270,7 +271,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 길이 입력 ──────────────────────────
-          _Label(text: '길이 (cm)', accent: accent),
+          SectionLabel(text: '길이 (cm)', color: accent),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -306,7 +307,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 장소 ──────────────────────────
-          _Label(text: '장소 (선택)', accent: accent),
+          SectionLabel(text: '장소 (선택)', color: accent),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
@@ -329,7 +330,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 20),
 
           // ── 메모 ──────────────────────────
-          _Label(text: '메모 (선택)', accent: accent),
+          SectionLabel(text: '메모 (선택)', color: accent),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
@@ -396,18 +397,3 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   }
 }
 
-class _Label extends StatelessWidget {
-  const _Label({required this.text, required this.accent});
-  final String text;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Container(width: 3, height: 14,
-          decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
-      const SizedBox(width: 6),
-      Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-    ]);
-  }
-}

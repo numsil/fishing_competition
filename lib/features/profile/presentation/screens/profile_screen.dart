@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
@@ -189,9 +190,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _Stat(value: '${profile.postCount}', label: '게시물', sub: sub),
-                            _Stat(value: '0', label: '팔로워', sub: sub),
-                            _Stat(value: '0', label: '팔로잉', sub: sub),
+                            StatNumber(value: '${profile.postCount}', label: '게시물', subColor: sub),
+                            StatNumber(value: '0', label: '팔로워', subColor: sub),
+                            StatNumber(value: '0', label: '팔로잉', subColor: sub),
                           ],
                         ),
                       ),
@@ -312,13 +313,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       orElse: () => 0,
                     );
                     return Row(children: [
-                      _StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: isDark, accent: accent),
                       const SizedBox(width: 8),
-                      _StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: isDark, accent: accent),
                       const SizedBox(width: 8),
-                      _StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: isDark, accent: accent),
                       const SizedBox(width: 8),
-                      _StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: isDark, accent: accent),
                     ]);
                   }),
                   const SizedBox(height: 6),
@@ -373,49 +374,6 @@ class _LunkerBadge extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label, required this.sub});
-  final String value, label;
-  final Color sub;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-      Text(label, style: TextStyle(fontSize: 11, color: sub)),
-    ]);
-  }
-}
-
-class _StatBox extends StatelessWidget {
-  const _StatBox({required this.icon, required this.value, required this.label, required this.isDark, required this.accent});
-  final IconData icon;
-  final String value, label;
-  final bool isDark;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-        ),
-        child: Column(children: [
-          Icon(icon, size: 18, color: subColor(isDark)),
-          const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: accent)),
-          Text(label, style: TextStyle(fontSize: 10, color: subColor(isDark))),
-        ]),
-      ),
-    );
-  }
-  
-  Color subColor(bool isDark) => isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-}
 
 class _Grid extends ConsumerWidget {
   const _Grid({required this.isDark});
