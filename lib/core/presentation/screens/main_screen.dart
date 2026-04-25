@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../router/app_router.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/confirm_dialog.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key, required this.child});
@@ -32,8 +34,25 @@ class MainScreen extends StatelessWidget {
     // ★ 이 숫자만 바꾸면 됩니다: 크면 위로, 작으면 아래로
     const fabOffsetFromBottom = 8.0;
 
-    return Scaffold(
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (idx != 0) {
+          context.go(AppRoutes.feed);
+          return;
+        }
+        final shouldExit = await showConfirmDialog(
+          context,
+          title: '앱 종료',
+          content: '앱을 종료하시겠습니까?',
+          confirmText: '종료',
+          confirmColor: AppColors.navy,
+        );
+        if (shouldExit) SystemNavigator.pop();
+      },
+      child: Scaffold(
+        body: Stack(
         clipBehavior: Clip.none,
         children: [
           // ── 콘텐츠 ──
@@ -161,7 +180,8 @@ class MainScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
 

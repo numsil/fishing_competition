@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_detail_screen.dart';
@@ -97,97 +98,64 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
 
   // ── DB 액션들 ──────────────────────────────────────────────────
 
-  void _startLeague() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('대회 시작', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('대회를 시작하면 참가자들에게 알림이 전송되고\n순위표가 활성화됩니다.\n\n지금 시작하시겠습니까?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.liveRed,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(leagueRepositoryProvider)
-                  .updateLeagueStatus(widget.leagueId, 'in_progress');
-              ref.invalidate(leagueDetailProvider(widget.leagueId));
-              ref.invalidate(leagueRankingProvider(widget.leagueId));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('🎣 대회가 시작되었습니다!')),
-                );
-              }
-            },
-            child: const Text('대회 시작'),
-          ),
-        ],
-      ),
+  void _startLeague() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '대회 시작',
+      content: '대회를 시작하면 참가자들에게 알림이 전송되고\n순위표가 활성화됩니다.\n\n지금 시작하시겠습니까?',
+      confirmText: '대회 시작',
+      confirmColor: AppColors.liveRed,
     );
+    if (!confirmed || !mounted) return;
+    await ref.read(leagueRepositoryProvider).updateLeagueStatus(widget.leagueId, 'in_progress');
+    ref.invalidate(leagueDetailProvider(widget.leagueId));
+    ref.invalidate(leagueRankingProvider(widget.leagueId));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🎣 대회가 시작되었습니다!')),
+      );
+    }
   }
 
-  void _endLeague() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('대회 종료', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('대회를 종료하면 더 이상 조과를 등록할 수 없고\n최종 결과가 확정됩니다.\n\n지금 종료하시겠습니까?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[700],
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(leagueRepositoryProvider)
-                  .updateLeagueStatus(widget.leagueId, 'completed');
-              ref.invalidate(leagueDetailProvider(widget.leagueId));
-              ref.invalidate(leagueRankingProvider(widget.leagueId));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('대회가 종료되었습니다. 최종 결과가 확정됩니다.')),
-                );
-              }
-            },
-            child: const Text('대회 종료'),
-          ),
-        ],
-      ),
+  void _endLeague() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '대회 종료',
+      content: '대회를 종료하면 더 이상 조과를 등록할 수 없고\n최종 결과가 확정됩니다.\n\n지금 종료하시겠습니까?',
+      confirmText: '대회 종료',
+      confirmColor: Colors.grey[700],
     );
+    if (!confirmed || !mounted) return;
+    await ref.read(leagueRepositoryProvider).updateLeagueStatus(widget.leagueId, 'completed');
+    ref.invalidate(leagueDetailProvider(widget.leagueId));
+    ref.invalidate(leagueRankingProvider(widget.leagueId));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('대회가 종료되었습니다. 최종 결과가 확정됩니다.')),
+      );
+    }
   }
 
-  void _kickParticipant(_Participant p) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('참가자 추방', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Text('${p.name} 님을\n대회에서 추방하시겠습니까?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(leagueRepositoryProvider)
-                  .removeParticipant(widget.leagueId, p.id);
-              ref.invalidate(leagueRankingProvider(widget.leagueId));
-              ref.invalidate(leagueDetailProvider(widget.leagueId));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${p.name} 님이 추방되었습니다.')),
-                );
-              }
-            },
-            child: const Text('추방'),
+  void _kickParticipant(_Participant p) async {
+    try {
+      await ref.read(leagueRepositoryProvider).removeParticipant(widget.leagueId, p.id);
+      ref.invalidate(leagueRankingProvider(widget.leagueId));
+      ref.invalidate(leagueDetailProvider(widget.leagueId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${p.name} 님이 추방되었습니다.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('추방 실패: $e'),
+            backgroundColor: Colors.red,
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   void _approvePending(_Participant p) async {
@@ -1006,7 +974,9 @@ class _ParticipantRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final canKick = status != LeagueManageStatus.ended;
+
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
@@ -1051,7 +1021,6 @@ class _ParticipantRow extends StatelessWidget {
           ),
           // 순위 칩
           Container(
-            margin: const EdgeInsets.only(right: 6),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: _rankColor.withValues(alpha: 0.1),
@@ -1065,17 +1034,38 @@ class _ParticipantRow extends StatelessWidget {
                   color: _rankColor),
             ),
           ),
-          if (status != LeagueManageStatus.ended)
-            IconButton(
-              onPressed: onKick,
-              icon: const Icon(Icons.person_remove_outlined, size: 20),
-              color: Colors.red.withValues(alpha: 0.6),
-              tooltip: '추방',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            ),
         ],
       ),
+    );
+
+    if (!canKick) return row;
+
+    return Dismissible(
+      key: Key(participant.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red.withValues(alpha: 0.1),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.person_remove_outlined, color: Colors.red, size: 20),
+            SizedBox(height: 4),
+            Text('추방', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) => showConfirmDialog(
+        context,
+        title: '참가자 추방',
+        content: '${participant.name} 님을\n대회에서 추방하시겠습니까?',
+        confirmText: '추방',
+        confirmColor: Colors.red,
+      ),
+      onDismissed: (direction) => onKick(),
+      child: row,
     );
   }
 }

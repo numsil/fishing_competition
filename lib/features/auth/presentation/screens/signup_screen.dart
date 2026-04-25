@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../data/auth_repository.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -75,26 +76,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return '회원가입에 실패했습니다. 다시 시도해주세요.';
   }
 
-  void _showEmailConfirmDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('이메일 확인'),
-        content: Text(
-          '${_emailCtrl.text}으로 인증 메일을 발송했습니다.\n이메일을 확인한 후 로그인해주세요.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(AppRoutes.login);
-            },
-            child: const Text('로그인하러 가기'),
-          ),
-        ],
-      ),
+  Future<void> _showEmailConfirmDialog() async {
+    await showConfirmDialog(
+      context,
+      title: '이메일 확인',
+      content: '${_emailCtrl.text}으로 인증 메일을 발송했습니다.\n이메일을 확인한 후 로그인해주세요.',
+      cancelText: null,
+      confirmText: '로그인하러 가기',
+      confirmColor: AppColors.navy,
     );
+    if (mounted) context.go(AppRoutes.login);
   }
 
   @override

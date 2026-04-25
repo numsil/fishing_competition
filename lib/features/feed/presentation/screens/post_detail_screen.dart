@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../league/data/league_repository.dart';
@@ -112,28 +113,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
   }
 
   Future<void> _deletePost() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('게시물 삭제', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
+    if (!mounted) return;
     try {
       await ref.read(feedRepositoryProvider).deletePost(widget.post.id);
       ref.invalidate(feedPostsProvider);
@@ -562,11 +542,28 @@ class _MoreMenu extends StatelessWidget {
               onTap: () => Navigator.pop(context)),
           if (isOwner) ...[
             Divider(height: 1, color: divColor),
-            _MenuItem(
-              icon: LucideIcons.trash2,
-              label: '게시물 삭제',
-              color: AppColors.error,
-              onTap: onDelete,
+            Dismissible(
+              key: const Key('delete_post'),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                color: AppColors.error.withValues(alpha: 0.12),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                child: const Icon(LucideIcons.trash2, color: AppColors.error, size: 22),
+              ),
+              confirmDismiss: (direction) => showConfirmDialog(
+                context,
+                title: '게시물 삭제',
+                content: '이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.',
+                confirmText: '삭제',
+              ),
+              onDismissed: (direction) => onDelete(),
+              child: _MenuItem(
+                icon: LucideIcons.trash2,
+                label: '게시물 삭제',
+                color: AppColors.error,
+                onTap: () {},
+              ),
             ),
           ] else ...[
             Divider(height: 1, color: divColor),

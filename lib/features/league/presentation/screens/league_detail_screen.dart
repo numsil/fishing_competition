@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
@@ -134,28 +135,14 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   }
 
   Future<void> _cancelJoin() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('참가 취소', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('정말 참가를 취소하시겠습니까?\n취소 후 재신청이 가능합니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('돌아가기'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('참가 취소'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '참가 취소',
+      content: '정말 참가를 취소하시겠습니까?\n취소 후 재신청이 가능합니다.',
+      cancelText: '돌아가기',
+      confirmText: '참가 취소',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _cancelling = true);
     try {
       await ref.read(leagueRepositoryProvider).leaveLeague(widget.league.id);
