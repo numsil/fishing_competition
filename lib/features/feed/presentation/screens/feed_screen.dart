@@ -11,6 +11,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
@@ -671,15 +672,7 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                 onPressed: () {
                   final link = 'https://huk.app/p/${p.id}';
                   Clipboard.setData(ClipboardData(text: link));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('링크가 복사되었습니다'),
-                      backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.black87,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
+                                    AppSnackBar.info(context, '링크가 복사되었습니다');
                 },
                 icon: Icon(LucideIcons.link2, color: iconColor, size: 24),
                 visualDensity: VisualDensity.compact,
@@ -828,15 +821,7 @@ class _MoreMenu extends StatelessWidget {
               Navigator.pop(context);
               final link = 'https://huk.app/p/$postId';
               Clipboard.setData(ClipboardData(text: link));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('링크가 복사되었습니다'),
-                  backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.black87,
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              );
+                            AppSnackBar.info(context, '링크가 복사되었습니다');
             },
           ),
           Divider(height: 1, color: divColor),

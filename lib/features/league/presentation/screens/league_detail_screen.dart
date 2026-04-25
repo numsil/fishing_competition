@@ -12,11 +12,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_catch_screen.dart';
 import 'league_participant_detail_screen.dart';
-
-// ── 단건 리그 provider ──────────────────────────────────
-final leagueDetailProvider = FutureProvider.family<League, String>((ref, id) {
-  return ref.watch(leagueRepositoryProvider).getLeague(id);
-});
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class LeagueDetailScreen extends ConsumerWidget {
   const LeagueDetailScreen({super.key, required this.leagueId});
@@ -109,25 +105,11 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       ref.invalidate(isJoinedProvider(widget.league.id));
       ref.invalidate(leagueRankingProvider(widget.league.id));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('참가 신청이 완료되었습니다!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.success(context, '참가 신청이 완료되었습니다!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().contains('duplicate') ? '이미 참가 신청한 대회입니다.' : '참가 신청 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.error(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _joining = false);
@@ -150,24 +132,11 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       ref.invalidate(leagueDetailProvider(widget.league.id));
       ref.invalidate(leagueRankingProvider(widget.league.id));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('참가가 취소되었습니다.'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.info(context, '참가가 취소되었습니다.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('취소 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.error(context, '취소 실패: $e');
       }
     } finally {
       if (mounted) setState(() => _cancelling = false);
@@ -177,13 +146,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   void _shareLeague(BuildContext context) {
     final link = 'huk:///league/detail/${widget.league.id}';
     Clipboard.setData(ClipboardData(text: link));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('초대 링크가 복사되었습니다'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+        AppSnackBar.info(context, '초대 링크가 복사되었습니다');
   }
 
   @override
@@ -379,7 +342,10 @@ class _RankingTab extends ConsumerWidget {
           );
         }
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(leagueRankingProvider(league.id)),
+          onRefresh: () async {
+            ref.invalidate(leagueRankingProvider(league.id));
+            ref.invalidate(leagueDetailProvider(league.id));
+          },
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             itemCount: entries.length,

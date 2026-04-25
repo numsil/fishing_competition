@@ -10,6 +10,8 @@ import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../league/data/league_repository.dart';
+import '../../../profile/data/profile_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -113,12 +115,7 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('사진 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+                AppSnackBar.error(context, '사진 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
     }
   }
@@ -139,12 +136,7 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+                AppSnackBar.error(context, '카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
     }
   }
@@ -364,13 +356,11 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   final _locationCtrl = TextEditingController();
   final _lengthCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
-  String _fish = '배스';
+  final String _fish = '배스';
   String? _selectedLeagueId;
   bool _sharing = false;
   double _compressProgress = 0.0;
   dynamic _compressSub;
-
-  static const _fishList = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '기타'];
 
   @override
   void dispose() {
@@ -386,9 +376,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   Future<void> _share() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인이 필요합니다.')),
-      );
+            AppSnackBar.info(context, '로그인이 필요합니다.');
       return;
     }
 
@@ -431,18 +419,14 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       );
 
       ref.invalidate(feedPostsProvider);
+      ref.invalidate(myPostsProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       _compressSub?.unsubscribe();
       _compressSub = null;
       if (mounted) {
         setState(() => _sharing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('업로드 실패: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+                AppSnackBar.error(context, '업로드 실패: $e');
       }
     }
   }
@@ -595,49 +579,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             ),
 
             Divider(height: 1, color: divColor),
-            const SizedBox(height: 20),
-
-            // ── 어종 선택 ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('어종', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _fishList.map((f) {
-                      final selected = _fish == f;
-                      return GestureDetector(
-                        onTap: () => setState(() => _fish = f),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: selected ? accent : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: selected
-                                  ? accent
-                                  : (isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
-                            ),
-                          ),
-                          child: Text(
-                            f,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? (isDark ? Colors.black : Colors.white) : sub,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 20),
 
             // ── 사이즈 입력 ──

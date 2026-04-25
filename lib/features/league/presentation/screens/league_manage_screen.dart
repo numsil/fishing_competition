@@ -7,7 +7,9 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
-import 'league_detail_screen.dart';
+import '../../../my_league/data/my_league_repository.dart';
+import 'league_create_screen.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  상태 enum
@@ -112,9 +114,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     ref.invalidate(leagueRankingProvider(widget.leagueId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🎣 대회가 시작되었습니다!')),
-      );
+            AppSnackBar.info(context, '🎣 대회가 시작되었습니다!');
     }
   }
 
@@ -131,9 +131,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     ref.invalidate(leagueRankingProvider(widget.leagueId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('대회가 종료되었습니다. 최종 결과가 확정됩니다.')),
-      );
+            AppSnackBar.info(context, '대회가 종료되었습니다. 최종 결과가 확정됩니다.');
     }
   }
 
@@ -143,18 +141,11 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
       ref.invalidate(leagueRankingProvider(widget.leagueId));
       ref.invalidate(leagueDetailProvider(widget.leagueId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${p.name} 님이 추방되었습니다.')),
-        );
+                AppSnackBar.info(context, '${p.name} 님이 추방되었습니다.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('추방 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+                AppSnackBar.info(context, '추방 실패: $e');
       }
     }
   }
@@ -166,9 +157,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leagueRankingProvider(widget.leagueId));
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${p.name} 님의 참가 신청을 수락했습니다.')),
-      );
+            AppSnackBar.info(context, '${p.name} 님의 참가 신청을 수락했습니다.');
     }
   }
 
@@ -178,10 +167,32 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leaguePendingProvider(widget.leagueId));
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${p.name} 님의 참가 신청을 거절했습니다.')),
-      );
+            AppSnackBar.info(context, '${p.name} 님의 참가 신청을 거절했습니다.');
     }
+  }
+
+  void _deleteLeague(BuildContext context, League league) {
+    showDeleteConfirmSheet(
+      context,
+      title: '리그 삭제',
+      content: '"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.',
+      onConfirmed: () async {
+        final navigator = Navigator.of(context);
+        try {
+          await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
+          ref.invalidate(myLeaguesProvider);
+          ref.invalidate(leaguesProvider);
+          if (mounted) {
+                        AppSnackBar.success(context, '리그가 삭제되었습니다.');
+            navigator.pop();
+          }
+        } catch (e) {
+          if (mounted) {
+                        AppSnackBar.error(context, '삭제 실패: $e');
+          }
+        }
+      },
+    );
   }
 
   void _showInviteSheet(BuildContext context, Color accent, bool isDark) {
@@ -241,9 +252,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       Clipboard.setData(ClipboardData(
                           text: 'https://huk.app/join/${widget.leagueId}'));
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('초대 링크가 클립보드에 복사됐습니다.')),
-                      );
+                                            AppSnackBar.info(context, '초대 링크가 클립보드에 복사됐습니다.');
                     },
                     child: Text('복사', style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
                   ),
@@ -291,9 +300,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       onPressed: () {
                         if (ctrl.text.isNotEmpty) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${ctrl.text} 님에게 초대장을 보냈습니다.')),
-                          );
+                                                    AppSnackBar.info(context, '${ctrl.text} 님에게 초대장을 보냈습니다.');
                         }
                       },
                       child: const Text('초대', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -308,146 +315,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     );
   }
 
-  void _showEditSheet(BuildContext context, League league, Color accent, bool isDark) {
-    final nameCtrl = TextEditingController(text: league.title);
-    final locationCtrl = TextEditingController(text: league.location);
-    final prizeCtrl = TextEditingController(text: league.prizeInfo ?? '');
-    final ruleCtrl = TextEditingController(text: league.rule);
-    int maxParticipants = league.maxParticipants;
-    int fee = league.entryFee;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, scrollCtrl) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40, height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('대회 정보 수정',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.pop(context);
-                            await ref.read(leagueRepositoryProvider).updateLeague(
-                              id: widget.leagueId,
-                              title: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
-                              location: locationCtrl.text.trim().isEmpty ? null : locationCtrl.text.trim(),
-                              rule: ruleCtrl.text.trim().isEmpty ? null : ruleCtrl.text.trim(),
-                              prizeInfo: prizeCtrl.text.trim().isEmpty ? null : prizeCtrl.text.trim(),
-                              maxParticipants: maxParticipants,
-                              entryFee: fee,
-                            );
-                            ref.invalidate(leagueDetailProvider(widget.leagueId));
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('대회 정보가 수정되었습니다.')),
-                              );
-                            }
-                          },
-                          child: Text('저장',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800, color: accent, fontSize: 15)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: StatefulBuilder(
-                  builder: (ctx, setLocal) => ListView(
-                    controller: scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                    children: [
-                      _EditField(label: '대회명', ctrl: nameCtrl, isDark: isDark, accent: accent),
-                      const SizedBox(height: 14),
-                      _EditField(label: '장소', ctrl: locationCtrl, isDark: isDark, accent: accent),
-                      const SizedBox(height: 14),
-                      _EditField(label: '규칙', ctrl: ruleCtrl, isDark: isDark, accent: accent),
-                      const SizedBox(height: 14),
-                      _EditField(label: '시상 내용', ctrl: prizeCtrl, isDark: isDark, accent: accent, maxLines: 3),
-                      const SizedBox(height: 14),
-                      _EditSection(
-                        label: '최대 참가자',
-                        child: Row(
-                          children: [
-                            _CounterBtn(
-                              icon: Icons.remove,
-                              onTap: () => setLocal(() { if (maxParticipants > 5) maxParticipants -= 5; }),
-                              accent: accent,
-                            ),
-                            const SizedBox(width: 16),
-                            Text('$maxParticipants명',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                            const SizedBox(width: 16),
-                            _CounterBtn(
-                              icon: Icons.add,
-                              onTap: () => setLocal(() => maxParticipants += 5),
-                              accent: accent,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _EditSection(
-                        label: '참가비',
-                        child: Row(
-                          children: [
-                            _CounterBtn(
-                              icon: Icons.remove,
-                              onTap: () => setLocal(() { if (fee >= 5000) fee -= 5000; }),
-                              accent: accent,
-                            ),
-                            const SizedBox(width: 16),
-                            Text(fee == 0 ? '무료' : '${fee ~/ 1000}천원',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                            const SizedBox(width: 16),
-                            _CounterBtn(
-                              icon: Icons.add,
-                              onTap: () => setLocal(() => fee += 5000),
-                              accent: accent,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,8 +356,22 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
             title: const Text('대회 관리',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                color: AppColors.error,
+                tooltip: '리그 삭제',
+                onPressed: () => _deleteLeague(context, league),
+              ),
               TextButton(
-                onPressed: () => _showEditSheet(context, league, accent, isDark),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LeagueCreateScreen(league: league),
+                    ),
+                  );
+                  ref.invalidate(leagueDetailProvider(widget.leagueId));
+                },
                 child: Text('수정',
                     style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 14)),
               ),
@@ -602,6 +483,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       cardBg: cardBg,
                       divColor: divColor,
                       onKick: _kickParticipant,
+                      onRefresh: () async {
+                        ref.invalidate(leagueRankingProvider(widget.leagueId));
+                        ref.invalidate(leagueDetailProvider(widget.leagueId));
+                      },
                     ),
                     _PendingTab(
                       pending: pending,
@@ -612,6 +497,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       divColor: divColor,
                       onApprove: _approvePending,
                       onReject: _rejectPending,
+                      onRefresh: () async {
+                        ref.invalidate(leaguePendingProvider(widget.leagueId));
+                        ref.invalidate(leagueDetailProvider(widget.leagueId));
+                      },
                     ),
                   ],
                 ),
@@ -884,6 +773,7 @@ class _ParticipantsTab extends StatelessWidget {
     required this.cardBg,
     required this.divColor,
     required this.onKick,
+    required this.onRefresh,
   });
 
   final List<_Participant> participants;
@@ -891,37 +781,47 @@ class _ParticipantsTab extends StatelessWidget {
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
   final void Function(_Participant) onKick;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (participants.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Container(
-              width: 72, height: 72,
-              decoration: BoxDecoration(
-                color: sub.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      color: sub.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.group_outlined, size: 36, color: sub),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('참가자가 없습니다',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: sub)),
+                  const SizedBox(height: 6),
+                  Text('초대 버튼을 눌러 참가자를 초대해보세요',
+                      style: TextStyle(fontSize: 12, color: sub.withValues(alpha: 0.7))),
+                ],
               ),
-              child: Icon(Icons.group_outlined, size: 36, color: sub),
             ),
-            const SizedBox(height: 16),
-            Text('참가자가 없습니다',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: sub)),
-            const SizedBox(height: 6),
-            Text('초대 버튼을 눌러 참가자를 초대해보세요',
-                style: TextStyle(fontSize: 12, color: sub.withValues(alpha: 0.7))),
           ],
         ),
       );
     }
 
-    return ListView.separated(
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: participants.length,
       separatorBuilder: (_, __) => Divider(height: 1, color: divColor),
@@ -937,6 +837,7 @@ class _ParticipantsTab extends StatelessWidget {
           onKick: () => onKick(p),
         );
       },
+      ),
     );
   }
 }
@@ -1073,6 +974,7 @@ class _PendingTab extends StatelessWidget {
     required this.divColor,
     required this.onApprove,
     required this.onReject,
+    required this.onRefresh,
   });
 
   final List<_Participant> pending;
@@ -1080,239 +982,128 @@ class _PendingTab extends StatelessWidget {
   final Color accent, sub, cardBg, divColor;
   final void Function(_Participant) onApprove;
   final void Function(_Participant) onReject;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (pending.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Container(
-              width: 72, height: 72,
-              decoration: BoxDecoration(
-                color: sub.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      color: sub.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.inbox_outlined, size: 36, color: sub),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('대기 중인 참가 신청이 없습니다',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: sub)),
+                ],
               ),
-              child: Icon(Icons.inbox_outlined, size: 36, color: sub),
             ),
-            const SizedBox(height: 16),
-            Text('대기 중인 참가 신청이 없습니다',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: sub)),
           ],
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Row(
-            children: [
-              Text('${pending.length}건 대기 중',
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  for (final p in List<_Participant>.from(pending)) {
-                    onApprove(p);
-                  }
-                },
-                child: Text('전체 수락',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: accent)),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        itemCount: pending.length + 1,
+        separatorBuilder: (_, i) => i == 0 ? const SizedBox.shrink() : Divider(height: 1, color: divColor),
+        itemBuilder: (_, i) {
+          if (i == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Row(
+                children: [
+                  Text('${pending.length}건 대기 중',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      for (final p in List<_Participant>.from(pending)) {
+                        onApprove(p);
+                      }
+                    },
+                    child: Text('전체 수락',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: pending.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: divColor),
-            itemBuilder: (_, i) {
-              final p = pending[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        width: 44, height: 44,
-                        color: accent.withValues(alpha: 0.1),
-                        child: Center(
-                          child: Text(
-                            p.name.isNotEmpty ? p.name[0] : '?',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: accent),
-                          ),
-                        ),
+            );
+          }
+          final p = pending[i - 1];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 44, height: 44,
+                    color: accent.withValues(alpha: 0.1),
+                    child: Center(
+                      child: Text(
+                        p.name.isNotEmpty ? p.name[0] : '?',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: accent),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(p.name,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700)),
-                          Text('신청 ${p.joinDate}',
-                              style: TextStyle(fontSize: 11, color: sub)),
-                        ],
-                      ),
-                    ),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: sub,
-                        side: BorderSide(color: divColor),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => onReject(p),
-                      child: const Text('거절',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accent,
-                        foregroundColor: isDark ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => onApprove(p),
-                      child: const Text('수락',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w700)),
-                    ),
-                  ],
+                  ),
                 ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-//  공통 위젯
-// ─────────────────────────────────────────────────────────────────
-
-class _EditField extends StatelessWidget {
-  const _EditField({
-    required this.label,
-    required this.ctrl,
-    required this.isDark,
-    required this.accent,
-    this.maxLines = 1,
-  });
-  final String label;
-  final TextEditingController ctrl;
-  final bool isDark;
-  final Color accent;
-  final int maxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF888888))),
-        const SizedBox(height: 6),
-        TextField(
-          controller: ctrl,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color: isDark
-                      ? const Color(0xFF333333)
-                      : const Color(0xFFDDDDDD)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                      Text('신청 ${p.joinDate}', style: TextStyle(fontSize: 11, color: sub)),
+                    ],
+                  ),
+                ),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: sub,
+                    side: BorderSide(color: divColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => onReject(p),
+                  child: const Text('거절', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => onApprove(p),
+                  child: const Text('수락', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ],
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EditSection extends StatelessWidget {
-  const _EditSection({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF888888))),
-        const SizedBox(height: 8),
-        child,
-      ],
-    );
-  }
-}
-
-class _CounterBtn extends StatelessWidget {
-  const _CounterBtn(
-      {required this.icon, required this.onTap, required this.accent});
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 18, color: accent),
+          );
+        },
       ),
     );
   }
 }
+

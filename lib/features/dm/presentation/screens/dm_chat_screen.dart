@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/dm_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class DmChatScreen extends ConsumerStatefulWidget {
   const DmChatScreen({super.key, required this.conversation});
@@ -86,9 +87,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
           .sendMessage(widget.conversation.id, text);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('메시지 전송에 실패했습니다')),
-        );
+                AppSnackBar.info(context, '메시지 전송에 실패했습니다');
         _ctrl.text = text;
       }
     } finally {

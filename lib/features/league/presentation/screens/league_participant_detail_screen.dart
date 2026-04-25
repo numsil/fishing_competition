@@ -9,6 +9,7 @@ import '../../data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 // ── 라우터에서 extras로 전달할 args ─────────────────────────
 class LeagueParticipantArgs {
@@ -253,25 +254,11 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                           await ref.read(feedRepositoryProvider).sharePostToFeed(posts[index]);
                           ref.invalidate(feedPostsProvider);
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('내 피드에 공유되었습니다.'),
-                                backgroundColor: AppColors.success,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            );
+                                                        AppSnackBar.success(context, '내 피드에 공유되었습니다.');
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('공유 실패: $e'),
-                                backgroundColor: AppColors.error,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            );
+                                                        AppSnackBar.error(context, '공유 실패: $e');
                           }
                         }
                       } : null,

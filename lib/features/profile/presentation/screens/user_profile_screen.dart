@@ -9,6 +9,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../data/profile_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key, required this.userId});
@@ -56,9 +57,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('메시지를 시작할 수 없습니다')),
-        );
+                AppSnackBar.info(context, '메시지를 시작할 수 없습니다');
       }
     } finally {
       if (mounted) setState(() => _dmLoading = false);

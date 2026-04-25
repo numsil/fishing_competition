@@ -10,6 +10,7 @@ import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -89,24 +90,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       await ref.read(profileRepositoryProvider).uploadAvatar(File(picked.path));
       ref.invalidate(myProfileProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('프로필 사진이 업데이트되었습니다!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.success(context, '프로필 사진이 업데이트되었습니다!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('업로드 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+                AppSnackBar.error(context, '업로드 실패: $e');
       }
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
@@ -130,7 +118,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               IconButton(icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20), onPressed: () => context.go(AppRoutes.login)),
             ],
           ),
-          body: NestedScrollView(
+          body: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(myProfileProvider);
+              ref.invalidate(myPostsProvider);
+              ref.invalidate(myLeaguesProvider);
+            },
+            child: NestedScrollView(
             headerSliverBuilder: (context, _) => [
           SliverToBoxAdapter(
             child: Padding(
@@ -345,6 +339,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 _History(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg),
               ],
             ),
+          ),
           ),
         );
       },

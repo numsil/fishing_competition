@@ -9,6 +9,7 @@ import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class PersonalCatchScreen extends ConsumerStatefulWidget {
   const PersonalCatchScreen({super.key});
@@ -19,13 +20,11 @@ class PersonalCatchScreen extends ConsumerStatefulWidget {
 
 class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   File? _image;
-  String _fishType = '배스';
+  final String _fishType = '배스';
   final _lengthCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
-
-  static const _fishOptions = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '기타'];
 
   @override
   void dispose() {
@@ -89,9 +88,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
 
   Future<void> _submit() async {
     if (_image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('사진을 촬영해주세요'), behavior: SnackBarBehavior.floating),
-      );
+            AppSnackBar.info(context, '사진을 촬영해주세요');
       return;
     }
     final user = ref.read(currentUserProvider);
@@ -114,25 +111,12 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       ref.invalidate(myPersonalRecordsProvider);
       ref.invalidate(myProfileProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('조과가 기록되었습니다! 🎣'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.success(context, '조과가 기록되었습니다! 🎣');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('등록 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+                AppSnackBar.error(context, '등록 실패: $e');
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -239,34 +223,6 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
                           style: TextStyle(fontSize: 12, color: sub)),
                     ]),
             ),
-          ),
-          const SizedBox(height: 24),
-
-          // ── 어종 선택 ──────────────────────────
-          SectionLabel(text: '어종', color: accent),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8, runSpacing: 8,
-            children: _fishOptions.map((fish) {
-              final sel = _fishType == fish;
-              return GestureDetector(
-                onTap: () => setState(() => _fishType = fish),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: sel ? accent : cardBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: sel ? accent : divColor),
-                  ),
-                  child: Text(fish,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                        color: sel ? (isDark ? Colors.black : Colors.white) : sub,
-                      )),
-                ),
-              );
-            }).toList(),
           ),
           const SizedBox(height: 24),
 

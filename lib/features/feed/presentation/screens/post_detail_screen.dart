@@ -14,6 +14,7 @@ import '../../../profile/data/profile_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../widgets/feed_video_player.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.post});
@@ -83,32 +84,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
   }
 
   Future<void> _sharePostToFeed() async {
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(feedRepositoryProvider).sharePostToFeed(widget.post);
       ref.invalidate(feedPostsProvider);
       ref.invalidate(myPostsProvider);
       ref.invalidate(myProfileProvider);
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('내 피드에 공유되었습니다.'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.success(context, '내 피드에 공유되었습니다.');
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('공유 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.error(context, '공유 실패: $e');
       }
     }
   }
@@ -135,14 +121,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('삭제 실패: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.error(context, '삭제 실패: $e');
       }
     }
   }
@@ -344,15 +323,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                   onPressed: () {
                     final link = 'https://huk.app/p/${p.id}';
                     Clipboard.setData(ClipboardData(text: link));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('링크가 복사되었습니다'),
-                        backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.black87,
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
+                                        AppSnackBar.info(context, '링크가 복사되었습니다');
                   },
                   icon: Icon(LucideIcons.link2, color: iconColor, size: 24),
                   visualDensity: VisualDensity.compact,
@@ -536,15 +507,7 @@ class _MoreMenu extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               Clipboard.setData(ClipboardData(text: 'https://huk.app/p/$postId'));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('링크가 복사되었습니다'),
-                  backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.black87,
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              );
+                            AppSnackBar.info(context, '링크가 복사되었습니다');
             },
           ),
           Divider(height: 1, color: divColor),

@@ -315,6 +315,8 @@ class LeagueRepository {
 
   // ── 리그 삭제 ──────────────────────────────────────────────
   Future<void> deleteLeague(String leagueId) async {
+    // 리그 소속 posts 먼저 삭제 (league_id SET NULL 방지)
+    await _supabase.from('posts').delete().eq('league_id', leagueId);
     await _supabase.from('leagues').delete().eq('id', leagueId);
   }
 
@@ -330,19 +332,33 @@ class LeagueRepository {
   Future<void> updateLeague({
     required String id,
     String? title,
+    String? description,
     String? location,
+    double? lat,
+    double? lng,
+    DateTime? startTime,
+    DateTime? endTime,
     String? rule,
+    int? catchLimit,
     String? prizeInfo,
     int? maxParticipants,
     int? entryFee,
+    bool? isPublic,
   }) async {
     final update = <String, dynamic>{};
     if (title != null) update['title'] = title;
+    if (description != null) update['description'] = description;
     if (location != null) update['location'] = location;
+    if (lat != null) update['lat'] = lat;
+    if (lng != null) update['lng'] = lng;
+    if (startTime != null) update['start_time'] = startTime.toIso8601String();
+    if (endTime != null) update['end_time'] = endTime.toIso8601String();
     if (rule != null) update['rule'] = rule;
+    if (catchLimit != null) update['catch_limit'] = catchLimit;
     if (prizeInfo != null) update['prize_info'] = prizeInfo;
     if (maxParticipants != null) update['max_participants'] = maxParticipants;
     if (entryFee != null) update['entry_fee'] = entryFee;
+    if (isPublic != null) update['is_public'] = isPublic;
     if (update.isEmpty) return;
     await _supabase.from('leagues').update(update).eq('id', id);
   }
@@ -379,4 +395,8 @@ final leagueUserPostsProvider = FutureProvider.family<List<Post>, (String, Strin
 // 코드 생성 없이 수동 정의
 final leaguePendingProvider = FutureProvider.family<List<LeaguePendingEntry>, String>(
   (ref, leagueId) => ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId),
+);
+
+final leagueDetailProvider = FutureProvider.family<League, String>(
+  (ref, id) => ref.watch(leagueRepositoryProvider).getLeague(id),
 );

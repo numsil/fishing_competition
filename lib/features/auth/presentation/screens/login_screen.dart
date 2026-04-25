@@ -5,6 +5,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../data/auth_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,12 +42,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('로그인 실패: 이메일과 비밀번호를 확인해주세요.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+                AppSnackBar.error(context, '로그인 실패: 이메일과 비밀번호를 확인해주세요.');
       }
     } finally {
       if (mounted) {

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../data/auth_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -55,12 +56,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_parseError(e.toString())),
-            backgroundColor: AppColors.error,
-          ),
-        );
+                AppSnackBar.error(context, _parseError(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

@@ -7,10 +7,16 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import 'league_detail_screen.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class LeagueCreateScreen extends ConsumerStatefulWidget {
-  const LeagueCreateScreen({super.key});
+  const LeagueCreateScreen({super.key, this.league});
+
+  /// null이면 생성 모드, non-null이면 편집 모드
+  final League? league;
 
   @override
   ConsumerState<LeagueCreateScreen> createState() => _LeagueCreateScreenState();
@@ -29,15 +35,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   int _catchLimit = 1; // 0=전체, 1,3,5,10
   bool _isPublic = true;
 
-  // 어종
-  String _fishCategory = '민물';
-  final Set<String> _selectedFish = {'배스'};
-
   // 장소 좌표
   LatLng? _selectedLatLng;
 
   // 상금/상품
-  String _prizeType = '상금';
+  String _prizeType = '기타';
   final List<_PrizeItem> _prizes = [
     _PrizeItem(rank: '1위', value: ''),
     _PrizeItem(rank: '2위', value: ''),
@@ -48,11 +50,37 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   // 소개 이미지 (URL 리스트)
   final List<String> _introImages = [];
 
-  bool _creating = false;
+  bool _submitting = false;
+
+  bool get _isEditMode => widget.league != null;
 
   static const _rules = ['최대어', '합산 길이', '마릿수', '무게'];
-  static const _freshFish = ['배스', '배스(스몰)', '쏘가리', '붕어', '잉어', '향어', '가물치', '메기', '강준치', '피라미'];
-  static const _saltFish = ['광어', '볼락', '우럭', '참돔', '감성돔', '삼치', '고등어', '방어', '농어', '무늬오징어'];
+
+  @override
+  void initState() {
+    super.initState();
+    final l = widget.league;
+    if (l != null) {
+      _nameCtrl.text = l.title;
+      _locationCtrl.text = l.location;
+      _maxCtrl.text = l.maxParticipants.toString();
+      _feeCtrl.text = l.entryFee.toString();
+      _introCtrl.text = l.description ?? '';
+      _dateRange = DateTimeRange(start: l.startTime, end: l.endTime);
+      _rule = l.rule;
+      _catchLimit = l.catchLimit;
+      _isPublic = l.isPublic;
+      if (l.lat != null && l.lng != null) {
+        _selectedLatLng = LatLng(l.lat!, l.lng!);
+      }
+      // prizeInfo는 기타 텍스트 필드로 표시
+      _prizeType = '기타';
+      _etcPrizeCtrl.text = l.prizeInfo ?? '';
+    } else {
+      // 생성 모드 기본값
+      _prizeType = '상금';
+    }
+  }
 
   @override
   void dispose() {
@@ -65,57 +93,74 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     super.dispose();
   }
 
-  // ── 리그 개설 ──
-  Future<void> _createLeague() async {
+  // ── 개설 / 수정 공통 제출 ──
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
     if (_dateRange == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('일정을 선택해주세요.')),
-      );
+            AppSnackBar.info(context, '일정을 선택해주세요.');
       return;
     }
     if (_locationCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('장소를 입력해주세요.')),
-      );
+            AppSnackBar.info(context, '장소를 입력해주세요.');
       return;
     }
 
-    final user = ref.read(currentUserProvider);
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인이 필요합니다.')),
-      );
-      return;
-    }
-
-    setState(() => _creating = true);
+    setState(() => _submitting = true);
     try {
-      await ref.read(leagueRepositoryProvider).createLeague(
-        hostId: user.id,
-        title: _nameCtrl.text.trim(),
-        description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
-        location: _locationCtrl.text.trim(),
-        lat: _selectedLatLng?.latitude,
-        lng: _selectedLatLng?.longitude,
-        startTime: _dateRange!.start,
-        endTime: _dateRange!.end,
-        entryFee: int.tryParse(_feeCtrl.text) ?? 0,
-        maxParticipants: int.tryParse(_maxCtrl.text) ?? 100,
-        fishTypes: _selectedFish.isEmpty ? '미정' : _selectedFish.join(', '),
-        rule: _rule,
-        catchLimit: _catchLimit,
-        prizeInfo: _buildPrizeInfo(),
-        isPublic: _isPublic,
-      );
-      ref.invalidate(leaguesProvider);
-      if (mounted) context.pop();
+      if (_isEditMode) {
+        await ref.read(leagueRepositoryProvider).updateLeague(
+          id: widget.league!.id,
+          title: _nameCtrl.text.trim(),
+          description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
+          location: _locationCtrl.text.trim(),
+          lat: _selectedLatLng?.latitude,
+          lng: _selectedLatLng?.longitude,
+          startTime: _dateRange!.start,
+          endTime: _dateRange!.end,
+          entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
+          maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
+          rule: _rule,
+          catchLimit: _catchLimit,
+          prizeInfo: _buildPrizeInfo(),
+          isPublic: _isPublic,
+        );
+        ref.invalidate(leagueDetailProvider(widget.league!.id));
+        ref.invalidate(leaguesProvider);
+        if (mounted) {
+                    AppSnackBar.info(context, '대회 정보가 수정되었습니다.');
+          context.pop();
+        }
+      } else {
+        final user = ref.read(currentUserProvider);
+        if (user == null) {
+          setState(() => _submitting = false);
+                    AppSnackBar.info(context, '로그인이 필요합니다.');
+          return;
+        }
+        await ref.read(leagueRepositoryProvider).createLeague(
+          hostId: user.id,
+          title: _nameCtrl.text.trim(),
+          description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
+          location: _locationCtrl.text.trim(),
+          lat: _selectedLatLng?.latitude,
+          lng: _selectedLatLng?.longitude,
+          startTime: _dateRange!.start,
+          endTime: _dateRange!.end,
+          entryFee: int.tryParse(_feeCtrl.text) ?? 0,
+          maxParticipants: int.tryParse(_maxCtrl.text) ?? 100,
+          fishTypes: '배스',
+          rule: _rule,
+          catchLimit: _catchLimit,
+          prizeInfo: _buildPrizeInfo(),
+          isPublic: _isPublic,
+        );
+        ref.invalidate(leaguesProvider);
+        if (mounted) context.pop();
+      }
     } catch (e) {
       if (mounted) {
-        setState(() => _creating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('개설 실패: $e'), backgroundColor: AppColors.error),
-        );
+        setState(() => _submitting = false);
+                AppSnackBar.error(context, _isEditMode ? '수정 실패: $e' : '개설 실패: $e');
       }
     }
   }
@@ -483,14 +528,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final sub = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    final fishList = _fishCategory == '민물' ? _freshFish : _saltFish;
     final dateText = _dateRange == null
         ? null
         : '${_dateRange!.start.year}.${_dateRange!.start.month.toString().padLeft(2, '0')}.${_dateRange!.start.day.toString().padLeft(2, '0')}  ~  ${_dateRange!.end.year}.${_dateRange!.end.month.toString().padLeft(2, '0')}.${_dateRange!.end.day.toString().padLeft(2, '0')}';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('리그 개설', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text(
+          _isEditMode ? '리그 수정' : '리그 개설',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -499,7 +546,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: ElevatedButton(
-              onPressed: _creating ? null : _createLeague,
+              onPressed: _submitting ? null : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.black,
@@ -509,9 +556,12 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 0,
               ),
-              child: _creating
+              child: _submitting
                   ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Text('개설', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                  : Text(
+                      _isEditMode ? '저장' : '개설',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
             ),
           ),
         ],
@@ -657,88 +707,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // ── 어종 ──
-            _Section(
-              title: '대상 어종',
-              accent: accent,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 대분류 탭
-                  Row(
-                    children: ['민물', '바다'].map((cat) {
-                      final sel = _fishCategory == cat;
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          _fishCategory = cat;
-                          _selectedFish.clear();
-                        }),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: sel ? accent : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: sel ? accent : divColor),
-                          ),
-                          child: Text(
-                            cat,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: sel ? (isDark ? Colors.black : Colors.white) : sub,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 10),
-                  // 소분류 어종
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: fishList.map((fish) {
-                      final sel = _selectedFish.contains(fish);
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          if (sel) {
-                            _selectedFish.remove(fish);
-                          } else {
-                            _selectedFish.add(fish);
-                          }
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: sel ? accent : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: sel ? accent : divColor,
-                            ),
-                          ),
-                          child: Text(
-                            fish,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                              color: sel ? Colors.black : sub,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  if (_selectedFish.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '선택팅: ${_selectedFish.join(', ')}',
-                      style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ],
@@ -1121,10 +1089,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             SizedBox(
               height: 52,
               child: ElevatedButton(
-                onPressed: _creating ? null : _createLeague,
-                child: _creating
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('리그 개설하기'),
+                    : Text(_isEditMode ? '수정 완료' : '리그 개설하기'),
               ),
             ),
           ],

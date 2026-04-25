@@ -5,9 +5,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_snack_bar.dart';
-import '../../../../core/widgets/confirm_dialog.dart';
-import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../league/data/league_repository.dart';
@@ -74,9 +71,9 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
           body: TabBarView(
             controller: _tab,
             children: [
-              _ActiveTab(leagues: activeLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+              _ActiveTab(leagues: activeLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
               _PersonalRecordTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-              _MyLeaguesTab(leagues: hosted, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+              _MyLeaguesTab(leagues: hosted, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
             ],
           ),
         );
@@ -96,25 +93,41 @@ class _ActiveTab extends StatelessWidget {
     required this.sub,
     required this.cardBg,
     required this.divColor,
+    required this.onRefresh,
   });
   final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (leagues.isEmpty) {
-      return _EmptyState(
-        isDark: isDark,
-        accent: accent,
-        sub: sub,
-        message: '참여중인 리그가 없습니다',
-        buttonLabel: '리그 찾아보기',
-        onTap: () => context.go(AppRoutes.league),
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: _EmptyState(
+                isDark: isDark,
+                accent: accent,
+                sub: sub,
+                message: '참여중인 리그가 없습니다',
+                buttonLabel: '리그 찾아보기',
+                onTap: () => context.go(AppRoutes.league),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return ListView(
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         _MySummaryCard(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
@@ -131,6 +144,7 @@ class _ActiveTab extends StatelessWidget {
               divColor: divColor,
             )),
       ],
+      ),
     );
   }
 }
@@ -806,25 +820,41 @@ class _MyLeaguesTab extends StatelessWidget {
     required this.sub,
     required this.cardBg,
     required this.divColor,
+    required this.onRefresh,
   });
   final List<League> leagues;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (leagues.isEmpty) {
-      return _EmptyState(
-        isDark: isDark,
-        accent: accent,
-        sub: sub,
-        message: '개설한 리그가 없습니다',
-        buttonLabel: '리그 개설하기',
-        onTap: () => context.go(AppRoutes.league),
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: _EmptyState(
+                isDark: isDark,
+                accent: accent,
+                sub: sub,
+                message: '개설한 리그가 없습니다',
+                buttonLabel: '리그 개설하기',
+                onTap: () => context.go(AppRoutes.league),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return ListView(
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         // 요약 카드
@@ -876,6 +906,7 @@ class _MyLeaguesTab extends StatelessWidget {
               divColor: divColor,
             )),
       ],
+      ),
     );
   }
 }
@@ -959,29 +990,6 @@ class _MyLeagueCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // 삭제 버튼
-                  GestureDetector(
-                    onTap: () => showDeleteConfirmSheet(
-                      context,
-                      title: '리그 삭제',
-                      content: '"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.',
-                      onConfirmed: () async {
-                        try {
-                          await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
-                          AppSnackBar.success(context, '리그가 삭제되었습니다.');
-                          ref.invalidate(myLeaguesProvider);
-                          ref.invalidate(leaguesProvider);
-                        } catch (e) {
-                          AppSnackBar.error(context, '삭제 실패: $e');
-                        }
-                      },
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      child: Icon(LucideIcons.trash2, size: 15, color: AppColors.error),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
                   // 관리 버튼
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

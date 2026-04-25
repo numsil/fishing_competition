@@ -11,6 +11,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 
 class LeagueCatchScreen extends ConsumerStatefulWidget {
   const LeagueCatchScreen({super.key, required this.league});
@@ -22,7 +23,7 @@ class LeagueCatchScreen extends ConsumerStatefulWidget {
 
 class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   File? _image;
-  late String _fishType;
+  final String _fishType = '배스';
   final _measureCtrl = TextEditingController(); // 길이 or 무게 (룰에 따라)
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
@@ -30,23 +31,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   // 무게 기준 대회인지 (rule이 '무게'인 경우)
   bool get _isWeightRule => widget.league.rule == '무게';
 
-  // 계측 단위 표시 (길이 기준이면 cm, 무게 기준이면 g)
-  String get _measureUnit => _isWeightRule ? 'g' : 'cm';
-
-  List<String> get _fishOptions {
-    final opts = widget.league.fishTypes
-        .split(',')
-        .map((f) => f.trim())
-        .where((f) => f.isNotEmpty)
-        .toList();
-    return opts.isEmpty ? ['배스'] : opts;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fishType = _fishOptions.first;
-  }
 
   @override
   void dispose() {
@@ -67,19 +51,12 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
 
   Future<void> _submit() async {
     if (_image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('사진을 촬영해주세요'), behavior: SnackBarBehavior.floating),
-      );
+            AppSnackBar.info(context, '사진을 촬영해주세요');
       return;
     }
     final val = double.tryParse(_measureCtrl.text.trim());
     if (val == null || val <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isWeightRule ? '무게를 입력해주세요' : '길이를 입력해주세요'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+            AppSnackBar.info(context, _isWeightRule ? '무게를 입력해주세요' : '길이를 입력해주세요');
       return;
     }
 
@@ -99,25 +76,16 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
         caption: _captionCtrl.text.trim().isEmpty ? null : _captionCtrl.text.trim(),
       );
       ref.invalidate(leagueRankingProvider(widget.league.id));
+      ref.invalidate(leagueDetailProvider(widget.league.id));
       ref.invalidate(feedPostsProvider);
       ref.invalidate(myPostsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('조과가 등록되었습니다! 🎣'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+                AppSnackBar.success(context, '조과가 등록되었습니다! 🎣');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('등록 실패: $e'), backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating),
-        );
+                AppSnackBar.error(context, '등록 실패: $e');
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -230,36 +198,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // ── 어종 선택 (여러 종류일 때만) ───────────
-          if (_fishOptions.length > 1) ...[
-            SectionLabel(text: '어종', color: accent),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8, runSpacing: 8,
-              children: _fishOptions.map((fish) {
-                final sel = _fishType == fish;
-                return GestureDetector(
-                  onTap: () => setState(() => _fishType = fish),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: sel ? accent : cardBg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: sel ? accent : divColor),
-                    ),
-                    child: Text(fish,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                          color: sel ? (isDark ? Colors.black : Colors.white) : sub,
-                        )),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-          ],
 
           // ── 계측값 입력 (룰에 따라 하나만) ─────────
           SectionLabel(text: measureLabel, color: accent),
