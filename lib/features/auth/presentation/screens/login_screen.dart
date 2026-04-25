@@ -69,7 +69,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   children: [
                     Image.asset(
-                      'assets/images/huk_logo.png',
+                      'assets/images/nak_icon.png',
                       width: 110,
                       height: 110,
                     ),

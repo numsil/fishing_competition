@@ -41,6 +41,9 @@ dependencies:
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
 
+  # 가시성 감지
+  visibility_detector: ^0.4.0+2
+
   # 이미지/동영상 피커
   image_picker: ^1.1.2
   video_compress: ^3.1.2
@@ -75,7 +78,7 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#111111"
+  adaptive_icon_background: "#00FF88"
   adaptive_icon_foreground: "assets/images/app_icon.png"
 
 flutter:

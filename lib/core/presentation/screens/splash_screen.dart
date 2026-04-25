@@ -85,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen>
                   builder: (_, __) => Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _HukSvgLogo(glowIntensity: _glow.value),
+                      _NakSvgLogo(glowIntensity: _glow.value),
                       const SizedBox(height: 22),
                       FadeTransition(
                         opacity: _textFade,
@@ -161,11 +161,11 @@ class _WaterPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  HUK SVG 로고 (형광 그린 + 글로우)
+//  NAK SVG 로고 (형광 그린 + 글로우)
 // ─────────────────────────────────────────────────────────────────
 
-class _HukSvgLogo extends StatelessWidget {
-  const _HukSvgLogo({required this.glowIntensity});
+class _NakSvgLogo extends StatelessWidget {
+  const _NakSvgLogo({required this.glowIntensity});
   final double glowIntensity;
 
   static const _neon = Color(0xFF00FF88);
@@ -179,7 +179,7 @@ class _HukSvgLogo extends StatelessWidget {
         Opacity(
           opacity: 0.18 * glowIntensity,
           child: SvgPicture.asset(
-            'assets/images/huk_logo.svg',
+            'assets/images/nak_logo.svg',
             width: 272,
             colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
           ),
@@ -188,14 +188,14 @@ class _HukSvgLogo extends StatelessWidget {
         Opacity(
           opacity: 0.40 * glowIntensity,
           child: SvgPicture.asset(
-            'assets/images/huk_logo.svg',
+            'assets/images/nak_logo.svg',
             width: 252,
             colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
           ),
         ),
         // 선명한 로고
         SvgPicture.asset(
-          'assets/images/huk_logo.svg',
+          'assets/images/nak_logo.svg',
           width: 240,
           colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
         ),

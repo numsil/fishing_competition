@@ -165,7 +165,7 @@ class MainScreen extends StatelessWidget {
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/images/huk_logo.png',
+                            'assets/images/nak_icon.png',
                             width: fabSize,
                             height: fabSize,
                             fit: BoxFit.cover,

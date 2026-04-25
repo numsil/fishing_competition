@@ -86,7 +86,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       title: SvgPicture.asset(
-        'assets/images/huk_logo.svg',
+        'assets/images/nak_logo.svg',
         height: 26,
         fit: BoxFit.contain,
         colorFilter: ColorFilter.mode(
