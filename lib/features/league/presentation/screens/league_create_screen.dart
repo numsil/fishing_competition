@@ -1,11 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
@@ -28,12 +30,14 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _locationCtrl = TextEditingController();
   final _maxCtrl = TextEditingController();
   final _feeCtrl = TextEditingController();
+  final _shortDescCtrl = TextEditingController();
   final _introCtrl = TextEditingController();
 
   DateTimeRange? _dateRange;
   String _rule = '최대어';
   int _catchLimit = 1; // 0=전체, 1,3,5,10
   bool _isPublic = true;
+  bool _allowGallery = true;
 
   // 장소 좌표
   LatLng? _selectedLatLng;
@@ -47,8 +51,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   ];
   final _etcPrizeCtrl = TextEditingController();
 
-  // 소개 이미지 (URL 리스트)
-  final List<String> _introImages = [];
+  // 소개 이미지 (편집 모드: 기존 URL + 새 파일)
+  final List<String> _existingImageUrls = [];
+  final List<XFile> _newImageFiles = [];
+  final _imagePicker = ImagePicker();
 
   bool _submitting = false;
 
@@ -65,17 +71,20 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _locationCtrl.text = l.location;
       _maxCtrl.text = l.maxParticipants.toString();
       _feeCtrl.text = l.entryFee.toString();
+      _shortDescCtrl.text = l.shortDescription ?? '';
       _introCtrl.text = l.description ?? '';
       _dateRange = DateTimeRange(start: l.startTime, end: l.endTime);
       _rule = l.rule;
       _catchLimit = l.catchLimit;
       _isPublic = l.isPublic;
+      _allowGallery = l.allowGallery;
       if (l.lat != null && l.lng != null) {
         _selectedLatLng = LatLng(l.lat!, l.lng!);
       }
       // prizeInfo는 기타 텍스트 필드로 표시
       _prizeType = '기타';
       _etcPrizeCtrl.text = l.prizeInfo ?? '';
+      _existingImageUrls.addAll(l.introImageUrls);
     } else {
       // 생성 모드 기본값
       _prizeType = '상금';
@@ -88,6 +97,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     _locationCtrl.dispose();
     _maxCtrl.dispose();
     _feeCtrl.dispose();
+    _shortDescCtrl.dispose();
     _introCtrl.dispose();
     _etcPrizeCtrl.dispose();
     super.dispose();
@@ -112,6 +122,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           id: widget.league!.id,
           title: _nameCtrl.text.trim(),
           description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
+          shortDescription: _shortDescCtrl.text.trim().isEmpty ? null : _shortDescCtrl.text.trim(),
+          clearShortDescription: _shortDescCtrl.text.trim().isEmpty,
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
@@ -123,6 +135,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           catchLimit: _catchLimit,
           prizeInfo: _buildPrizeInfo(),
           isPublic: _isPublic,
+          allowGallery: _allowGallery,
+          newImageFiles: _newImageFiles,
+          existingImageUrls: _existingImageUrls,
+          hostId: widget.league!.hostId,
         );
         ref.invalidate(leagueDetailProvider(widget.league!.id));
         ref.invalidate(leaguesProvider);
@@ -141,18 +157,21 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           hostId: user.id,
           title: _nameCtrl.text.trim(),
           description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
+          shortDescription: _shortDescCtrl.text.trim().isEmpty ? null : _shortDescCtrl.text.trim(),
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
           startTime: _dateRange!.start,
           endTime: _dateRange!.end,
           entryFee: int.tryParse(_feeCtrl.text) ?? 0,
-          maxParticipants: int.tryParse(_maxCtrl.text) ?? 100,
+          maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
           rule: _rule,
           catchLimit: _catchLimit,
           prizeInfo: _buildPrizeInfo(),
           isPublic: _isPublic,
+          allowGallery: _allowGallery,
+          introImageFiles: _newImageFiles,
         );
         ref.invalidate(leaguesProvider);
         if (mounted) context.pop();
@@ -368,155 +387,174 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     );
   }
 
+  int get _totalImageCount => _existingImageUrls.length + _newImageFiles.length;
+
+  Future<void> _pickImage(ImageSource source, void Function(void Function()) setS) async {
+    final file = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1920,
+    );
+    if (file == null) return;
+    setS(() => setState(() => _newImageFiles.add(file)));
+  }
+
+  Future<void> _pickMultipleImages(void Function(void Function()) setS) async {
+    final files = await _imagePicker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1920,
+    );
+    if (files.isEmpty) return;
+    setS(() => setState(() => _newImageFiles.addAll(files)));
+  }
+
   // ── 소개 이미지 팝업 ──
   Future<void> _openImagePopup() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final urlCtrl = TextEditingController();
+    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
 
     await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => Dialog(
-          insetPadding: const EdgeInsets.all(20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text('이미지 추가', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, size: 22),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // 추가된 이미지 목록
-                if (_introImages.isNotEmpty) ...[
-                  SizedBox(
-                    height: 80,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _introImages.length,
-                      itemBuilder: (_, i) => Stack(
+        builder: (ctx, setS) {
+          final totalCount = _existingImageUrls.length + _newImageFiles.length;
+          return Dialog(
+            insetPadding: const EdgeInsets.all(20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('이미지 추가', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, size: 22),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // 추가된 이미지 목록
+                  if (totalCount > 0) ...[
+                    SizedBox(
+                      height: 90,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
                         children: [
-                          Container(
-                            width: 80, height: 80,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: AppSvg(AppIcons.fish, size: 36,
-                                  color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC)),
-                            ),
-                          ),
-                          Positioned(
-                            top: 2, right: 10,
-                            child: GestureDetector(
-                              onTap: () => setS(() {
-                                setState(() => _introImages.removeAt(i));
-                              }),
-                              child: Container(
-                                width: 18, height: 18,
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
+                          // 기존 URL 이미지 (편집 모드)
+                          ..._existingImageUrls.asMap().entries.map((e) => Stack(
+                            children: [
+                              Container(
+                                width: 80, height: 80,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: divColor),
+                                  image: DecorationImage(
+                                    image: NetworkImage(e.value),
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
-                                child: const Icon(Icons.close, size: 12, color: Colors.white),
                               ),
-                            ),
-                          ),
+                              Positioned(
+                                top: 2, right: 10,
+                                child: GestureDetector(
+                                  onTap: () => setS(() {
+                                    setState(() => _existingImageUrls.removeAt(e.key));
+                                  }),
+                                  child: Container(
+                                    width: 20, height: 20,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, size: 13, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )),
+                          // 새로 선택한 파일 이미지
+                          ..._newImageFiles.asMap().entries.map((e) => Stack(
+                            children: [
+                              Container(
+                                width: 80, height: 80,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: accent.withValues(alpha: 0.4)),
+                                  image: DecorationImage(
+                                    image: FileImage(File(e.value.path)),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 2, right: 10,
+                                child: GestureDetector(
+                                  onTap: () => setS(() {
+                                    setState(() => _newImageFiles.removeAt(e.key));
+                                  }),
+                                  child: Container(
+                                    width: 20, height: 20,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, size: 13, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // 이미지 추가 버튼들
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ImgBtn(
-                        icon: Icons.camera_alt_outlined,
-                        label: '카메라',
-                        accent: accent,
-                        isDark: isDark,
-                        onTap: () {
-                          setS(() {
-                            setState(() => _introImages.add('camera_${_introImages.length}'));
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _ImgBtn(
-                        icon: Icons.photo_library_outlined,
-                        label: '갤러리',
-                        accent: accent,
-                        isDark: isDark,
-                        onTap: () {
-                          setS(() {
-                            setState(() => _introImages.add('gallery_${_introImages.length}'));
-                          });
-                        },
-                      ),
-                    ),
+                    const SizedBox(height: 12),
                   ],
-                ),
-                const SizedBox(height: 10),
-                // URL 직접 입력
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: urlCtrl,
-                        style: const TextStyle(fontSize: 13),
-                        decoration: const InputDecoration(
-                          hintText: '이미지 URL 직접 입력',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          isDense: true,
+                  // 이미지 추가 버튼들
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ImgBtn(
+                          icon: Icons.camera_alt_outlined,
+                          label: '카메라',
+                          accent: accent,
+                          isDark: isDark,
+                          onTap: () => _pickImage(ImageSource.camera, setS),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (urlCtrl.text.trim().isNotEmpty) {
-                          setS(() {
-                            setState(() => _introImages.add(urlCtrl.text.trim()));
-                          });
-                          urlCtrl.clear();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ImgBtn(
+                          icon: Icons.photo_library_outlined,
+                          label: '갤러리 (복수)',
+                          accent: accent,
+                          isDark: isDark,
+                          onTap: () => _pickMultipleImages(setS),
+                        ),
                       ),
-                      child: const Text('추가'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text('완료 (${_introImages.length}장)'),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('완료 ($totalCount장)'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -539,7 +577,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(LucideIcons.chevronLeft, size: 24),
           onPressed: () => context.pop(),
         ),
         actions: [
@@ -806,6 +844,12 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: const InputDecoration(hintText: '0', suffixText: '명'),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return '참가 인원을 입력해주세요';
+                          final n = int.tryParse(v);
+                          if (n == null || n < 1) return '1명 이상 입력해주세요';
+                          return null;
+                        },
                       ),
                     ),
                   ),
@@ -973,6 +1017,21 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
               ),
             ),
 
+            // ── 간단 소개 ──
+            _Section(
+              title: '간단 소개',
+              accent: accent,
+              child: TextFormField(
+                controller: _shortDescCtrl,
+                maxLength: 40,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  hintText: '한 줄로 대회를 소개해주세요',
+                  counterText: '',
+                ),
+              ),
+            ),
+
             // ── 대회 소개 ──
             _Section(
               title: '대회 소개',
@@ -1005,13 +1064,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           Icon(Icons.add_photo_alternate_outlined, size: 20, color: accent),
                           const SizedBox(width: 8),
                           Text(
-                            _introImages.isEmpty
+                            _totalImageCount == 0
                                 ? '소개 이미지 추가'
-                                : '이미지 ${_introImages.length}장 추가됨',
+                                : '이미지 $_totalImageCount장 추가됨',
                             style: TextStyle(
                               fontSize: 13,
-                              color: _introImages.isEmpty ? sub : accent,
-                              fontWeight: _introImages.isEmpty ? FontWeight.w400 : FontWeight.w700,
+                              color: _totalImageCount == 0 ? sub : accent,
+                              fontWeight: _totalImageCount == 0 ? FontWeight.w400 : FontWeight.w700,
                             ),
                           ),
                         ],
@@ -1019,44 +1078,38 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     ),
                   ),
                   // 이미지 미리보기
-                  if (_introImages.isNotEmpty) ...[
+                  if (_totalImageCount > 0) ...[
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 80,
-                      child: ListView.builder(
+                      child: ListView(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _introImages.length,
-                        itemBuilder: (_, i) => Stack(
-                          children: [
-                            Container(
-                              width: 80, height: 80,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: divColor),
-                              ),
-                              child: Center(
-                                child: AppSvg(AppIcons.fish, size: 36,
-                                    color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC)),
+                        children: [
+                          ..._existingImageUrls.map((url) => Container(
+                            width: 80, height: 80,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: divColor),
+                              image: DecorationImage(
+                                image: NetworkImage(url),
+                                fit: BoxFit.cover,
                               ),
                             ),
-                            Positioned(
-                              top: 2, right: 10,
-                              child: GestureDetector(
-                                onTap: () => setState(() => _introImages.removeAt(i)),
-                                child: Container(
-                                  width: 18, height: 18,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close, size: 12, color: Colors.white),
-                                ),
+                          )),
+                          ..._newImageFiles.map((f) => Container(
+                            width: 80, height: 80,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: accent.withValues(alpha: 0.4)),
+                              image: DecorationImage(
+                                image: FileImage(File(f.path)),
+                                fit: BoxFit.cover,
                               ),
                             ),
-                          ],
-                        ),
+                          )),
+                        ],
                       ),
                     ),
                   ],
@@ -1064,25 +1117,46 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
               ),
             ),
 
-            // ── 공개 설정 ──
+            // ── 공개 설정 + 앨범 허용 ──
             Container(
               margin: const EdgeInsets.only(bottom: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: cardBg,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: divColor),
               ),
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('공개 리그', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  _isPublic ? '누구나 참가 신청 가능' : '초대 링크로만 참가 가능',
-                  style: TextStyle(fontSize: 12, color: sub),
-                ),
-                value: _isPublic,
-                activeColor: accent,
-                onChanged: (v) => setState(() => _isPublic = v),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    title: Text(
+                      _isPublic ? '공개 리그' : '비공개 리그',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      _isPublic ? '누구나 참가 신청 가능' : '초대 링크로만 참가 가능',
+                      style: TextStyle(fontSize: 12, color: sub),
+                    ),
+                    value: _isPublic,
+                    activeColor: accent,
+                    onChanged: (v) => setState(() => _isPublic = v),
+                  ),
+                  Divider(height: 1, color: divColor),
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    title: Text(
+                      _allowGallery ? '갤러리 사용 허용' : '갤러리 사용 불가',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      _allowGallery ? '참가자가 앨범 사진으로 조과 등록 가능' : '카메라 촬영만 조과 등록 가능',
+                      style: TextStyle(fontSize: 12, color: sub),
+                    ),
+                    value: _allowGallery,
+                    activeColor: accent,
+                    onChanged: (v) => setState(() => _allowGallery = v),
+                  ),
+                ],
               ),
             ),
 

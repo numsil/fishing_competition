@@ -11,6 +11,7 @@ abstract class League with _$League {
     @JsonKey(name: 'host_id') required String hostId,
     required String title,
     String? description,
+    @JsonKey(name: 'short_description') String? shortDescription,
     required String location,
     double? lat,
     double? lng,
@@ -24,6 +25,8 @@ abstract class League with _$League {
     @JsonKey(name: 'catch_limit') @Default(1) int catchLimit,
     @JsonKey(name: 'prize_info') String? prizeInfo,
     @JsonKey(name: 'is_public') @Default(true) bool isPublic,
+    @JsonKey(name: 'allow_gallery') @Default(true) bool allowGallery,
+    @JsonKey(name: 'intro_image_urls') @Default([]) List<String> introImageUrls,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // 조인된 데이터
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int participantsCount,

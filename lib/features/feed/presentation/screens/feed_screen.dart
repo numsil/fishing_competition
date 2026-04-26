@@ -714,22 +714,18 @@ class _InstaPostState extends ConsumerState<_InstaPost>
             ),
           ),
 
-        // ── 해시태그 행 (어종 + 캡션 태그 + 낚시/조과) ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 3, 16, 0),
-          child: Text(
-            [
-              '#${p.fishType}',
-              ..._extractHashtags(p.caption),
-              '#낚시',
-              '#조과',
-            ].join('  '),
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B),
+        // ── 해시태그 행 ──
+        if (_extractHashtags(p.caption).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 3, 16, 0),
+            child: Text(
+              _extractHashtags(p.caption).join('  '),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B),
+              ),
             ),
           ),
-        ),
 
         // ── 댓글 더보기 ──
         if (commentCount > 0)

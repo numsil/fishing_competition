@@ -65,7 +65,7 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
               labelColor: accent,
               unselectedLabelColor: sub,
               tabs: const [
-                Tab(text: '참여중'),
+                Tab(text: '참여 리그'),
                 Tab(text: '개인 기록'),
                 Tab(text: '개설한 리그'),
               ],
@@ -275,16 +275,18 @@ class _ActiveLeagueCard extends ConsumerWidget {
     String myRank = '-';
     String myBest = '-';
 
-    rankingAsync.whenData((entries) {
-      if (currentUserId != null) {
-        final idx = entries.indexWhere((e) => e.userId == currentUserId);
-        if (idx >= 0) {
-          myRank = '${idx + 1}위';
-          final best = entries[idx].bestLength;
-          if (best != null) myBest = '${best.toStringAsFixed(1)}cm';
+    if (!isUpcoming) {
+      rankingAsync.whenData((entries) {
+        if (currentUserId != null) {
+          final idx = entries.indexWhere((e) => e.userId == currentUserId);
+          if (idx >= 0) {
+            myRank = '${idx + 1}위';
+            final best = entries[idx].bestLength;
+            if (best != null) myBest = '${best.toStringAsFixed(1)}cm';
+          }
         }
-      }
-    });
+      });
+    }
 
     return GestureDetector(
       onTap: () => context.push(
@@ -590,42 +592,76 @@ class _PersonalRecordTab extends ConsumerWidget {
             error: (e, _) => Center(child: Text('불러오기 실패: $e', style: TextStyle(color: sub))),
           ),
         ),
-        // ── 하단 고정 "사진 촬영하기" 버튼 ──
+        // ── 하단 고정 버튼 (카메라 + 앨범) ──
         Positioned(
           left: 16, right: 16, bottom: 16,
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                File? captured;
-                try {
-                  final picked = await ImagePicker().pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 85,
-                    maxWidth: 1280,
-                  );
-                  if (picked != null) captured = File(picked.path);
-                } catch (e) {
-                  if (context.mounted) {
-                    AppSnackBar.error(context, '카메라 실행 실패: $e');
-                  }
-                  return;
-                }
-                if (captured == null) return;
-                if (!context.mounted) return;
-                await context.push(AppRoutes.personalCatch, extra: captured);
-              },
-              icon: const Icon(Icons.camera_alt_rounded, size: 22),
-              label: const Text('사진 촬영하기',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: isDark ? Colors.black : Colors.white,
-                elevation: 6,
-                shadowColor: accent.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: Row(
+            children: [
+              // 앨범 버튼
+              SizedBox(
+                width: 54, height: 54,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    File? picked;
+                    try {
+                      final img = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 85,
+                        maxWidth: 1280,
+                      );
+                      if (img != null) picked = File(img.path);
+                    } catch (e) {
+                      if (context.mounted) AppSnackBar.error(context, '갤러리 실행 실패: $e');
+                      return;
+                    }
+                    if (picked == null || !context.mounted) return;
+                    await context.push(AppRoutes.personalCatch, extra: picked);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    side: BorderSide(color: accent.withValues(alpha: 0.6)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+                  ),
+                  child: Icon(Icons.photo_library_rounded, size: 22, color: accent),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              // 카메라 버튼
+              Expanded(
+                child: SizedBox(
+                  height: 54,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      File? captured;
+                      try {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 85,
+                          maxWidth: 1280,
+                        );
+                        if (picked != null) captured = File(picked.path);
+                      } catch (e) {
+                        if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
+                        return;
+                      }
+                      if (captured == null || !context.mounted) return;
+                      await context.push(AppRoutes.personalCatch, extra: captured);
+                    },
+                    icon: const Icon(Icons.camera_alt_rounded, size: 22),
+                    label: const Text('사진 촬영하기',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: isDark ? Colors.black : Colors.white,
+                      elevation: 6,
+                      shadowColor: accent.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

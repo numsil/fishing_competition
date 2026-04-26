@@ -139,31 +139,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             )
                           : const Text('로그인'),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE))),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Text('OR', style: TextStyle(fontSize: 11, color: sub)),
-                        ),
-                        Expanded(child: Divider(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE))),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: () => context.go(AppRoutes.feed),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFEE500),
-                          foregroundColor: Colors.black87,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('카카오로 시작하기', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                      ),
-                    ),
                   ],
                 ),
               ),

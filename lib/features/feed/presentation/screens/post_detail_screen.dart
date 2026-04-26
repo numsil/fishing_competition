@@ -161,7 +161,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
         scrolledUnderElevation: 0,
         title: const Text('게시물', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         leading: IconButton(
-          icon: Icon(LucideIcons.arrowLeft, color: iconColor),
+          icon: Icon(LucideIcons.chevronLeft, color: iconColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -392,14 +392,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               ),
 
             // 해시태그
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Text(
-                ['#${p.fishType}', ..._extractHashtags(p.caption), '#낚시', '#조과'].join('  '),
-                style: TextStyle(fontSize: 13,
-                    color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
+            if (_extractHashtags(p.caption).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(
+                  _extractHashtags(p.caption).join('  '),
+                  style: TextStyle(fontSize: 13,
+                      color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
+                ),
               ),
-            ),
 
             // 댓글 보기
             GestureDetector(

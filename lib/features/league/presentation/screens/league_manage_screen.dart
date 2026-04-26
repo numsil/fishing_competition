@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
+import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import 'league_create_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
@@ -35,11 +39,13 @@ class _Participant {
     required this.name,
     required this.username,
     required this.joinDate,
+    this.avatarUrl,
     this.record,
     this.rank,
     this.isPending = false,
   });
   final String id, name, username, joinDate;
+  final String? avatarUrl;
   final String? record;
   final int? rank;
   final bool isPending;
@@ -54,6 +60,7 @@ List<_Participant> _rankEntriesToParticipants(List<LeagueRankEntry> entries) {
       id: entry.userId,
       name: entry.username,
       username: entry.username,
+      avatarUrl: entry.avatarUrl,
       joinDate: '-',
       record: hasRecord ? '${entry.bestLength!.toStringAsFixed(1)}cm' : null,
       rank: hasRecord ? idx + 1 : null,
@@ -356,11 +363,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
             title: const Text('대회 관리',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded),
-                color: AppColors.error,
-                tooltip: '리그 삭제',
+              TextButton(
                 onPressed: () => _deleteLeague(context, league),
+                child: const Text('리그삭제',
+                    style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 14)),
               ),
               TextButton(
                 onPressed: () async {
@@ -628,40 +634,9 @@ class _StatusCard extends StatelessWidget {
 
           // 액션 버튼
           if (status == LeagueManageStatus.upcoming)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.liveRed,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                label: const Text('대회 시작',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                onPressed: onStart,
-              ),
-            )
+            _StartButton(onPressed: onStart)
           else if (status == LeagueManageStatus.live)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: sub,
-                  side: BorderSide(color: divColor),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.stop_rounded, size: 20),
-                label: const Text('대회 종료',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                onPressed: onEnd,
-              ),
-            )
+            _EndButton(onPressed: onEnd, sub: sub, divColor: divColor)
           else
             Container(
               width: double.infinity,
@@ -842,7 +817,7 @@ class _ParticipantsTab extends StatelessWidget {
   }
 }
 
-class _ParticipantRow extends StatelessWidget {
+class _ParticipantRow extends ConsumerWidget {
   const _ParticipantRow({
     required this.participant,
     required this.rank,
@@ -867,96 +842,136 @@ class _ParticipantRow extends StatelessWidget {
     return accent;
   }
 
-  String get _rankEmoji {
-    if (rank == 1) return '🥇';
-    if (rank == 2) return '🥈';
-    if (rank == 3) return '🥉';
-    return '${rank}위';
+  String get _rankLabel {
+    if (rank == 1) return '1위';
+    if (rank == 2) return '2위';
+    if (rank == 3) return '3위';
+    return '$rank위';
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final canKick = status != LeagueManageStatus.ended;
+    final currentUserId = ref.watch(currentUserProvider)?.id;
+    final isMe = currentUserId == participant.id;
 
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          // 순위 아바타
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              width: 44, height: 44,
-              color: _rankColor.withValues(alpha: 0.1),
-              child: Center(
-                child: rank <= 3
-                    ? Text(_rankEmoji, style: const TextStyle(fontSize: 20))
-                    : Text(
-                        participant.name.isNotEmpty ? participant.name[0] : '?',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: accent),
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: isMe ? null : () => context.push('/user/${participant.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            // 프로필 아바타
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(participant.name,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                participant.record != null
-                    ? Text(participant.record!,
+                UserAvatar(
+                  username: participant.name,
+                  avatarUrl: participant.avatarUrl,
+                  radius: 22,
+                  isDark: isDark,
+                ),
+                if (status != LeagueManageStatus.upcoming && rank <= 3)
+                  Positioned(
+                    bottom: -4, right: -4,
+                    child: Container(
+                      width: 18, height: 18,
+                      decoration: BoxDecoration(
+                        color: _rankColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.darkBg : Colors.white,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$rank',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(participant.name,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w700)),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('나', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  if (status == LeagueManageStatus.upcoming)
+                    Text('참가 신청', style: TextStyle(fontSize: 11, color: sub))
+                  else if (participant.record != null)
+                    Text(participant.record!,
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: _rankColor))
-                    : Text('조과 없음',
-                        style: TextStyle(fontSize: 11, color: sub)),
-              ],
-            ),
-          ),
-          // 순위 칩
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _rankColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              rank <= 3 ? _rankEmoji : '$rank위',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: _rankColor),
-            ),
-          ),
-          if (canKick) ...[
-            const SizedBox(width: 4),
-            IconButton(
-              onPressed: () => showDeleteConfirmSheet(
-                context,
-                title: '참가자 추방',
-                content: '${participant.name} 님을\n대회에서 추방하시겠습니까?',
-                slideLabel: '밀어서 추방',
-                onConfirmed: onKick,
+                  else
+                    Text('조과 없음', style: TextStyle(fontSize: 11, color: sub)),
+                ],
               ),
-              icon: const Icon(Icons.person_remove_outlined, size: 20),
-              color: Colors.red.withValues(alpha: 0.6),
-              tooltip: '추방',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
+            // 순위 칩 (모집중엔 숨김)
+            if (status != LeagueManageStatus.upcoming)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _rankColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _rankLabel,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _rankColor),
+                ),
+              ),
+            if (canKick && !isMe) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => showDeleteConfirmSheet(
+                  context,
+                  title: '참가자 추방',
+                  content: '${participant.name} 님을\n대회에서 추방하시겠습니까?',
+                  slideLabel: '밀어서 추방',
+                  onConfirmed: onKick,
+                ),
+                icon: const Icon(Icons.person_remove_outlined, size: 20),
+                color: Colors.red.withValues(alpha: 0.6),
+                tooltip: '추방',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
-    return row;
   }
 }
 
@@ -1050,17 +1065,13 @@ class _PendingTab extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    width: 44, height: 44,
-                    color: accent.withValues(alpha: 0.1),
-                    child: Center(
-                      child: Text(
-                        p.name.isNotEmpty ? p.name[0] : '?',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: accent),
-                      ),
-                    ),
+                GestureDetector(
+                  onTap: () => context.push('/user/${p.id}'),
+                  child: UserAvatar(
+                    username: p.name,
+                    avatarUrl: p.avatarUrl,
+                    radius: 22,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1102,6 +1113,97 @@ class _PendingTab extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── 대회 시작 버튼 ────────────────────────────────────────
+class _StartButton extends StatelessWidget {
+  const _StartButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFF3B30), Color(0xFFFF6B35)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(LucideIcons.play, size: 14, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  '대회 시작하기',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 대회 종료 버튼 ────────────────────────────────────────
+class _EndButton extends StatelessWidget {
+  const _EndButton({required this.onPressed, required this.sub, required this.divColor});
+  final VoidCallback onPressed;
+  final Color sub;
+  final Color divColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: sub,
+          side: BorderSide(color: divColor),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        onPressed: onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.x, size: 16, color: sub),
+            const SizedBox(width: 8),
+            Text('대회 종료',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: sub,
+                )),
+          ],
+        ),
       ),
     );
   }

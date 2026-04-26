@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
@@ -46,10 +48,32 @@ class LeagueRepository {
 
   LeagueRepository(this._supabase);
 
+  Future<List<String>> _uploadIntroImages(
+      String hostId, List<XFile> files) async {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final urls = <String>[];
+    for (var i = 0; i < files.length; i++) {
+      final bytes = await files[i].readAsBytes();
+      final ext = files[i].path.split('.').last.toLowerCase();
+      final path = 'leagues/${hostId}_${ts}_$i.$ext';
+      await _supabase.storage.from('league_images').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: 'image/$ext',
+          upsert: false,
+        ),
+      );
+      urls.add(_supabase.storage.from('league_images').getPublicUrl(path));
+    }
+    return urls;
+  }
+
   Future<void> createLeague({
     required String hostId,
     required String title,
     String? description,
+    String? shortDescription,
     required String location,
     double? lat,
     double? lng,
@@ -62,11 +86,17 @@ class LeagueRepository {
     int catchLimit = 1,
     String? prizeInfo,
     bool isPublic = true,
+    bool allowGallery = true,
+    List<XFile> introImageFiles = const [],
   }) async {
+    final imageUrls = introImageFiles.isNotEmpty
+        ? await _uploadIntroImages(hostId, introImageFiles)
+        : <String>[];
     await _supabase.from('leagues').insert({
       'host_id': hostId,
       'title': title,
       'description': description,
+      if (shortDescription != null) 'short_description': shortDescription,
       'location': location,
       'lat': lat,
       'lng': lng,
@@ -80,6 +110,8 @@ class LeagueRepository {
       'catch_limit': catchLimit,
       'prize_info': prizeInfo,
       'is_public': isPublic,
+      'allow_gallery': allowGallery,
+      'intro_image_urls': imageUrls,
     });
   }
 
@@ -333,6 +365,8 @@ class LeagueRepository {
     required String id,
     String? title,
     String? description,
+    String? shortDescription,
+    bool clearShortDescription = false,
     String? location,
     double? lat,
     double? lng,
@@ -344,10 +378,16 @@ class LeagueRepository {
     int? maxParticipants,
     int? entryFee,
     bool? isPublic,
+    bool? allowGallery,
+    List<XFile>? newImageFiles,
+    List<String>? existingImageUrls,
+    String? hostId,
   }) async {
     final update = <String, dynamic>{};
     if (title != null) update['title'] = title;
     if (description != null) update['description'] = description;
+    if (shortDescription != null) update['short_description'] = shortDescription;
+    if (clearShortDescription) update['short_description'] = null;
     if (location != null) update['location'] = location;
     if (lat != null) update['lat'] = lat;
     if (lng != null) update['lng'] = lng;
@@ -359,6 +399,13 @@ class LeagueRepository {
     if (maxParticipants != null) update['max_participants'] = maxParticipants;
     if (entryFee != null) update['entry_fee'] = entryFee;
     if (isPublic != null) update['is_public'] = isPublic;
+    if (allowGallery != null) update['allow_gallery'] = allowGallery;
+    if (newImageFiles != null || existingImageUrls != null) {
+      final uploaded = (newImageFiles?.isNotEmpty == true && hostId != null)
+          ? await _uploadIntroImages(hostId!, newImageFiles!)
+          : <String>[];
+      update['intro_image_urls'] = [...?existingImageUrls, ...uploaded];
+    }
     if (update.isEmpty) return;
     await _supabase.from('leagues').update(update).eq('id', id);
   }

@@ -430,7 +430,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         for (int attempt = 0; attempt < 2; attempt++) {
           info = await VideoCompress.compressVideo(
             widget.selectedFile.path,
-            quality: VideoQuality.LowQuality,
+            quality: VideoQuality.MediumQuality,
             deleteOrigin: false,
             includeAudio: true,
           );

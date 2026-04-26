@@ -14,8 +14,9 @@ import '../../data/league_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 
 class LeagueCatchScreen extends ConsumerStatefulWidget {
-  const LeagueCatchScreen({super.key, required this.league});
+  const LeagueCatchScreen({super.key, required this.league, this.initialImage});
   final League league;
+  final File? initialImage;
 
   @override
   ConsumerState<LeagueCatchScreen> createState() => _LeagueCatchScreenState();
@@ -24,13 +25,19 @@ class LeagueCatchScreen extends ConsumerStatefulWidget {
 class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   File? _image;
   final String _fishType = '배스';
-  final _measureCtrl = TextEditingController(); // 길이 or 무게 (룰에 따라)
+  final _measureCtrl = TextEditingController();
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
 
-  // 무게 기준 대회인지 (rule이 '무게'인 경우)
   bool get _isWeightRule => widget.league.rule == '무게';
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialImage != null) {
+      _image = widget.initialImage;
+    }
+  }
 
   @override
   void dispose() {
@@ -43,6 +50,15 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1280,
+    );
+    if (picked != null) setState(() => _image = File(picked.path));
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
       imageQuality: 85,
       maxWidth: 1280,
     );

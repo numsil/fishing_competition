@@ -1,18 +1,21 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_catch_screen.dart';
 import 'league_participant_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 
 class LeagueDetailScreen extends ConsumerWidget {
   const LeagueDetailScreen({super.key, required this.leagueId});
@@ -54,14 +57,21 @@ class _LeagueDetailBody extends ConsumerStatefulWidget {
 }
 
 class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   TabController? _tab;
   bool _joining = false;
   bool _cancelling = false;
+  Timer? _refreshTimer;
 
   bool get _hasTabs =>
       widget.league.status == 'in_progress' ||
       widget.league.status == 'completed';
+
+  void _refreshAll() {
+    ref.invalidate(leagueDetailProvider(widget.league.id));
+    ref.invalidate(isJoinedProvider(widget.league.id));
+    ref.invalidate(leagueRankingProvider(widget.league.id));
+  }
 
   @override
   void initState() {
@@ -69,10 +79,29 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     if (_hasTabs) {
       _tab = TabController(length: 2, vsync: this);
     }
+    WidgetsBinding.instance.addObserver(this);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAll());
+  }
+
+  @override
+  void didUpdateWidget(_LeagueDetailBody old) {
+    super.didUpdateWidget(old);
+    // 상태가 바뀌면 탭 컨트롤러 재생성
+    if (old.league.status != widget.league.status) {
+      _tab?.dispose();
+      _tab = _hasTabs ? TabController(length: 2, vsync: this) : null;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshAll();
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _tab?.dispose();
     super.dispose();
   }
@@ -117,30 +146,27 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   }
 
   Future<void> _cancelJoin() async {
-    final confirmed = await showConfirmDialog(
+    await showDeleteConfirmSheet(
       context,
       title: '참가 취소',
       content: '정말 참가를 취소하시겠습니까?\n취소 후 재신청이 가능합니다.',
-      cancelText: '돌아가기',
-      confirmText: '참가 취소',
+      slideLabel: '밀어서 참가 취소',
+      icon: LucideIcons.userMinus,
+      onConfirmed: () async {
+        setState(() => _cancelling = true);
+        try {
+          await ref.read(leagueRepositoryProvider).leaveLeague(widget.league.id);
+          ref.invalidate(isJoinedProvider(widget.league.id));
+          ref.invalidate(leagueDetailProvider(widget.league.id));
+          ref.invalidate(leagueRankingProvider(widget.league.id));
+          if (mounted) AppSnackBar.info(context, '참가가 취소되었습니다.');
+        } catch (e) {
+          if (mounted) AppSnackBar.error(context, '취소 실패: $e');
+        } finally {
+          if (mounted) setState(() => _cancelling = false);
+        }
+      },
     );
-    if (!confirmed || !mounted) return;
-    setState(() => _cancelling = true);
-    try {
-      await ref.read(leagueRepositoryProvider).leaveLeague(widget.league.id);
-      ref.invalidate(isJoinedProvider(widget.league.id));
-      ref.invalidate(leagueDetailProvider(widget.league.id));
-      ref.invalidate(leagueRankingProvider(widget.league.id));
-      if (mounted) {
-                AppSnackBar.info(context, '참가가 취소되었습니다.');
-      }
-    } catch (e) {
-      if (mounted) {
-                AppSnackBar.error(context, '취소 실패: $e');
-      }
-    } finally {
-      if (mounted) setState(() => _cancelling = false);
-    }
   }
 
   void _shareLeague(BuildContext context) {
@@ -320,6 +346,7 @@ class _RankingTab extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(leagueRankingProvider(league.id));
             ref.invalidate(leagueDetailProvider(league.id));
+            ref.invalidate(isJoinedProvider(league.id));
           },
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
@@ -907,31 +934,87 @@ class _BottomBar extends ConsumerWidget {
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SizedBox(
-                height: 54,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        fullscreenDialog: true,
-                        builder: (_) => LeagueCatchScreen(league: league),
+              child: Row(
+                children: [
+                  // 앨범 버튼 (리그 설정에서 허용한 경우만)
+                  if (league.allowGallery) ...[
+                    SizedBox(
+                      width: 54, height: 54,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          File? picked;
+                          try {
+                            final img = await ImagePicker().pickImage(
+                              source: ImageSource.gallery,
+                              imageQuality: 85,
+                              maxWidth: 1280,
+                            );
+                            if (img != null) picked = File(img.path);
+                          } catch (e) {
+                            if (context.mounted) AppSnackBar.error(context, '갤러리 실행 실패: $e');
+                            return;
+                          }
+                          if (picked == null || !context.mounted) return;
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              fullscreenDialog: true,
+                              builder: (_) => LeagueCatchScreen(league: league, initialImage: picked),
+                            ),
+                          );
+                          if (result == true) ref.invalidate(leagueRankingProvider(league.id));
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(color: accent.withValues(alpha: 0.6)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+                        ),
+                        child: Icon(Icons.photo_library_rounded, size: 22, color: accent),
                       ),
-                    );
-                    if (result == true) {
-                      ref.invalidate(leagueRankingProvider(league.id));
-                    }
-                  },
-                  icon: const Icon(Icons.camera_alt_rounded, size: 22),
-                  label: const Text('조과 사진 등록',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  // 카메라 버튼
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          File? captured;
+                          try {
+                            final picked = await ImagePicker().pickImage(
+                              source: ImageSource.camera,
+                              imageQuality: 85,
+                              maxWidth: 1280,
+                            );
+                            if (picked != null) captured = File(picked.path);
+                          } catch (e) {
+                            if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
+                            return;
+                          }
+                          if (captured == null || !context.mounted) return;
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              fullscreenDialog: true,
+                              builder: (_) => LeagueCatchScreen(league: league, initialImage: captured),
+                            ),
+                          );
+                          if (result == true) ref.invalidate(leagueRankingProvider(league.id));
+                        },
+                        icon: const Icon(Icons.camera_alt_rounded, size: 22),
+                        label: const Text('조과 사진 등록',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           );
@@ -968,7 +1051,28 @@ class _BottomBar extends ConsumerWidget {
                 ),
               );
             }
-            // 미참가 → 신청 버튼
+            // 미참가 → 정원 초과 여부 확인
+            final isFull = league.maxParticipants > 0 &&
+                league.participantsCount >= league.maxParticipants;
+            if (isFull) {
+              return SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.block_rounded, size: 20),
+                  label: const Text('모집 마감',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                    foregroundColor: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
+                    disabledBackgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                    disabledForegroundColor: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              );
+            }
             return SizedBox(
               height: 54,
               width: double.infinity,
