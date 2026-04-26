@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_colors.dart';
 
 // ── 슬라이드 확인 위젯 ────────────────────────────────────
@@ -31,7 +32,7 @@ class _SlideToConfirmState extends State<SlideToConfirm>
   late Animation<double> _resetAnim;
 
   static const double _thumbSize = 50.0;
-  static const double _threshold = 0.88;
+  static const double _threshold = 0.70;
 
   @override
   void initState() {
@@ -181,6 +182,7 @@ Future<void> showDeleteConfirmSheet(
   required String title,
   required String content,
   String slideLabel = '밀어서 삭제',
+  IconData icon = LucideIcons.trash2,
   required VoidCallback onConfirmed,
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -194,6 +196,7 @@ Future<void> showDeleteConfirmSheet(
       title: title,
       content: content,
       slideLabel: slideLabel,
+      icon: icon,
       isDark: isDark,
       onConfirmed: () {
         Navigator.pop(ctx);
@@ -208,6 +211,7 @@ class _DeleteConfirmSheet extends StatelessWidget {
     required this.title,
     required this.content,
     required this.slideLabel,
+    required this.icon,
     required this.isDark,
     required this.onConfirmed,
   });
@@ -215,6 +219,7 @@ class _DeleteConfirmSheet extends StatelessWidget {
   final String title;
   final String content;
   final String slideLabel;
+  final IconData icon;
   final bool isDark;
   final VoidCallback onConfirmed;
 
@@ -246,8 +251,7 @@ class _DeleteConfirmSheet extends StatelessWidget {
                 color: AppColors.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: AppColors.error, size: 26),
+              child: Icon(icon, color: AppColors.error, size: 26),
             ),
             const SizedBox(height: 14),
             // 제목
@@ -265,10 +269,15 @@ class _DeleteConfirmSheet extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             // 슬라이드 바
-            SlideToConfirm(
-              label: slideLabel,
-              color: AppColors.error,
-              onConfirmed: onConfirmed,
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: SlideToConfirm(
+                  label: slideLabel,
+                  color: AppColors.error,
+                  onConfirmed: onConfirmed,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             // 취소 텍스트
