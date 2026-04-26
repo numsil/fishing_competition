@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/image_compress.dart';
 import 'post_model.dart';
 
 part 'feed_repository.g.dart';
@@ -17,7 +18,7 @@ class FeedRepository {
         .select('*, users(username, avatar_url), post_likes(count), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
-        .eq('is_deleted', false)
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('created_at', ascending: false);
 
     return response.map((data) {
@@ -135,10 +136,11 @@ class FeedRepository {
       );
       videoUrl = _supabase.storage.from('post_videos').getPublicUrl(videoPath);
     } else if (imageFile != null) {
+      final compressed = await compressForUpload(imageFile);
       final storagePath = 'posts/${userId}_$ts.jpg';
       await _supabase.storage.from('post_images').upload(
         storagePath,
-        imageFile,
+        compressed,
         fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
       );
       imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
@@ -158,6 +160,7 @@ class FeedRepository {
       'lng': lng,
       'league_id': leagueId,
       'is_personal_record': isPersonalRecord,
+      'is_deleted': false,
       'length': length,
       'weight': weight,
       'catch_count': catchCount,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,10 +67,13 @@ GoRouter appRouter(Ref ref) {
       // 개인 기록 조과 촬영: 풀스크린
       GoRoute(
         path: AppRoutes.personalCatch,
-        pageBuilder: (context, state) => const MaterialPage(
-          fullscreenDialog: true,
-          child: PersonalCatchScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final initialImage = state.extra is File ? state.extra as File : null;
+          return MaterialPage(
+            fullscreenDialog: true,
+            child: PersonalCatchScreen(initialImage: initialImage),
+          );
+        },
       ),
       // 개인 기록 갤러리 상세
       GoRoute(

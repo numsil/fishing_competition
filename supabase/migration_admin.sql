@@ -20,11 +20,13 @@ VALUES ('post_videos', 'post_videos', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- post_videos 버킷 접근 정책
-CREATE POLICY IF NOT EXISTS "Anyone can read post videos"
+DROP POLICY IF EXISTS "Anyone can read post videos" ON storage.objects;
+CREATE POLICY "Anyone can read post videos"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'post_videos');
 
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload post videos"
+DROP POLICY IF EXISTS "Authenticated users can upload post videos" ON storage.objects;
+CREATE POLICY "Authenticated users can upload post videos"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'post_videos' AND auth.role() = 'authenticated');
 

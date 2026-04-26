@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -98,11 +99,16 @@ class _MediaPickerStep extends StatefulWidget {
 class _MediaPickerStepState extends State<_MediaPickerStep> {
   final _picker = ImagePicker();
   bool _videoMode = false;
+  bool _loadingMedia = false;
 
   Future<void> _pickFromGallery() async {
+    setState(() => _loadingMedia = true);
     try {
       if (_videoMode) {
-        final video = await _picker.pickVideo(source: ImageSource.gallery);
+        final video = await _picker.pickVideo(
+          source: ImageSource.gallery,
+          maxDuration: const Duration(minutes: 3),
+        );
         if (video != null) await widget.onMediaSelected(video, true);
       } else {
         final image = await _picker.pickImage(
@@ -115,15 +121,21 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.error(context, '사진 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
+        AppSnackBar.error(context, '사진 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
+    } finally {
+      if (mounted) setState(() => _loadingMedia = false);
     }
   }
 
   Future<void> _pickFromCamera() async {
+    setState(() => _loadingMedia = true);
     try {
       if (_videoMode) {
-        final video = await _picker.pickVideo(source: ImageSource.camera);
+        final video = await _picker.pickVideo(
+          source: ImageSource.camera,
+          maxDuration: const Duration(minutes: 3),
+        );
         if (video != null) await widget.onMediaSelected(video, true);
       } else {
         final image = await _picker.pickImage(
@@ -136,8 +148,10 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.error(context, '카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
+        AppSnackBar.error(context, '카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
+    } finally {
+      if (mounted) setState(() => _loadingMedia = false);
     }
   }
 
@@ -152,7 +166,9 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: bg,
-        body: SafeArea(
+        body: Stack(
+          children: [
+        SafeArea(
           child: Column(
             children: [
               // ── 상단 바 ──
@@ -259,6 +275,26 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
               ),
             ],
           ),
+        ),
+            // ── 미디어 로딩 오버레이 ──
+            if (_loadingMedia)
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: accent),
+                      const SizedBox(height: 16),
+                      Text(
+                        _videoMode ? '동영상 불러오는 중...' : '사진 불러오는 중...',
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -390,16 +426,25 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
           if (mounted) setState(() => _compressProgress = progress / 100.0);
         });
 
-        final info = await VideoCompress.compressVideo(
-          widget.selectedFile.path,
-          quality: VideoQuality.MediumQuality,
-          deleteOrigin: false,
-          includeAudio: true,
-        );
+        MediaInfo? info;
+        for (int attempt = 0; attempt < 2; attempt++) {
+          info = await VideoCompress.compressVideo(
+            widget.selectedFile.path,
+            quality: VideoQuality.LowQuality,
+            deleteOrigin: false,
+            includeAudio: true,
+          );
+          if (info?.file != null) break;
+          await Future.delayed(const Duration(milliseconds: 800));
+        }
 
         _compressSub?.unsubscribe();
         _compressSub = null;
         compressedVideo = info?.file;
+
+        if (compressedVideo == null) {
+          throw Exception('영상 압축에 실패했습니다. 다시 시도해주세요.');
+        }
       }
 
       final lengthVal = double.tryParse(_lengthCtrl.text.trim());
@@ -426,7 +471,10 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       _compressSub = null;
       if (mounted) {
         setState(() => _sharing = false);
-                AppSnackBar.error(context, '업로드 실패: $e');
+        final msg = e.toString().contains('413')
+            ? '파일 크기가 너무 큽니다. 더 짧은 영상이나 작은 사진을 사용해주세요.'
+            : '업로드 실패: $e';
+        AppSnackBar.error(context, msg);
       }
     }
   }
@@ -463,7 +511,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: _sharing ? null : widget.onBack,
-          icon: Icon(Icons.arrow_back_ios_rounded, color: textColor, size: 20),
+          icon: Icon(LucideIcons.chevronLeft, color: textColor, size: 24),
         ),
         title: Text(
           '새 게시물',

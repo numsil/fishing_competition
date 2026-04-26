@@ -14,7 +14,9 @@ import '../../../profile/data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 
 class PersonalCatchScreen extends ConsumerStatefulWidget {
-  const PersonalCatchScreen({super.key});
+  const PersonalCatchScreen({super.key, this.initialImage});
+
+  final File? initialImage;
 
   @override
   ConsumerState<PersonalCatchScreen> createState() => _PersonalCatchScreenState();
@@ -30,6 +32,17 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   double? _capturedLat;
   double? _capturedLng;
   bool _fetchingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialImage != null) {
+      _image = widget.initialImage;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _captureCurrentLocation();
+      });
+    }
+  }
 
   Future<void> _captureCurrentLocation() async {
     if (_fetchingLocation) return;

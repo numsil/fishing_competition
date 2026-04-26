@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../league/data/league_repository.dart';
@@ -594,7 +597,23 @@ class _PersonalRecordTab extends ConsumerWidget {
             height: 54,
             child: ElevatedButton.icon(
               onPressed: () async {
-                await context.push(AppRoutes.personalCatch);
+                File? captured;
+                try {
+                  final picked = await ImagePicker().pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 85,
+                    maxWidth: 1280,
+                  );
+                  if (picked != null) captured = File(picked.path);
+                } catch (e) {
+                  if (context.mounted) {
+                    AppSnackBar.error(context, '카메라 실행 실패: $e');
+                  }
+                  return;
+                }
+                if (captured == null) return;
+                if (!context.mounted) return;
+                await context.push(AppRoutes.personalCatch, extra: captured);
               },
               icon: const Icon(Icons.camera_alt_rounded, size: 22),
               label: const Text('사진 촬영하기',
