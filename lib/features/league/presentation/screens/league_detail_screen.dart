@@ -158,35 +158,10 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // ── 상단 이미지 헤더 ──────────────────────────
+          // ── 앱바 ──────────────────────────────────────
           SliverAppBar(
-            expandedHeight: 180,
             pinned: true,
             forceElevated: innerBoxIsScrolled,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 60),
-                    const Text('🎣', style: TextStyle(fontSize: 60)),
-                    if (league.status == 'in_progress')
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.liveRed,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('LIVE',
-                            style: TextStyle(color: Colors.white, fontSize: 11,
-                                fontWeight: FontWeight.w900, letterSpacing: 2)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.share_outlined),
@@ -706,8 +681,165 @@ class _InfoTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── 소개 이미지 ───────────────────────────────
+        if (league.introImageUrls.isNotEmpty) ...[
+          _InfoSection(
+            title: '소개 이미지',
+            icon: LucideIcons.image,
+            accent: accent,
+            isDark: isDark,
+            child: _IntroImageGallery(
+              imageUrls: league.introImageUrls,
+              divColor: divColor,
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ],
+    );
+  }
+}
+
+// ── 소개 이미지 갤러리 ───────────────────────────────────
+class _IntroImageGallery extends StatefulWidget {
+  const _IntroImageGallery({required this.imageUrls, required this.divColor});
+  final List<String> imageUrls;
+  final Color divColor;
+
+  @override
+  State<_IntroImageGallery> createState() => _IntroImageGalleryState();
+}
+
+class _IntroImageGalleryState extends State<_IntroImageGallery> {
+  int _currentIndex = 0;
+  final _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _openFullscreen(int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _FullscreenImageViewer(
+          imageUrls: widget.imageUrls,
+          initialIndex: index,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = widget.imageUrls;
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: urls.length,
+              onPageChanged: (i) => setState(() => _currentIndex = i),
+              itemBuilder: (_, i) => GestureDetector(
+                onTap: () => _openFullscreen(i),
+                child: Image.network(
+                  urls[i],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: widget.divColor,
+                    child: const Center(
+                      child: Icon(Icons.broken_image_outlined, size: 36, color: Colors.grey),
+                    ),
+                  ),
+                  loadingBuilder: (_, child, progress) => progress == null
+                      ? child
+                      : const Center(child: CircularProgressIndicator()),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (urls.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(urls.length, (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: _currentIndex == i ? 16 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: _currentIndex == i ? Colors.grey[600] : Colors.grey[400],
+                borderRadius: BorderRadius.circular(3),
+              ),
+            )),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── 이미지 전체화면 뷰어 ─────────────────────────────────
+class _FullscreenImageViewer extends StatefulWidget {
+  const _FullscreenImageViewer({required this.imageUrls, required this.initialIndex});
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  @override
+  State<_FullscreenImageViewer> createState() => _FullscreenImageViewerState();
+}
+
+class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
+  late int _current;
+  late final PageController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _ctrl = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_current + 1} / ${widget.imageUrls.length}',
+            style: const TextStyle(color: Colors.white)),
+      ),
+      body: PageView.builder(
+        controller: _ctrl,
+        itemCount: widget.imageUrls.length,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemBuilder: (_, i) => InteractiveViewer(
+          child: Center(
+            child: Image.network(
+              widget.imageUrls[i],
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image_outlined, size: 64, color: Colors.white54),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -826,7 +958,7 @@ class _BottomBar extends ConsumerWidget {
                       ? const SizedBox(
                           width: 18, height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.cancel_outlined),
+                      : const Icon(LucideIcons.userMinus, size: 18),
                   label: Text(cancelling ? '처리 중...' : '참가 취소'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
