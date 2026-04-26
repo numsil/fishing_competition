@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 
 class LeagueScreen extends ConsumerStatefulWidget {
@@ -15,7 +16,40 @@ class LeagueScreen extends ConsumerStatefulWidget {
 
 class _LeagueScreenState extends ConsumerState<LeagueScreen> {
   int _filter = 0;
-  final _filters = ['전체', '모집중', '진행중', '내 주변'];
+  String _query = '';
+  final _searchCtrl = TextEditingController();
+
+  // 0=전체, 1=모집중, 2=진행중, 3=종료
+  static const _filters = ['전체', '모집중', '진행중', '종료'];
+  static const _filterStatuses = ['', 'recruiting', 'in_progress', 'completed'];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<League> _applyFilter(List<League> all) {
+    var result = all;
+
+    // 상태 필터
+    final status = _filterStatuses[_filter];
+    if (status.isNotEmpty) {
+      result = result.where((l) => l.status == status).toList();
+    }
+
+    // 검색어
+    final q = _query.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      result = result
+          .where((l) =>
+              l.title.toLowerCase().contains(q) ||
+              l.location.toLowerCase().contains(q))
+          .toList();
+    }
+
+    return result;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,10 +74,21 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
                 hintText: '지역, 대회명으로 검색',
                 hintStyle: TextStyle(color: sub, fontSize: 14),
                 prefixIcon: Icon(LucideIcons.search, color: sub, size: 20),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(LucideIcons.x, color: sub, size: 16),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -63,7 +108,11 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                   decoration: BoxDecoration(
                     color: _filter == i ? accent : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _filter == i ? accent : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider)),
+                    border: Border.all(
+                      color: _filter == i
+                          ? accent
+                          : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                    ),
                   ),
                   child: Center(
                     child: Text(
@@ -73,7 +122,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                         fontWeight: FontWeight.w600,
                         color: _filter == i
                             ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? const Color(0xFF888888) : const Color(0xFF888888)),
+                            : const Color(0xFF888888),
                       ),
                     ),
                   ),
@@ -85,45 +134,62 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
           // 리스트
           Expanded(
             child: ref.watch(leaguesProvider).when(
+              skipLoadingOnReload: true,
               data: (leaguesData) {
-                if (leaguesData.isEmpty) {
+                final filtered = _applyFilter(leaguesData);
+
+                if (filtered.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: () async => ref.invalidate(leaguesProvider),
                     child: ListView(
-                      children: const [
-                        SizedBox(height: 160),
-                        Center(child: Text('등록된 리그가 없습니다.', style: TextStyle(color: Colors.grey))),
+                      children: [
+                        const SizedBox(height: 160),
+                        Center(
+                          child: Text(
+                            _query.isNotEmpty
+                                ? '검색 결과가 없습니다.'
+                                : '해당하는 리그가 없습니다.',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
                       ],
                     ),
                   );
                 }
+
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(leaguesProvider),
                   child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: leaguesData.length,
-                  itemBuilder: (context, index) {
-                    final l = leaguesData[index];
-                    final startStr = DateFormat('M/d').format(l.startTime);
-                    final endStr = DateFormat('M/d').format(l.endTime);
-                    
-                    _Status stat = _Status.open;
-                    if (l.status == 'in_progress') stat = _Status.live;
-                    else if (l.status == 'completed') stat = _Status.ended;
-                    else if (l.status == 'canceled') stat = _Status.canceled;
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final l = filtered[index];
+                      final startStr = DateFormat('M/d').format(l.startTime);
+                      final endStr = DateFormat('M/d').format(l.endTime);
 
-                    return _LeagueItem(
-                      id: l.id,
-                      title: l.title,
-                      location: l.location,
-                      date: startStr == endStr ? startStr : '$startStr ~ $endStr',
-                      participants: l.participantsCount,
-                      max: l.maxParticipants,
-                      prize: l.entryFee > 0 ? '${NumberFormat('#,###').format(l.entryFee)}원' : '무료 참가',
-                      status: stat,
-                      rule: l.description ?? '',
-                    );
-                  },
+                      _Status stat = _Status.open;
+                      if (l.status == 'in_progress') {
+                        stat = _Status.live;
+                      } else if (l.status == 'completed') {
+                        stat = _Status.ended;
+                      } else if (l.status == 'canceled') {
+                        stat = _Status.canceled;
+                      }
+
+                      return _LeagueItem(
+                        id: l.id,
+                        title: l.title,
+                        location: l.location,
+                        date: startStr == endStr ? startStr : '$startStr ~ $endStr',
+                        participants: l.participantsCount,
+                        max: l.maxParticipants,
+                        prize: l.entryFee > 0
+                            ? '${NumberFormat('#,###').format(l.entryFee)}원'
+                            : '무료 참가',
+                        status: stat,
+                        rule: l.shortDescription ?? '',
+                      );
+                    },
                   ),
                 );
               },
@@ -133,7 +199,12 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                 child: ListView(
                   children: [
                     const SizedBox(height: 160),
-                    Center(child: Text('오류가 발생했습니다: $e', style: const TextStyle(color: Colors.grey))),
+                    Center(
+                      child: Text(
+                        '오류가 발생했습니다: $e',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -148,7 +219,18 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
 enum _Status { live, open, ended, canceled }
 
 class _LeagueItem extends StatelessWidget {
-  const _LeagueItem({required this.id, required this.title, required this.location, required this.date, required this.participants, required this.max, required this.prize, required this.status, required this.rule});
+  const _LeagueItem({
+    required this.id,
+    required this.title,
+    required this.location,
+    required this.date,
+    required this.participants,
+    required this.max,
+    required this.prize,
+    required this.status,
+    required this.rule,
+  });
+
   final String id, title, location, date, prize, rule;
   final int participants, max;
   final _Status status;
@@ -190,11 +272,22 @@ class _LeagueItem extends StatelessWidget {
                     color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(statusText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: statusColor)),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15), overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -225,7 +318,9 @@ class _LeagueItem extends StatelessWidget {
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
                           value: participants / max,
-                          backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+                          backgroundColor: isDark
+                              ? const Color(0xFF2A2A2A)
+                              : const Color(0xFFF0F0F0),
                           valueColor: AlwaysStoppedAnimation(accent),
                           minHeight: 3,
                         ),
@@ -237,7 +332,14 @@ class _LeagueItem extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(prize, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
+                    Text(
+                      prize,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
                     Text(rule, style: TextStyle(fontSize: 11, color: sub)),
                   ],
                 ),
