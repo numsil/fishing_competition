@@ -137,7 +137,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'HUK에 오신 걸 환영합니다',
+                      'Nakstar에 오신 걸 환영합니다',
                       style: TextStyle(fontSize: 13, color: sub),
                     ),
                   ],

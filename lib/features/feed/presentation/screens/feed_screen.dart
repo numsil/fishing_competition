@@ -86,11 +86,11 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       title: SvgPicture.asset(
-        'assets/images/nak_logo.svg',
+        'assets/images/nakstar.svg',
         height: 26,
         fit: BoxFit.contain,
-        colorFilter: ColorFilter.mode(
-          isDark ? Colors.white : Colors.black,
+        colorFilter: const ColorFilter.mode(
+          Colors.white,
           BlendMode.srcIn,
         ),
       ),

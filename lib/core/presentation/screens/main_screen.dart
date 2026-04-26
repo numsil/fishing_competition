@@ -61,7 +61,7 @@ class MainScreen extends StatelessWidget {
             child: child,
           ),
 
-          // ── 바텀 네비 + HUK! 버튼 ──
+          // ── 바텀 네비 + Nakstar 버튼 ──
           Positioned(
             bottom: 0,
             left: 0,
@@ -145,7 +145,7 @@ class MainScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // ── HUK! 플로팅 원형 버튼 ──
+                  // ── Nakstar 플로팅 원형 버튼 ──
                   Positioned(
                     bottom: bottomPad + fabOffsetFromBottom,
                     child: GestureDetector(
