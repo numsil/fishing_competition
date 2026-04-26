@@ -52,9 +52,11 @@ dependencies:
   # SVG
   flutter_svg: ^2.0.17
 
-  # 지도
+  # 지도/위치
   flutter_map: ^7.0.2
   latlong2: ^0.9.0
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
   supabase_flutter: ^2.12.4
   flutter_dotenv: ^6.0.1
   lucide_icons: ^0.257.0

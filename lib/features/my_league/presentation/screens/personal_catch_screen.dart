@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -25,6 +27,50 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   final _locationCtrl = TextEditingController();
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
+  double? _capturedLat;
+  double? _capturedLng;
+  bool _fetchingLocation = false;
+
+  Future<void> _captureCurrentLocation() async {
+    if (_fetchingLocation) return;
+    setState(() => _fetchingLocation = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) AppSnackBar.info(context, '위치 서비스를 켜주세요');
+        return;
+      }
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        if (mounted) AppSnackBar.info(context, '위치 권한이 거부되었습니다');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      _capturedLat = pos.latitude;
+      _capturedLng = pos.longitude;
+      if (_locationCtrl.text.trim().isEmpty) {
+        try {
+          final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            final parts = [p.administrativeArea, p.locality, p.subLocality, p.thoroughfare]
+                .where((s) => s != null && s.isNotEmpty)
+                .toList();
+            if (parts.isNotEmpty) _locationCtrl.text = parts.join(' ');
+          }
+        } catch (_) {}
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '위치 가져오기 실패: $e');
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -41,7 +87,12 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       imageQuality: 85,
       maxWidth: 1280,
     );
-    if (picked != null) setState(() => _image = File(picked.path));
+    if (picked != null) {
+      setState(() => _image = File(picked.path));
+      if (_capturedLat == null) {
+        await _captureCurrentLocation();
+      }
+    }
   }
 
   Future<void> _showSourceSheet() async {
@@ -104,6 +155,8 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
         fishType: _fishType,
         length: lengthVal,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+        lat: _capturedLat,
+        lng: _capturedLng,
         caption: _captionCtrl.text.trim().isEmpty ? null : _captionCtrl.text.trim(),
         catchCount: 1,
         isPersonalRecord: true,
@@ -263,7 +316,41 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 장소 ──────────────────────────
-          SectionLabel(text: '장소 (선택)', color: accent),
+          Row(
+            children: [
+              SectionLabel(text: '장소 (선택)', color: accent),
+              const Spacer(),
+              if (_fetchingLocation)
+                Row(children: [
+                  SizedBox(
+                    width: 12, height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5, color: accent),
+                  ),
+                  const SizedBox(width: 6),
+                  Text('GPS 가져오는 중…',
+                      style: TextStyle(fontSize: 11, color: sub, fontWeight: FontWeight.w600)),
+                ])
+              else if (_capturedLat != null)
+                Row(children: [
+                  Icon(LucideIcons.mapPin, size: 12, color: accent),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_capturedLat!.toStringAsFixed(5)}, ${_capturedLng!.toStringAsFixed(5)}',
+                    style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600),
+                  ),
+                ])
+              else if (_image != null)
+                GestureDetector(
+                  onTap: _captureCurrentLocation,
+                  child: Row(children: [
+                    Icon(LucideIcons.locate, size: 12, color: sub),
+                    const SizedBox(width: 4),
+                    Text('현재 위치 가져오기',
+                        style: TextStyle(fontSize: 11, color: sub, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(

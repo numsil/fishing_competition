@@ -130,7 +130,7 @@ class _ActiveTab extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        _MySummaryCard(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+        _MySummaryCard(activeCount: leagues.length, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
         const SizedBox(height: 20),
         Text('참여중인 리그 ${leagues.length}개',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
@@ -149,19 +149,36 @@ class _ActiveTab extends StatelessWidget {
   }
 }
 
-class _MySummaryCard extends StatelessWidget {
+class _MySummaryCard extends ConsumerWidget {
   const _MySummaryCard({
+    required this.activeCount,
     required this.isDark,
     required this.accent,
     required this.sub,
     required this.cardBg,
     required this.divColor,
   });
+  final int activeCount;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(mySeasonStatsProvider);
+
+    String rankValue = '...';
+    String fishValue = '...';
+    statsAsync.whenData((stats) {
+      rankValue = stats.bestRank != null ? '${stats.bestRank}위' : '-';
+      fishValue = stats.maxFishLength != null
+          ? '${stats.maxFishLength!.toStringAsFixed(1)}cm'
+          : '-';
+    });
+    if (statsAsync.hasError) {
+      rankValue = '-';
+      fishValue = '-';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -182,13 +199,13 @@ class _MySummaryCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              _SummaryItem(value: '3', label: '참여중', accent: accent),
+              _SummaryItem(value: '$activeCount', label: '참여중', accent: accent),
               _Divider(divColor: divColor),
-              _SummaryItem(value: '1위', label: '최고 순위', accent: AppColors.gold),
+              _SummaryItem(value: rankValue, label: '최고 순위', accent: AppColors.gold),
               _Divider(divColor: divColor),
-              _SummaryItem(value: '52.3cm', label: '최대어', accent: accent),
+              _SummaryItem(value: fishValue, label: '최대어', accent: accent),
               _Divider(divColor: divColor),
-              _SummaryItem(value: '650', label: '누적 점수', accent: accent),
+              _SummaryItem(value: '-', label: '누적 점수', accent: accent),
             ],
           ),
         ],
@@ -526,7 +543,7 @@ class _PersonalRecordTab extends ConsumerWidget {
                           (_, i) {
                             final post = posts[i];
                             return GestureDetector(
-                              onTap: () => context.push(AppRoutes.postDetail, extra: post),
+                              onTap: () => context.push(AppRoutes.personalRecordDetail, extra: post),
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [

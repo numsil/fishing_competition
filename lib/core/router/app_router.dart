@@ -13,6 +13,7 @@ import '../../features/league/presentation/screens/league_manage_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_detail_screen.dart';
 import '../../features/my_league/presentation/screens/personal_catch_screen.dart';
+import '../../features/my_league/presentation/screens/personal_record_detail_screen.dart';
 import '../../features/feed/presentation/screens/post_detail_screen.dart';
 import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
@@ -68,6 +69,14 @@ GoRouter appRouter(Ref ref) {
           fullscreenDialog: true,
           child: PersonalCatchScreen(),
         ),
+      ),
+      // 개인 기록 갤러리 상세
+      GoRoute(
+        path: AppRoutes.personalRecordDetail,
+        pageBuilder: (context, state) {
+          final post = state.extra as dynamic;
+          return MaterialPage(child: PersonalRecordDetailScreen(post: post));
+        },
       ),
       // DM 목록: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -180,6 +189,7 @@ class AppRoutes {
   static const String leagueManage = '/league/manage';
   static const String upload = '/upload';
   static const String personalCatch = '/personal-catch';
+  static const String personalRecordDetail = '/personal-record';
   static const String ranking = '/ranking';
   static const String profile = '/profile';
   static const String postDetail = '/post';
