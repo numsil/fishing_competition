@@ -15,8 +15,8 @@ lib/
   core/
     presentation/screens/  # splash, main
     router/app_router.dart  # GoRouter 전체 라우트 정의
-    theme/                  # AppColors, AppTheme, AppTextStyles
-    widgets/                # UserAvatar, AppSvg, ConfirmDialog, AppSnackBar, SectionLabel, StatWidgets, InfoChip, EmptyState
+    theme/                  # 디자인 토큰 (Colors/TextStyles/Spacing/Radius/Elevation/Durations) + AppTheme
+    widgets/                # AppButton/AppCard/AppTextField/ConfirmDialog/AppSnackBar/SectionLabel/StatWidgets/InfoChip/EmptyState/SlideToConfirm/UserAvatar/AppSvg
   features/
     auth/       # 로그인/회원가입, currentUserProvider
     feed/       # 홈 피드, 게시물 상세, 좋아요, 댓글
@@ -25,7 +25,15 @@ lib/
     profile/    # 프로필, 통계, 게시물 그리드
     ranking/    # 전체 랭킹
     upload/     # 일반 피드 업로드
+docs/
+  DESIGN_SYSTEM.md  # 🎨 디자인 시스템 단일 기준 문서 (UI 작업 전 필독)
 ```
+
+## 디자인 시스템
+
+> 📐 **모든 UI 작업의 기준 문서**: [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
+>
+> 색상·타이포·스페이싱·컴포넌트 사양이 모두 거기에 있습니다. 새 화면을 만들거나 토큰/컴포넌트를 추가/변경할 때 그 문서를 함께 업데이트하세요.
 
 ## 공용 컴포넌트 원칙 (필수)
 
@@ -34,25 +42,34 @@ lib/
 ### 현재 공용 위젯 목록 (`lib/core/widgets/`)
 | 파일 | 클래스 | 용도 |
 |---|---|---|
+| `app_button.dart` | `AppButton` (primary/secondary/ghost/destructive) | 표준 버튼 |
+| `app_card.dart` | `AppCard` (surface/tinted/outlined) | 표준 카드 컨테이너 |
+| `app_text_field.dart` | `AppTextField` | 표준 입력 필드 |
 | `confirm_dialog.dart` | `ConfirmDialog`, `showConfirmDialog()` | 확인/취소 다이얼로그 |
-| `app_snack_bar.dart` | `AppSnackBar.success/error/info()` | 스낵바 |
+| `app_snack_bar.dart` | `AppSnackBar.success/error/info()` | 탑 슬라이드 배너 |
 | `section_label.dart` | `SectionLabel` | 섹션 제목 (컬러 바 + 텍스트) |
 | `stat_widgets.dart` | `StatNumber`, `StatBox` | 통계 숫자/박스 |
 | `info_chip.dart` | `InfoChip`, `InfoChipFilled` | 아이콘+텍스트 칩 |
 | `empty_state.dart` | `EmptyState` | 빈 목록 화면 |
 | `slide_to_confirm.dart` | `SlideToConfirm`, `showDeleteConfirmSheet()` | 슬라이드 삭제 확인 |
 | `user_avatar.dart` | `UserAvatar` | 유저 아바타 |
+| `app_svg.dart` | `AppSvg`, `AppIcons` | SVG 래퍼 |
 
 ### 현재 공용 테마 (`lib/core/theme/`)
 | 파일 | 클래스 | 용도 |
 |---|---|---|
-| `app_colors.dart` | `AppColors` | 색상 상수 |
-| `app_text_styles.dart` | `AppTextStyles` | 텍스트 스타일 상수 |
+| `app_colors.dart` | `AppColors` | 색상 토큰 |
+| `app_text_styles.dart` | `AppTextStyles` | 타이포 토큰 |
+| `app_spacing.dart` | `AppSpacing` | 4pt 그리드 스페이싱 토큰 |
+| `app_radius.dart` | `AppRadius` | 모서리 반경 토큰 |
+| `app_elevation.dart` | `AppElevation` | 그림자 토큰 |
+| `app_durations.dart` | `AppDurations` | 애니메이션 시간 토큰 |
+| `app_theme.dart` | `AppTheme` | 다크/라이트 ThemeData 통합 |
 
 ### 새 컴포넌트가 필요한 경우
 1. `lib/core/widgets/` 또는 `lib/core/theme/`에 파일 생성
 2. 기존 코드에서 중복 클래스 제거하고 import로 교체
-3. 이 목록 업데이트
+3. 이 목록 + `docs/DESIGN_SYSTEM.md`의 컴포넌트 섹션 + 변경 로그 업데이트
 
 ## 핵심 규칙
 
@@ -66,9 +83,9 @@ lib/
 ```dart
 final messenger = ScaffoldMessenger.of(context); // 1. 미리 캡처
 Navigator.pop(dialogCtx);                         // 2. dialog context로 닫기
-await Future.delayed(const Duration(milliseconds: 300)); // 3. 애니메이션 대기
+await Future.delayed(AppDurations.dialogClose);   // 3. 애니메이션 대기
 await doWork();                                   // 4. 작업
-messenger.showSnackBar(...);                      // 5. 스낵바
+AppSnackBar.success(context, '완료');              // 5. 피드백
 ref.invalidate(someProvider);                     // 6. 마지막에 invalidate
 ```
 

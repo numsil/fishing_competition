@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_colors.dart';
+import 'app_radius.dart';
 
 class AppTheme {
   AppTheme._();
@@ -88,8 +89,34 @@ class AppTheme {
           labelStyle: const TextStyle(color: AppColors.darkText, fontSize: 13),
           side: const BorderSide(color: AppColors.darkDivider),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.darkSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brLg),
+          titleTextStyle: const TextStyle(
+            color: AppColors.darkText,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: const TextStyle(
+            color: AppColors.darkTextSub,
+            fontSize: 14,
+            height: 1.45,
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.darkSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brTopXl),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: AppColors.darkSurface2,
+          contentTextStyle: const TextStyle(color: AppColors.darkText),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brMd),
+          behavior: SnackBarBehavior.floating,
         ),
         textTheme: const TextTheme(
           displayLarge:
@@ -178,6 +205,32 @@ class AppTheme {
           labelColor: AppColors.navy,
           unselectedLabelColor: AppColors.lightTextSub,
           indicatorColor: AppColors.navy,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.lightSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brLg),
+          titleTextStyle: const TextStyle(
+            color: AppColors.lightText,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: const TextStyle(
+            color: AppColors.lightTextSub,
+            fontSize: 14,
+            height: 1.45,
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.lightSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brTopXl),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: AppColors.lightText,
+          contentTextStyle: const TextStyle(color: Colors.white),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.brMd),
+          behavior: SnackBarBehavior.floating,
         ),
         textTheme: const TextTheme(
           displayLarge:
