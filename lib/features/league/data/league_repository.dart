@@ -416,11 +416,15 @@ Future<List<League>> leagues(LeaguesRef ref) {
 
 @riverpod
 Future<bool> isJoined(IsJoinedRef ref, String leagueId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
   return ref.watch(leagueRepositoryProvider).isJoined(leagueId);
 }
 
 @riverpod
 Future<List<LeagueRankEntry>> leagueRanking(LeagueRankingRef ref, String leagueId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(leagueRepositoryProvider).getLeagueRanking(leagueId);
 }
 
@@ -438,5 +442,9 @@ final leaguePendingProvider = FutureProvider.family<List<LeaguePendingEntry>, St
 );
 
 final leagueDetailProvider = FutureProvider.family<League, String>(
-  (ref, id) => ref.watch(leagueRepositoryProvider).getLeague(id),
+  (ref, id) {
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
+    return ref.watch(leagueRepositoryProvider).getLeague(id);
+  },
 );

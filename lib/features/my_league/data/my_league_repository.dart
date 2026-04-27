@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../league/data/league_model.dart';
@@ -192,5 +193,7 @@ Future<Map<String, List<League>>> myLeagues(MyLeaguesRef ref) {
 
 @riverpod
 Future<SeasonStats> mySeasonStats(MySeasonStatsRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
   return ref.watch(myLeagueRepositoryProvider).getSeasonStats();
 }

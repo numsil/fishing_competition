@@ -12,8 +12,6 @@ import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
-import '../../../league/data/league_repository.dart';
-import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -244,7 +242,7 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _ActiveLeagueCard extends ConsumerWidget {
+class _ActiveLeagueCard extends StatelessWidget {
   const _ActiveLeagueCard({
     required this.league,
     required this.isDark,
@@ -258,33 +256,13 @@ class _ActiveLeagueCard extends ConsumerWidget {
   final Color accent, sub, cardBg, divColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isLive = league.status == 'in_progress';
     final isUpcoming = league.status == 'recruiting';
     final type = isLive ? 'live' : isUpcoming ? 'upcoming' : 'history';
 
     final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
     final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
-
-    // 순위 데이터 가져오기
-    final rankingAsync = ref.watch(leagueRankingProvider(league.id));
-    final currentUserId = ref.watch(currentUserProvider)?.id;
-
-    String myRank = '-';
-    String myBest = '-';
-
-    if (!isUpcoming) {
-      rankingAsync.whenData((entries) {
-        if (currentUserId != null) {
-          final idx = entries.indexWhere((e) => e.userId == currentUserId);
-          if (idx >= 0) {
-            myRank = '${idx + 1}위';
-            final best = entries[idx].bestLength;
-            if (best != null) myBest = '${best.toStringAsFixed(1)}cm';
-          }
-        }
-      });
-    }
 
     return GestureDetector(
       onTap: () => context.push(
@@ -384,7 +362,7 @@ class _ActiveLeagueCard extends ConsumerWidget {
               children: [
                 _RecordChip(
                   label: '내 순위',
-                  value: myRank,
+                  value: '-',
                   color: accent,
                   sub: sub,
                   isDark: isDark,
@@ -393,7 +371,7 @@ class _ActiveLeagueCard extends ConsumerWidget {
                 const SizedBox(width: 10),
                 _RecordChip(
                   label: '내 최대어',
-                  value: myBest,
+                  value: '-',
                   color: accent,
                   sub: sub,
                   isDark: isDark,
