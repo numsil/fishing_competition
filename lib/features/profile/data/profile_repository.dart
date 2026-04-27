@@ -81,7 +81,7 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select('*, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
@@ -97,7 +97,7 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select('*, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', true)

@@ -52,8 +52,7 @@ class LeagueRepository {
   Future<List<String>> _uploadIntroImages(
       String hostId, List<XFile> files) async {
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final urls = <String>[];
-    for (var i = 0; i < files.length; i++) {
+    final futures = List.generate(files.length, (i) async {
       final bytes = await files[i].readAsBytes();
       final ext = files[i].path.split('.').last.toLowerCase();
       final path = 'leagues/${hostId}_${ts}_$i.$ext';
@@ -65,9 +64,9 @@ class LeagueRepository {
           upsert: false,
         ),
       );
-      urls.add(_supabase.storage.from('league_images').getPublicUrl(path));
-    }
-    return urls;
+      return _supabase.storage.from('league_images').getPublicUrl(path);
+    });
+    return Future.wait(futures);
   }
 
   Future<void> createLeague({
@@ -129,7 +128,7 @@ class LeagueRepository {
   Future<List<League>> getLeagues() async {
     final response = await _supabase
         .from('leagues')
-        .select('*, league_participants(id)')
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(id)')
         .order('created_at', ascending: false);
 
     return response.map((data) {
@@ -187,21 +186,12 @@ class LeagueRepository {
         .select('user_id, users(username, avatar_url)')
         .eq('league_id', leagueId);
 
-    // 3. 해당 리그 게시물 (weight 포함, 폴백 지원)
-    List<dynamic> posts;
-    try {
-      posts = await _supabase
-          .from('posts')
-          .select('user_id, length, weight, fish_type, is_lunker')
-          .eq('league_id', leagueId)
-          .eq('is_deleted', false);
-    } catch (_) {
-      posts = await _supabase
-          .from('posts')
-          .select('user_id, length, fish_type, is_lunker')
-          .eq('league_id', leagueId)
-          .eq('is_deleted', false);
-    }
+    // 3. 해당 리그 게시물 (weight는 null 허용)
+    final posts = await _supabase
+        .from('posts')
+        .select('user_id, length, weight, fish_type, is_lunker')
+        .eq('league_id', leagueId)
+        .eq('is_deleted', false);
 
     // 4. 유저별 측정값 목록 구성
     final Map<String, List<double>> userMeasures = {};

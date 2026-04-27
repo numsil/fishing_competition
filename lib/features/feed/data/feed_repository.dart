@@ -16,7 +16,7 @@ class FeedRepository {
   Future<List<Post>> getPosts() async {
     final response = await _supabase
         .from('posts')
-        .select('*, users(username, avatar_url), post_likes(count), post_comments(count)')
+        .select('id, user_id, league_id, image_url, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url), post_likes(count), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -46,7 +46,7 @@ class FeedRepository {
   Future<void> toggleLike(String postId, String userId) async {
     final existingLike = await _supabase
         .from('post_likes')
-        .select()
+        .select('id')
         .eq('post_id', postId)
         .eq('user_id', userId)
         .maybeSingle();

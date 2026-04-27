@@ -23,14 +23,14 @@ class MyLeagueRepository {
     // 1. Hosted leagues
     final hostedRes = await _supabase
         .from('leagues')
-        .select('*, league_participants(id)')
+        .select('id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(id)')
         .eq('host_id', userId)
         .order('created_at', ascending: false);
 
     // 2. Participated leagues
     final participatedRes = await _supabase
         .from('league_participants')
-        .select('leagues(*, league_participants(id))')
+        .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(id))')
         .eq('user_id', userId)
         .order('joined_at', ascending: false);
 
