@@ -10,6 +10,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key, required this.userId});
@@ -66,10 +67,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final currentUser = ref.watch(currentUserProvider);
     final isMe = currentUser?.id == widget.userId;
 
@@ -86,15 +85,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       data: (profile) => Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: Icon(LucideIcons.arrowLeft,
-                color: isDark ? Colors.white : Colors.black),
+            icon: Icon(LucideIcons.chevronLeft,
+                color: context.isDark ? Colors.white : Colors.black),
             onPressed: () => context.pop(),
           ),
           title: Text(
             profile.username,
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
-          backgroundColor: isDark ? AppColors.darkBg : Colors.white,
+          backgroundColor: context.isDark ? AppColors.darkBg : Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
         ),
@@ -114,13 +113,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                                color: accent.withValues(alpha: 0.35), width: 2),
+                                color: context.accentColor.withValues(alpha: 0.35), width: 2),
                           ),
                           child: UserAvatar(
                             username: profile.username,
                             avatarUrl: profile.avatarUrl,
                             radius: 38,
-                            isDark: isDark,
+                            isDark: context.isDark,
                           ),
                         ),
                         const SizedBox(width: 20),
@@ -158,7 +157,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         child: FilledButton(
                           onPressed: () {},
                           style: FilledButton.styleFrom(
-                            backgroundColor: accent,
+                            backgroundColor: context.accentColor,
                             minimumSize: const Size(0, 36),
                             padding: EdgeInsets.zero,
                             shape: RoundedRectangleBorder(
@@ -169,7 +168,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: isDark ? Colors.black : Colors.white),
+                                color: context.isDark ? Colors.black : Colors.white),
                           ),
                         ),
                       ),
@@ -183,7 +182,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           minimumSize: const Size(36, 36),
                           padding: EdgeInsets.zero,
                           side: BorderSide(
-                              color: isDark
+                              color: context.isDark
                                   ? AppColors.darkSurface2
                                   : AppColors.lightDivider),
                           shape: RoundedRectangleBorder(
@@ -195,12 +194,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: accent,
+                                  color: context.accentColor,
                                 ),
                               )
                             : Icon(LucideIcons.messageCircle,
                                 size: 18,
-                                color: isDark ? Colors.white : Colors.black),
+                                color: context.isDark ? Colors.white : Colors.black),
                       ),
                     ]),
                     const SizedBox(height: 16),
@@ -212,7 +211,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         color: cardBg,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: isDark
+                            color: context.isDark
                                 ? AppColors.darkSurface2
                                 : AppColors.lightDivider),
                       ),
@@ -228,17 +227,17 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                               style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
-                                  color: accent)),
+                                  color: context.accentColor)),
                         ]),
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: profile.mannerTemperature / 100,
-                            backgroundColor: isDark
+                            backgroundColor: context.isDark
                                 ? AppColors.darkSurface2
                                 : AppColors.lightDivider,
-                            valueColor: AlwaysStoppedAnimation(accent),
+                            valueColor: AlwaysStoppedAnimation(context.accentColor),
                             minHeight: 6,
                           ),
                         ),
@@ -291,29 +290,29 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           icon: LucideIcons.fish,
                           value: '${profile.lunkerCount}',
                           label: '런커',
-                          isDark: isDark,
-                          accent: accent),
+                          isDark: context.isDark,
+                          accent: context.accentColor),
                       const SizedBox(width: 8),
                       StatBox(
                           icon: LucideIcons.medal,
                           value: '-',
                           label: '우승',
-                          isDark: isDark,
-                          accent: accent),
+                          isDark: context.isDark,
+                          accent: context.accentColor),
                       const SizedBox(width: 8),
                       StatBox(
                           icon: LucideIcons.barChart2,
                           value: '-',
                           label: '점수',
-                          isDark: isDark,
-                          accent: accent),
+                          isDark: context.isDark,
+                          accent: context.accentColor),
                       const SizedBox(width: 8),
                       StatBox(
                           icon: LucideIcons.waves,
                           value: '-',
                           label: '참가',
-                          isDark: isDark,
-                          accent: accent),
+                          isDark: context.isDark,
+                          accent: context.accentColor),
                     ]),
                     const SizedBox(height: 6),
 
@@ -333,7 +332,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           body: TabBarView(
             controller: _tab,
             children: [
-              _UserGrid(userId: widget.userId, isDark: isDark),
+              _UserGrid(userId: widget.userId, isDark: context.isDark),
             ],
           ),
         ),

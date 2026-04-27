@@ -14,6 +14,7 @@ import '../../../league/data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class MyLeagueScreen extends ConsumerStatefulWidget {
   const MyLeagueScreen({super.key});
@@ -40,11 +41,9 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final divColor = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final divColor = context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
     return ref.watch(myLeaguesProvider).when(
       skipLoadingOnReload: true,
@@ -61,8 +60,8 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
               controller: _tab,
               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-              indicatorColor: accent,
-              labelColor: accent,
+              indicatorColor: context.accentColor,
+              labelColor: context.accentColor,
               unselectedLabelColor: sub,
               tabs: const [
                 Tab(text: '참여 리그'),
@@ -74,9 +73,9 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
           body: TabBarView(
             controller: _tab,
             children: [
-              _ActiveTab(leagues: activeLeagues, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
-              _PersonalRecordTab(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-              _MyLeaguesTab(leagues: hosted, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
+              _ActiveTab(leagues: activeLeagues, isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
+              _PersonalRecordTab(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor),
+              _MyLeaguesTab(leagues: hosted, isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
             ],
           ),
         );

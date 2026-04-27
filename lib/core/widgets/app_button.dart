@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../extensions/theme_extensions.dart';
 
 /// 버튼 변형(variant).
 enum AppButtonVariant {
@@ -45,12 +46,10 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final onAccent = isDark ? Colors.black : Colors.white;
+    final onAccent = context.isDark ? Colors.black : Colors.white;
     final disabled = onPressed == null || loading;
 
-    final colors = _resolveColors(isDark, accent, onAccent);
+    final colors = _resolveColors(context.isDark, context.accentColor, onAccent);
     final dims = _resolveDims();
 
     final child = loading

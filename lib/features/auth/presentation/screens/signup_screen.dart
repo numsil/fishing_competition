@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../../../core/widgets/app_svg.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../data/auth_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -86,17 +88,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 20, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(LucideIcons.chevronLeft,
+              size: 24, color: context.isDark ? Colors.white : Colors.black),
           onPressed: () => context.go(AppRoutes.login),
         ),
       ),
@@ -114,11 +114,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: accent,
+                        color: context.accentColor,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: accent.withValues(alpha: 0.3),
+                            color: context.accentColor.withValues(alpha: 0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -127,7 +127,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       padding: const EdgeInsets.all(14),
                       child: AppSvg(
                         AppIcons.fishingRod,
-                        color: isDark ? Colors.black : Colors.white,
+                        color: context.isDark ? Colors.black : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -229,7 +229,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               width: 20, height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: isDark ? Colors.black : Colors.white,
+                                color: context.isDark ? Colors.black : Colors.white,
                               ),
                             )
                           : const Text('가입하기'),
@@ -243,7 +243,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           onTap: () => context.go(AppRoutes.login),
                           child: Text(
                             '로그인',
-                            style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 13),
+                            style: TextStyle(color: context.accentColor, fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ),
                       ],

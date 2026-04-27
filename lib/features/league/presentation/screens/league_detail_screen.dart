@@ -16,6 +16,7 @@ import 'league_catch_screen.dart';
 import 'league_participant_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueDetailScreen extends ConsumerWidget {
   const LeagueDetailScreen({super.key, required this.leagueId});
@@ -23,14 +24,12 @@ class LeagueDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
     return ref.watch(leagueDetailProvider(leagueId)).when(
       data: (league) => _LeagueDetailBody(
         league: league,
-        isDark: isDark,
-        accent: accent,
+        isDark: context.isDark,
+        accent: context.accentColor,
       ),
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
@@ -1129,22 +1128,21 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
+          color: context.accentColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accent.withValues(alpha: 0.2)),
+          border: Border.all(color: context.accentColor.withValues(alpha: 0.2)),
         ),
         child: Column(children: [
           Text(value,
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: accent)),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: context.accentColor)),
           const SizedBox(height: 2),
           Text(label,
               style: TextStyle(fontSize: 11,
-                  color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
+                  color: context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
         ]),
       ),
     );

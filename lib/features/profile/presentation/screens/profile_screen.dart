@@ -11,6 +11,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -37,13 +38,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
     // 카메라 / 갤러리 선택
     final choice = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      backgroundColor: context.isDark ? AppColors.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -55,18 +54,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                color: context.isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: Icon(Icons.camera_alt_rounded, color: accent),
+              leading: Icon(Icons.camera_alt_rounded, color: context.accentColor),
               title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_rounded, color: accent),
+              leading: Icon(Icons.photo_library_rounded, color: context.accentColor),
               title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
@@ -103,10 +102,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
 
     return ref.watch(myProfileProvider).when(
       data: (profile) {
@@ -114,7 +111,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           appBar: AppBar(
             title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
             actions: [
-              IconButton(icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white : Colors.black), onPressed: () {}),
+              IconButton(icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black), onPressed: () {}),
               IconButton(icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20), onPressed: () => context.go(AppRoutes.login)),
             ],
           ),
@@ -142,19 +139,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: accent.withValues(alpha: 0.35), width: 2),
+                                border: Border.all(color: context.accentColor.withValues(alpha: 0.35), width: 2),
                               ),
                               child: _uploadingAvatar
                                   ? SizedBox(
                                       width: 76, height: 76,
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 2.5, color: accent),
+                                        strokeWidth: 2.5, color: context.accentColor),
                                     )
                                   : UserAvatar(
                                       username: profile.username,
                                       avatarUrl: profile.avatarUrl,
                                       radius: 38,
-                                      isDark: isDark,
+                                      isDark: context.isDark,
                                     ),
                             ),
                             Positioned(
@@ -162,17 +159,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               child: Container(
                                 width: 24, height: 24,
                                 decoration: BoxDecoration(
-                                  color: accent,
+                                  color: context.accentColor,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isDark ? AppColors.darkBg : Colors.white,
+                                    color: context.isDark ? AppColors.darkBg : Colors.white,
                                     width: 2,
                                   ),
                                 ),
                                 child: Icon(
                                   Icons.camera_alt_rounded,
                                   size: 12,
-                                  color: isDark ? Colors.black : Colors.white,
+                                  color: context.isDark ? Colors.black : Colors.white,
                                 ),
                               ),
                             ),
@@ -219,10 +216,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 36),
                         padding: EdgeInsets.zero,
-                        side: BorderSide(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                        side: BorderSide(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Text('프로필 수정', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                      child: Text('프로필 수정', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.isDark ? Colors.white : Colors.black)),
                     )),
                     const SizedBox(width: 8),
                     OutlinedButton(
@@ -230,10 +227,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(36, 36),
                         padding: EdgeInsets.zero,
-                        side: BorderSide(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                        side: BorderSide(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Icon(LucideIcons.userPlus, size: 18, color: isDark ? Colors.white : Colors.black),
+                      child: Icon(LucideIcons.userPlus, size: 18, color: context.isDark ? Colors.white : Colors.black),
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -243,21 +240,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     decoration: BoxDecoration(
                       color: cardBg,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                      border: Border.all(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                     ),
                     child: Column(children: [
                       Row(children: [
                         Text('앵글러 온도', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
                         const Spacer(),
-                        Text('${profile.mannerTemperature}°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
+                        Text('${profile.mannerTemperature}°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.accentColor)),
                       ]),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: profile.mannerTemperature / 100,
-                          backgroundColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                          valueColor: AlwaysStoppedAnimation(accent),
+                          backgroundColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                          valueColor: AlwaysStoppedAnimation(context.accentColor),
                           minHeight: 6,
                         ),
                       ),
@@ -307,13 +304,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       orElse: () => 0,
                     );
                     return Row(children: [
-                      StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: context.isDark, accent: context.accentColor),
                       const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: context.isDark, accent: context.accentColor),
                       const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: context.isDark, accent: context.accentColor),
                       const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: isDark, accent: accent),
+                      StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: context.isDark, accent: context.accentColor),
                     ]);
                   }),
                   const SizedBox(height: 6),
@@ -335,8 +332,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             body: TabBarView(
               controller: _tab,
               children: [
-                _Grid(isDark: isDark),
-                _History(isDark: isDark, accent: accent, sub: sub, cardBg: cardBg),
+                _Grid(isDark: context.isDark),
+                _History(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg),
               ],
             ),
           ),

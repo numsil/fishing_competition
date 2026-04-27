@@ -13,6 +13,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueCreateScreen extends ConsumerStatefulWidget {
   const LeagueCreateScreen({super.key, this.league});
@@ -204,9 +205,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: sel ? accent : Colors.transparent,
+          color: sel ? context.accentColor : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: sel ? accent : divColor),
+          border: Border.all(color: sel ? context.accentColor : divColor),
         ),
         child: Text(
           label,
@@ -245,13 +246,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       initialDateRange: _dateRange,
       locale: const Locale('ko', 'KR'),
       builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final accent = isDark ? AppColors.neonGreen : AppColors.navy;
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: isDark
-                ? ColorScheme.dark(primary: accent, onPrimary: Colors.black)
-                : ColorScheme.light(primary: accent, onPrimary: Colors.white),
+            colorScheme: context.isDark
+                ? ColorScheme.dark(primary: context.accentColor, onPrimary: Colors.black)
+                : ColorScheme.light(primary: context.accentColor, onPrimary: Colors.white),
           ),
           child: child!,
         );
@@ -262,8 +261,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   // ── 지도 선택 팝업 ──
   Future<void> _openMapPicker() async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     LatLng pinned = _selectedLatLng ?? const LatLng(36.8, 127.9);
     final mapCtrl = MapController();
 
@@ -318,7 +315,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                   point: pinned,
                                   width: 40,
                                   height: 40,
-                                  child: Icon(Icons.location_pin, color: accent, size: 40),
+                                  child: Icon(Icons.location_pin, color: context.accentColor, size: 40),
                                 ),
                               ],
                             ),
@@ -351,7 +348,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               ),
                               child: Text(
                                 '${pinned.latitude.toStringAsFixed(4)}, ${pinned.longitude.toStringAsFixed(4)}',
-                                style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w700),
+                                style: TextStyle(color: context.accentColor, fontSize: 12, fontWeight: FontWeight.w700),
                               ),
                             ),
                           ),
@@ -410,9 +407,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   // ── 소개 이미지 팝업 ──
   Future<void> _openImagePopup() async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final divColor = context.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
 
     await showDialog(
       context: context,
@@ -488,7 +483,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                 margin: const EdgeInsets.only(right: 8),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: accent.withValues(alpha: 0.4)),
+                                  border: Border.all(color: context.accentColor.withValues(alpha: 0.4)),
                                   image: DecorationImage(
                                     image: FileImage(File(e.value.path)),
                                     fit: BoxFit.cover,
@@ -525,8 +520,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         child: _ImgBtn(
                           icon: Icons.camera_alt_outlined,
                           label: '카메라',
-                          accent: accent,
-                          isDark: isDark,
+                          accent: context.accentColor,
+                          isDark: context.isDark,
                           onTap: () => _pickImage(ImageSource.camera, setS),
                         ),
                       ),
@@ -535,8 +530,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         child: _ImgBtn(
                           icon: Icons.photo_library_outlined,
                           label: '갤러리 (복수)',
-                          accent: accent,
-                          isDark: isDark,
+                          accent: context.accentColor,
+                          isDark: context.isDark,
                           onTap: () => _pickMultipleImages(setS),
                         ),
                       ),
@@ -561,11 +556,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final sub = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final sub = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
+    final divColor = context.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
     final dateText = _dateRange == null
         ? null
         : '${_dateRange!.start.year}.${_dateRange!.start.month.toString().padLeft(2, '0')}.${_dateRange!.start.day.toString().padLeft(2, '0')}  ~  ${_dateRange!.end.year}.${_dateRange!.end.month.toString().padLeft(2, '0')}.${_dateRange!.end.day.toString().padLeft(2, '0')}';
@@ -586,7 +579,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             child: ElevatedButton(
               onPressed: _submitting ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
+                backgroundColor: context.accentColor,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 minimumSize: Size.zero,
@@ -617,7 +610,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 controller: _nameCtrl,
                 decoration: InputDecoration(
                   labelText: '대회명',
-                  labelStyle: TextStyle(color: accent, fontWeight: FontWeight.w600),
+                  labelStyle: TextStyle(color: context.accentColor, fontWeight: FontWeight.w600),
                   hintText: '예) 2026 충주호 배스 오픈',
                   hintStyle: TextStyle(color: sub, fontSize: 14),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
@@ -627,11 +620,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: accent),
+                    borderSide: BorderSide(color: context.accentColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: accent, width: 2),
+                    borderSide: BorderSide(color: context.accentColor, width: 2),
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -642,7 +635,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     borderSide: BorderSide(color: AppColors.error, width: 2),
                   ),
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF111111) : Colors.white,
+                  fillColor: context.isDark ? const Color(0xFF111111) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
                 validator: (v) => v?.isEmpty == true ? '대회명을 입력해주세요' : null,
@@ -652,23 +645,23 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 일정 ──
             _Section(
               title: '일정',
-              accent: accent,
+              accent: context.accentColor,
               child: GestureDetector(
                 onTap: _pickDateRange,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
+                    color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _dateRange != null ? accent : divColor,
+                      color: _dateRange != null ? context.accentColor : divColor,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(Icons.calendar_month_rounded,
-                          color: _dateRange != null ? accent : sub, size: 20),
+                          color: _dateRange != null ? context.accentColor : sub, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -676,7 +669,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             color: _dateRange != null
-                                ? (isDark ? Colors.white : Colors.black)
+                                ? (context.isDark ? Colors.white : Colors.black)
                                 : sub,
                             fontWeight: _dateRange != null ? FontWeight.w600 : FontWeight.w400,
                           ),
@@ -696,7 +689,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 장소 ──
             _Section(
               title: '장소',
-              accent: accent,
+              accent: context.accentColor,
               child: Column(
                 children: [
                   TextFormField(
@@ -705,7 +698,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       hintText: '지도에서 선택하거나 직접 입력',
                       suffixIcon: IconButton(
                         onPressed: _openMapPicker,
-                        icon: Icon(Icons.map_outlined, color: accent, size: 22),
+                        icon: Icon(Icons.map_outlined, color: context.accentColor, size: 22),
                         tooltip: '지도에서 선택',
                       ),
                     ),
@@ -737,7 +730,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                     point: _selectedLatLng!,
                                     width: 36,
                                     height: 36,
-                                    child: Icon(Icons.location_pin, color: accent, size: 36),
+                                    child: Icon(Icons.location_pin, color: context.accentColor, size: 36),
                                   ),
                                 ],
                               ),
@@ -754,7 +747,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 순위 결정 방식 ──
             _Section(
               title: '순위 결정 방식',
-              accent: accent,
+              accent: context.accentColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -773,16 +766,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: sel ? accent : Colors.transparent,
+                            color: sel ? context.accentColor : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: sel ? accent : divColor),
+                            border: Border.all(color: sel ? context.accentColor : divColor),
                           ),
                           child: Text(
                             rule,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                              color: sel ? (isDark ? Colors.black : Colors.white) : sub,
+                              color: sel ? (context.isDark ? Colors.black : Colors.white) : sub,
                             ),
                           ),
                         ),
@@ -799,11 +792,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: [
-                        _buildLimitChip(1, '1마리', accent, divColor, sub, isDark),
-                        _buildLimitChip(3, '3마리', accent, divColor, sub, isDark),
-                        _buildLimitChip(5, '5마리', accent, divColor, sub, isDark),
-                        _buildLimitChip(10, '10마리', accent, divColor, sub, isDark),
-                        _buildLimitChip(0, '전체', accent, divColor, sub, isDark),
+                        _buildLimitChip(1, '1마리', context.accentColor, divColor, sub, context.isDark),
+                        _buildLimitChip(3, '3마리', context.accentColor, divColor, sub, context.isDark),
+                        _buildLimitChip(5, '5마리', context.accentColor, divColor, sub, context.isDark),
+                        _buildLimitChip(10, '10마리', context.accentColor, divColor, sub, context.isDark),
+                        _buildLimitChip(0, '전체', context.accentColor, divColor, sub, context.isDark),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -811,16 +804,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.08),
+                        color: context.accentColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                        border: Border.all(color: context.accentColor.withValues(alpha: 0.3)),
                       ),
                       child: Row(children: [
-                        Icon(Icons.info_outline_rounded, size: 14, color: accent),
+                        Icon(Icons.info_outline_rounded, size: 14, color: context.accentColor),
                         const SizedBox(width: 6),
                         Text(
                           _rulePreview,
-                          style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 12, color: context.accentColor, fontWeight: FontWeight.w600),
                         ),
                       ]),
                     ),
@@ -837,7 +830,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   Expanded(
                     child: _Section(
                       title: '최대 참가자',
-                      accent: accent,
+                      accent: context.accentColor,
                       bottomPad: 0,
                       child: TextFormField(
                         controller: _maxCtrl,
@@ -857,7 +850,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   Expanded(
                     child: _Section(
                       title: '참가비',
-                      accent: accent,
+                      accent: context.accentColor,
                       bottomPad: 0,
                       child: TextFormField(
                         controller: _feeCtrl,
@@ -874,7 +867,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 상금/상품/기타 ──
             _Section(
               title: '시상',
-              accent: accent,
+              accent: context.accentColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -888,16 +881,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                           decoration: BoxDecoration(
-                            color: sel ? accent : Colors.transparent,
+                            color: sel ? context.accentColor : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: sel ? accent : divColor),
+                            border: Border.all(color: sel ? context.accentColor : divColor),
                           ),
                           child: Text(
                             t,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: sel ? (isDark ? Colors.black : Colors.white) : sub,
+                              color: sel ? (context.isDark ? Colors.black : Colors.white) : sub,
                             ),
                           ),
                         ),
@@ -950,8 +943,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       onPressed: () => setState(() => _prizes.add(
                         _PrizeItem(rank: '${_prizes.length + 1}위', value: ''),
                       )),
-                      icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
-                      label: Text('순위 추가', style: TextStyle(color: accent, fontSize: 13)),
+                      icon: Icon(Icons.add_circle_outline, size: 18, color: context.accentColor),
+                      label: Text('순위 추가', style: TextStyle(color: context.accentColor, fontSize: 13)),
                       style: TextButton.styleFrom(padding: EdgeInsets.zero),
                     ),
                   ],
@@ -996,8 +989,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       onPressed: () => setState(() => _prizes.add(
                         _PrizeItem(rank: '${_prizes.length + 1}위', value: ''),
                       )),
-                      icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
-                      label: Text('순위 추가', style: TextStyle(color: accent, fontSize: 13)),
+                      icon: Icon(Icons.add_circle_outline, size: 18, color: context.accentColor),
+                      label: Text('순위 추가', style: TextStyle(color: context.accentColor, fontSize: 13)),
                       style: TextButton.styleFrom(padding: EdgeInsets.zero),
                     ),
                   ],
@@ -1020,7 +1013,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 간단 소개 ──
             _Section(
               title: '간단 소개',
-              accent: accent,
+              accent: context.accentColor,
               child: TextFormField(
                 controller: _shortDescCtrl,
                 maxLength: 40,
@@ -1035,7 +1028,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             // ── 대회 소개 ──
             _Section(
               title: '대회 소개',
-              accent: accent,
+              accent: context.accentColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1054,14 +1047,14 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+                        color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: divColor),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate_outlined, size: 20, color: accent),
+                          Icon(Icons.add_photo_alternate_outlined, size: 20, color: context.accentColor),
                           const SizedBox(width: 8),
                           Text(
                             _totalImageCount == 0
@@ -1069,7 +1062,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                 : '이미지 $_totalImageCount장 추가됨',
                             style: TextStyle(
                               fontSize: 13,
-                              color: _totalImageCount == 0 ? sub : accent,
+                              color: _totalImageCount == 0 ? sub : context.accentColor,
                               fontWeight: _totalImageCount == 0 ? FontWeight.w400 : FontWeight.w700,
                             ),
                           ),
@@ -1102,7 +1095,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: accent.withValues(alpha: 0.4)),
+                              border: Border.all(color: context.accentColor.withValues(alpha: 0.4)),
                               image: DecorationImage(
                                 image: FileImage(File(f.path)),
                                 fit: BoxFit.cover,
@@ -1138,7 +1131,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _isPublic,
-                    activeColor: accent,
+                    activeColor: context.accentColor,
                     onChanged: (v) => setState(() => _isPublic = v),
                   ),
                   Divider(height: 1, color: divColor),
@@ -1153,7 +1146,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _allowGallery,
-                    activeColor: accent,
+                    activeColor: context.accentColor,
                     onChanged: (v) => setState(() => _allowGallery = v),
                   ),
                 ],

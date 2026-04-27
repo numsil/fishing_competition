@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../extensions/theme_extensions.dart';
 
 /// 디자인 시스템 표준 텍스트 입력 필드.
 /// 라벨 + TextFormField + 헬퍼/에러 텍스트의 조합을 통일한다.
@@ -49,9 +50,8 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor =
-        isDark ? AppColors.darkText : AppColors.lightText;
+        context.isDark ? AppColors.darkText : AppColors.lightText;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

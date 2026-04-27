@@ -12,6 +12,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class PersonalCatchScreen extends ConsumerStatefulWidget {
   const PersonalCatchScreen({super.key, this.initialImage});
@@ -109,12 +110,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   }
 
   Future<void> _showSourceSheet() async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
     final choice = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      backgroundColor: context.isDark ? AppColors.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -126,18 +125,18 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
             Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                color: context.isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: Icon(Icons.camera_alt_rounded, color: accent),
+              leading: Icon(Icons.camera_alt_rounded, color: context.accentColor),
               title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_rounded, color: accent),
+              leading: Icon(Icons.photo_library_rounded, color: context.accentColor),
               title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
@@ -191,16 +190,14 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
-    final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final divColor = context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: context.isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        backgroundColor: context.isDark ? AppColors.darkBg : AppColors.lightBg,
         elevation: 0,
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,9 +218,9 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
               onPressed: _submitting ? null : _submit,
               child: _submitting
                   ? SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                      child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor))
                   : Text('등록',
-                      style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
+                      style: TextStyle(color: context.accentColor, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
         ],
@@ -238,10 +235,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
               height: 260,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _image == null ? divColor : accent,
+                  color: _image == null ? divColor : context.accentColor,
                   width: _image == null ? 1 : 2,
                 ),
               ),
@@ -276,14 +273,14 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
+                          color: context.accentColor.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.camera_alt_rounded, size: 32, color: accent),
+                        child: Icon(Icons.camera_alt_rounded, size: 32, color: context.accentColor),
                       ),
                       const SizedBox(height: 14),
                       Text('탭하여 촬영하기',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: accent)),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: context.accentColor)),
                       const SizedBox(height: 4),
                       Text('잡은 물고기를 촬영하거나 갤러리에서 선택하세요',
                           style: TextStyle(fontSize: 12, color: sub)),
@@ -293,7 +290,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 길이 입력 ──────────────────────────
-          SectionLabel(text: '길이 (cm)', color: accent),
+          SectionLabel(text: '길이 (cm)', color: context.accentColor),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -331,13 +328,13 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           // ── 장소 ──────────────────────────
           Row(
             children: [
-              SectionLabel(text: '장소 (선택)', color: accent),
+              SectionLabel(text: '장소 (선택)', color: context.accentColor),
               const Spacer(),
               if (_fetchingLocation)
                 Row(children: [
                   SizedBox(
                     width: 12, height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1.5, color: accent),
+                    child: CircularProgressIndicator(strokeWidth: 1.5, color: context.accentColor),
                   ),
                   const SizedBox(width: 6),
                   Text('GPS 가져오는 중…',
@@ -345,11 +342,11 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
                 ])
               else if (_capturedLat != null)
                 Row(children: [
-                  Icon(LucideIcons.mapPin, size: 12, color: accent),
+                  Icon(LucideIcons.mapPin, size: 12, color: context.accentColor),
                   const SizedBox(width: 4),
                   Text(
                     '${_capturedLat!.toStringAsFixed(5)}, ${_capturedLng!.toStringAsFixed(5)}',
-                    style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 11, color: context.accentColor, fontWeight: FontWeight.w600),
                   ),
                 ])
               else if (_image != null)
@@ -386,7 +383,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           const SizedBox(height: 20),
 
           // ── 메모 ──────────────────────────
-          SectionLabel(text: '메모 (선택)', color: accent),
+          SectionLabel(text: '메모 (선택)', color: context.accentColor),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(

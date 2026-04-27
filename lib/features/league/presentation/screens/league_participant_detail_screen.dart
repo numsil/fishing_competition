@@ -10,6 +10,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 // ── 라우터에서 extras로 전달할 args ─────────────────────────
 class LeagueParticipantArgs {
@@ -75,8 +76,6 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     final postsAsync = ref.watch(leagueUserPostsProvider((leagueId, userId)));
     final currentUserId = ref.watch(currentUserProvider)?.id;
     final isMyPost = currentUserId != null && currentUserId == userId;
@@ -102,7 +101,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                           username: entry.username,
                           avatarUrl: entry.avatarUrl,
                           radius: 36,
-                          isDark: isDark,
+                          isDark: context.isDark,
                         ),
                         Positioned(
                           bottom: -4,
@@ -111,10 +110,10 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                             width: 26,
                             height: 26,
                             decoration: BoxDecoration(
-                              color: _rankColor(isDark),
+                              color: _rankColor(context.isDark),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isDark ? AppColors.darkBg : Colors.white,
+                                color: context.isDark ? AppColors.darkBg : Colors.white,
                                 width: 2,
                               ),
                             ),
@@ -169,15 +168,15 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                         _StatCard(
                           label: _mainLabel,
                           value: _mainValue,
-                          accent: accent,
-                          isDark: isDark,
+                          accent: context.accentColor,
+                          isDark: context.isDark,
                         ),
                         const SizedBox(width: 8),
                         _StatCard(
                           label: '마릿수',
                           value: '${entry.totalCount}마리',
-                          accent: accent,
-                          isDark: isDark,
+                          accent: context.accentColor,
+                          isDark: context.isDark,
                         ),
                         if (entry.bestLength != null) ...[
                           const SizedBox(width: 8),
@@ -186,8 +185,8 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                             value: rule == '무게'
                                 ? '${entry.bestLength!.toStringAsFixed(0)}g'
                                 : '${entry.bestLength}cm',
-                            accent: accent,
-                            isDark: isDark,
+                            accent: context.accentColor,
+                            isDark: context.isDark,
                           ),
                         ],
                       ],
@@ -203,7 +202,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Row(children: [
-                  Icon(LucideIcons.camera, size: 15, color: accent),
+                  Icon(LucideIcons.camera, size: 15, color: context.accentColor),
                   const SizedBox(width: 6),
                   Text(
                     '등록 조과 (${posts.length}건)',
@@ -223,14 +222,14 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                     children: [
                       Icon(LucideIcons.fish,
                           size: 48,
-                          color: isDark
+                          color: context.isDark
                               ? AppColors.darkTextSub
                               : AppColors.lightTextSub),
                       const SizedBox(height: 12),
                       Text(
                         '등록된 조과가 없습니다',
                         style: TextStyle(
-                            color: isDark
+                            color: context.isDark
                                 ? AppColors.darkTextSub
                                 : AppColors.lightTextSub),
                       ),
@@ -245,8 +244,8 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _CatchCard(
                       post: posts[index],
-                      isDark: isDark,
-                      accent: accent,
+                      isDark: context.isDark,
+                      accent: context.accentColor,
                       onTap: () => context.push('/post', extra: posts[index]),
                       isMyPost: isMyPost,
                       onShareToFeed: isMyPost ? () async {

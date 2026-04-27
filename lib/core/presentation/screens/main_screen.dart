@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../router/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../extensions/theme_extensions.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key, required this.child});
@@ -21,11 +22,9 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final idx = _tabIndex(context);
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final inactive = isDark ? const Color(0xFF555555) : const Color(0xFFAAAAAA);
-    final navBg = isDark ? const Color(0xFF111111) : Colors.white;
+    final inactive = context.isDark ? const Color(0xFF555555) : const Color(0xFFAAAAAA);
+    final navBg = context.isDark ? const Color(0xFF111111) : Colors.white;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     const navBarH = 60.0;
@@ -83,7 +82,7 @@ class MainScreen extends StatelessWidget {
                         color: navBg,
                         border: Border(
                           top: BorderSide(
-                            color: isDark
+                            color: context.isDark
                                 ? const Color(0xFF252525)
                                 : const Color(0xFFE0E0E0),
                             width: 0.5,
@@ -102,7 +101,7 @@ class MainScreen extends StatelessWidget {
                                 activeIcon: Icons.home_rounded,
                                 label: '홈',
                                 active: idx == 0,
-                                accent: accent,
+                                accent: context.accentColor,
                                 inactive: inactive,
                                 onTap: () => context.go(AppRoutes.feed),
                               ),
@@ -112,7 +111,7 @@ class MainScreen extends StatelessWidget {
                                 activeIcon: Icons.explore_rounded,
                                 label: '리그',
                                 active: idx == 1,
-                                accent: accent,
+                                accent: context.accentColor,
                                 inactive: inactive,
                                 onTap: () => context.go(AppRoutes.league),
                               ),
@@ -124,7 +123,7 @@ class MainScreen extends StatelessWidget {
                                 activeIcon: Icons.leaderboard_rounded,
                                 label: '랭킹',
                                 active: idx == 3,
-                                accent: accent,
+                                accent: context.accentColor,
                                 inactive: inactive,
                                 onTap: () => context.go(AppRoutes.ranking),
                               ),
@@ -134,7 +133,7 @@ class MainScreen extends StatelessWidget {
                                 activeIcon: Icons.person_rounded,
                                 label: '프로필',
                                 active: idx == 4,
-                                accent: accent,
+                                accent: context.accentColor,
                                 inactive: inactive,
                                 onTap: () => context.go(AppRoutes.profile),
                               ),

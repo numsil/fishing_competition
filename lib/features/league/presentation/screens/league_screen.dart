@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueScreen extends ConsumerStatefulWidget {
   const LeagueScreen({super.key});
@@ -53,9 +54,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC);
+    final sub = context.isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,8 +62,8 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
         actions: [
           TextButton.icon(
             onPressed: () => context.push('/league/create'),
-            icon: Icon(LucideIcons.plus, size: 18, color: accent),
-            label: Text('개설', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
+            icon: Icon(LucideIcons.plus, size: 18, color: context.accentColor),
+            label: Text('개설', style: TextStyle(color: context.accentColor, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -106,12 +105,12 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: _filter == i ? accent : Colors.transparent,
+                    color: _filter == i ? context.accentColor : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: _filter == i
-                          ? accent
-                          : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                          ? context.accentColor
+                          : (context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
                     ),
                   ),
                   child: Center(
@@ -121,7 +120,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: _filter == i
-                            ? (isDark ? Colors.black : Colors.white)
+                            ? (context.isDark ? Colors.black : Colors.white)
                             : const Color(0xFF888888),
                       ),
                     ),
@@ -237,11 +236,9 @@ class _LeagueItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFF999999);
-    final bg = isDark ? AppColors.darkSurface : Colors.white;
-    final border = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFF999999);
+    final bg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final border = context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
     final (statusText, statusColor) = switch (status) {
       _Status.live => ('LIVE', AppColors.liveRed),
@@ -318,10 +315,10 @@ class _LeagueItem extends StatelessWidget {
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
                           value: participants / max,
-                          backgroundColor: isDark
+                          backgroundColor: context.isDark
                               ? const Color(0xFF2A2A2A)
                               : const Color(0xFFF0F0F0),
-                          valueColor: AlwaysStoppedAnimation(accent),
+                          valueColor: AlwaysStoppedAnimation(context.accentColor),
                           minHeight: 3,
                         ),
                       ),
@@ -337,7 +334,7 @@ class _LeagueItem extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: accent,
+                        color: context.accentColor,
                       ),
                     ),
                     Text(rule, style: TextStyle(fontSize: 11, color: sub)),

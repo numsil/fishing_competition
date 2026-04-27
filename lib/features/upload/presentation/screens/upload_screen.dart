@@ -13,6 +13,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -52,19 +53,17 @@ class _UploadScreenState extends State<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_generatingThumb) {
-      final accent = isDark ? AppColors.neonGreen : AppColors.navy;
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
-          backgroundColor: isDark ? AppColors.darkBg : Colors.black,
+          backgroundColor: context.isDark ? AppColors.darkBg : Colors.black,
           body: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: accent),
+                CircularProgressIndicator(color: context.accentColor),
                 const SizedBox(height: 16),
                 const Text('동영상 처리 중...', style: TextStyle(color: Colors.white)),
               ],
@@ -75,9 +74,9 @@ class _UploadScreenState extends State<UploadScreen> {
     }
 
     return _step == 0
-        ? _MediaPickerStep(isDark: isDark, onMediaSelected: _onMediaSelected)
+        ? _MediaPickerStep(isDark: context.isDark, onMediaSelected: _onMediaSelected)
         : _CaptionStep(
-            isDark: isDark,
+            isDark: context.isDark,
             selectedFile: _selectedFile!,
             isVideo: _isVideo,
             thumbnailBytes: _thumbnailBytes,

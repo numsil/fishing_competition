@@ -12,27 +12,26 @@ import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
     return Scaffold(
-      appBar: _FeedAppBar(isDark: isDark, accent: accent),
+      appBar: _FeedAppBar(isDark: context.isDark, accent: context.accentColor),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(feedPostsProvider),
         child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _FavoritesBar(isDark: isDark, accent: accent)),
+          SliverToBoxAdapter(child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor)),
           SliverToBoxAdapter(
             child: Divider(
               height: 0.5,
               thickness: 0.5,
-              color: isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+              color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
             ),
           ),
           ref.watch(feedPostsProvider).when(
@@ -48,8 +47,8 @@ class FeedScreen extends ConsumerWidget {
                 delegate: SliverChildBuilderDelegate(
                   (context, i) => _InstaPost(
                     post: posts[i],
-                    isDark: isDark,
-                    accent: accent,
+                    isDark: context.isDark,
+                    accent: context.accentColor,
                   ),
                   childCount: posts.length,
                 ),

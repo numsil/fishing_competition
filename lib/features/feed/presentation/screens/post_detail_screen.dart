@@ -15,6 +15,7 @@ import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../widgets/feed_video_player.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.post});
@@ -127,16 +128,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
   }
 
   void _openComments() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CommentSheet(
         post: widget.post,
-        isDark: isDark,
-        accent: accent,
+        isDark: context.isDark,
+        accent: context.accentColor,
         comments: _comments,
         onCommentAdded: (c) => setState(() => _comments.add(c)),
       ),
@@ -145,12 +144,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
     final p = widget.post;
-    final iconColor = isDark ? Colors.white : Colors.black;
-    final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
-    final bgColor = isDark ? AppColors.darkBg : Colors.white;
+    final iconColor = context.isDark ? Colors.white : Colors.black;
+    final subColor = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
+    final bgColor = context.isDark ? AppColors.darkBg : Colors.white;
     final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
 
     return Scaffold(
@@ -171,12 +168,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               final currentUserId = ref.read(currentUserProvider)?.id;
               showModalBottomSheet(
                 context: context,
-                backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                backgroundColor: context.isDark ? const Color(0xFF1C1C1E) : Colors.white,
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 builder: (_) => _MoreMenu(
-                  isDark: isDark,
+                  isDark: context.isDark,
                   postId: p.id,
                   post: p,
                   isOwner: currentUserId != null && currentUserId == p.userId,
@@ -209,7 +206,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                     username: p.username,
                     avatarUrl: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
                     radius: 18,
-                    isDark: isDark,
+                    isDark: context.isDark,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -222,7 +219,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                         if (p.isLunker) ...[
                           const SizedBox(width: 4),
-                          Icon(LucideIcons.checkCircle, size: 13, color: accent),
+                          Icon(LucideIcons.checkCircle, size: 13, color: context.accentColor),
                         ],
                       ]),
                       if (p.location != null)
@@ -238,12 +235,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               onDoubleTap: p.videoUrl != null ? null : _doubleTapLike,
               child: Container(
                 width: double.infinity,
-                color: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
+                color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
                 child: AspectRatio(
                   aspectRatio: 1,
                   child: Stack(fit: StackFit.expand, children: [
                     if (p.videoUrl != null)
-                      FeedVideoPlayer(post: p, accent: accent)
+                      FeedVideoPlayer(post: p, accent: context.accentColor)
                     else
                       Image.network(
                         p.imageUrl,
@@ -256,13 +253,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                                   ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
                                   : null,
                               strokeWidth: 2,
-                              color: accent,
+                              color: context.accentColor,
                             ),
                           );
                         },
                         errorBuilder: (_, __, ___) => Center(
                           child: Icon(LucideIcons.image, size: 60,
-                              color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+                              color: context.isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
                         ),
                       ),
                     if (p.leagueId != null)
@@ -278,7 +275,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                             Icon(LucideIcons.trophy, size: 10, color: AppColors.gold),
                             const SizedBox(width: 5),
                             Text('리그 게시물',
-                                style: TextStyle(color: accent, fontSize: 11,
+                                style: TextStyle(color: context.accentColor, fontSize: 11,
                                     fontWeight: FontWeight.w600)),
                           ]),
                         ),
@@ -346,19 +343,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.08),
+                    color: context.accentColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: accent.withValues(alpha: 0.2)),
+                    border: Border.all(color: context.accentColor.withValues(alpha: 0.2)),
                   ),
                   child: Row(children: [
-                    Icon(LucideIcons.fish, size: 16, color: accent),
+                    Icon(LucideIcons.fish, size: 16, color: context.accentColor),
                     const SizedBox(width: 8),
                     Text(p.fishType,
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: accent)),
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.accentColor)),
                     if (p.length != null) ...[
                       const SizedBox(width: 10),
                       Text('${p.length}cm',
-                          style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w600)),
+                          style: TextStyle(fontSize: 13, color: context.accentColor, fontWeight: FontWeight.w600)),
                     ],
                     if (p.isLunker) ...[
                       const SizedBox(width: 8),
@@ -398,7 +395,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                 child: Text(
                   _extractHashtags(p.caption).join('  '),
                   style: TextStyle(fontSize: 13,
-                      color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
+                      color: context.isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
                 ),
               ),
 
@@ -712,7 +709,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                       onTap: val.text.trim().isNotEmpty ? _submit : null,
                       child: Text('게시',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
-                              color: val.text.trim().isNotEmpty ? accent : subColor)),
+                              color: val.text.trim().isNotEmpty ? context.accentColor : subColor)),
                     ),
                   ),
                 ]),

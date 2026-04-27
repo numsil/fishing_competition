@@ -10,6 +10,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class DmChatScreen extends ConsumerStatefulWidget {
   const DmChatScreen({super.key, required this.conversation});
@@ -97,10 +98,8 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final bg = isDark ? AppColors.darkBg : Colors.white;
-    final divColor = isDark ? const Color(0xFF262626) : const Color(0xFFEEEEEE);
+    final bg = context.isDark ? AppColors.darkBg : Colors.white;
+    final divColor = context.isDark ? const Color(0xFF262626) : const Color(0xFFEEEEEE);
     final myId = ref.watch(currentUserProvider)?.id ?? '';
 
     return Scaffold(
@@ -110,8 +109,8 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(LucideIcons.arrowLeft,
-              color: isDark ? Colors.white : Colors.black),
+          icon: Icon(LucideIcons.chevronLeft,
+              color: context.isDark ? Colors.white : Colors.black),
           onPressed: () => context.pop(),
         ),
         title: Row(
@@ -120,7 +119,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
               username: widget.conversation.otherUsername,
               avatarUrl: widget.conversation.otherAvatarUrl,
               radius: 18,
-              isDark: isDark,
+              isDark: context.isDark,
             ),
             const SizedBox(width: 10),
             Text(
@@ -128,7 +127,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : Colors.black,
+                color: context.isDark ? Colors.white : Colors.black,
               ),
             ),
           ],
@@ -137,9 +136,9 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
       body: Column(
         children: [
           Divider(height: 0.5, thickness: 0.5, color: divColor),
-          Expanded(child: _buildMessageList(isDark, accent, myId)),
+          Expanded(child: _buildMessageList(context.isDark, context.accentColor, myId)),
           Divider(height: 0.5, thickness: 0.5, color: divColor),
-          _buildInput(isDark, accent, divColor),
+          _buildInput(context.isDark, context.accentColor, divColor),
         ],
       ),
     );

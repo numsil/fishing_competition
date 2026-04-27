@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/ranking_repository.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -29,8 +30,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
 
     return ref.watch(topRankingsProvider).when(
       data: (rankings) {
@@ -47,9 +46,9 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
           body: TabBarView(
             controller: _tab,
             children: [
-              _LeagueTab(entries: rankings, isDark: isDark, accent: accent),
-              _RegionTab(entries: rankings, isDark: isDark, accent: accent),
-              _MonthlyTab(isDark: isDark, accent: accent),
+              _LeagueTab(entries: rankings, isDark: context.isDark, accent: context.accentColor),
+              _RegionTab(entries: rankings, isDark: context.isDark, accent: context.accentColor),
+              _MonthlyTab(isDark: context.isDark, accent: context.accentColor),
             ],
           ),
         );

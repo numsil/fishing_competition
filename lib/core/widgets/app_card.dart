@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../extensions/theme_extensions.dart';
 
 /// 카드 변형.
 enum AppCardVariant {
@@ -42,27 +43,26 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final br = BorderRadius.circular(radius ?? AppRadius.lg);
 
     final bg = switch (variant) {
       AppCardVariant.surface =>
-        isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
       AppCardVariant.tinted => (tintColor ??
-              (isDark ? AppColors.neonGreen : AppColors.navy))
-          .withValues(alpha: isDark ? 0.10 : 0.06),
+              (context.isDark ? AppColors.neonGreen : AppColors.navy))
+          .withValues(alpha: context.isDark ? 0.10 : 0.06),
       AppCardVariant.outlined => Colors.transparent,
     };
 
     final border = switch (variant) {
       AppCardVariant.surface => borderColor != null
           ? Border.all(color: borderColor!)
-          : (isDark
+          : (context.isDark
               ? null
               : Border.all(color: AppColors.lightDivider)),
       AppCardVariant.outlined => Border.all(
           color: borderColor ??
-              (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+              (context.isDark ? AppColors.darkDivider : AppColors.lightDivider),
         ),
       AppCardVariant.tinted => null,
     };

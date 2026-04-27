@@ -11,6 +11,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class PersonalRecordDetailScreen extends ConsumerStatefulWidget {
   const PersonalRecordDetailScreen({super.key, required this.post});
@@ -108,12 +109,10 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final bg = isDark ? AppColors.darkBg : Colors.white;
-    final cardBg = isDark ? AppColors.darkSurface : const Color(0xFFF7F7F8);
-    final sub = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
-    final iconColor = isDark ? Colors.white : Colors.black;
+    final bg = context.isDark ? AppColors.darkBg : Colors.white;
+    final cardBg = context.isDark ? AppColors.darkSurface : const Color(0xFFF7F7F8);
+    final sub = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
+    final iconColor = context.isDark ? Colors.white : Colors.black;
     final hasGps = post.lat != null && post.lng != null;
     final isOwner = ref.watch(currentUserProvider)?.id == post.userId;
 
@@ -136,13 +135,13 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                     child: Center(
                       child: SizedBox(
                         width: 18, height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
                       ),
                     ),
                   )
                 : IconButton(
                     icon: Icon(LucideIcons.moreHorizontal, color: iconColor),
-                    onPressed: () => _openMoreMenu(isDark, accent),
+                    onPressed: () => _openMoreMenu(context.isDark, context.accentColor),
                   ),
         ],
       ),
@@ -152,13 +151,13 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
           AspectRatio(
             aspectRatio: 1,
             child: Container(
-              color: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
+              color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
               child: Image.network(
                 post.imageUrl,
                 fit: BoxFit.cover,
                 loadingBuilder: (_, child, progress) {
                   if (progress == null) return child;
-                  return Center(child: CircularProgressIndicator(strokeWidth: 2, color: accent));
+                  return Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor));
                 },
                 errorBuilder: (_, __, ___) => Center(
                   child: Icon(LucideIcons.image, size: 60, color: sub),
@@ -176,23 +175,23 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.08),
+                  color: context.accentColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withValues(alpha: 0.25)),
+                  border: Border.all(color: context.accentColor.withValues(alpha: 0.25)),
                 ),
                 child: Row(children: [
-                  Icon(LucideIcons.fish, size: 22, color: accent),
+                  Icon(LucideIcons.fish, size: 22, color: context.accentColor),
                   const SizedBox(width: 12),
                   Text(post.fishType,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: accent)),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.accentColor)),
                   const Spacer(),
                   Text('${post.length}',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: accent)),
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: context.accentColor)),
                   const SizedBox(width: 4),
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text('cm',
-                        style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w700)),
+                        style: TextStyle(fontSize: 13, color: context.accentColor, fontWeight: FontWeight.w700)),
                   ),
                   if (post.isLunker) ...[
                     const SizedBox(width: 10),
@@ -223,7 +222,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               decoration: BoxDecoration(
                 color: cardBg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+                border: Border.all(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,7 +230,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                   Padding(
                     padding: EdgeInsets.fromLTRB(16, 14, 16, hasGps ? 12 : 14),
                     child: Row(children: [
-                      Icon(LucideIcons.mapPin, size: 18, color: accent),
+                      Icon(LucideIcons.mapPin, size: 18, color: context.accentColor),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -287,7 +286,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                               Marker(
                                 point: LatLng(post.lat!, post.lng!),
                                 width: 36, height: 36,
-                                child: Icon(LucideIcons.mapPin, color: accent, size: 32),
+                                child: Icon(LucideIcons.mapPin, color: context.accentColor, size: 32),
                               ),
                             ]),
                           ],

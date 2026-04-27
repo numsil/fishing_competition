@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_colors.dart';
+import '../extensions/theme_extensions.dart';
 
 // ── 슬라이드 확인 위젯 ────────────────────────────────────
 class SlideToConfirm extends StatefulWidget {
@@ -78,7 +79,6 @@ class _SlideToConfirmState extends State<SlideToConfirm>
   @override
   Widget build(BuildContext context) {
     final color = widget.color ?? AppColors.error;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -92,10 +92,10 @@ class _SlideToConfirmState extends State<SlideToConfirm>
           child: Container(
             height: widget.height,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: isDark ? 0.12 : 0.07),
+              color: color.withValues(alpha: context.isDark ? 0.12 : 0.07),
               borderRadius: BorderRadius.circular(widget.height / 2),
               border: Border.all(
-                color: color.withValues(alpha: isDark ? 0.35 : 0.25),
+                color: color.withValues(alpha: context.isDark ? 0.35 : 0.25),
               ),
             ),
             child: Stack(
@@ -185,10 +185,9 @@ Future<void> showDeleteConfirmSheet(
   IconData icon = LucideIcons.trash2,
   required VoidCallback onConfirmed,
 }) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   return showModalBottomSheet(
     context: context,
-    backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+    backgroundColor: context.isDark ? const Color(0xFF1C1C1E) : Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -197,7 +196,7 @@ Future<void> showDeleteConfirmSheet(
       content: content,
       slideLabel: slideLabel,
       icon: icon,
-      isDark: isDark,
+      isDark: context.isDark,
       onConfirmed: () {
         Navigator.pop(ctx);
         onConfirmed();

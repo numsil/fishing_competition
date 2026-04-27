@@ -12,6 +12,7 @@ import '../../../profile/data/profile_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueCatchScreen extends ConsumerStatefulWidget {
   const LeagueCatchScreen({super.key, required this.league, this.initialImage});
@@ -110,20 +111,18 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
-    final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final divColor = context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     final measureLabel = _isWeightRule ? '무게 (g)' : '길이 (cm)';
     final measureHint = _isWeightRule ? '예) 1250' : '예) 42.5';
     final measureSuffix = _isWeightRule ? 'g' : 'cm';
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: context.isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        backgroundColor: context.isDark ? AppColors.darkBg : AppColors.lightBg,
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,9 +143,9 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
               onPressed: _submitting ? null : _submit,
               child: _submitting
                   ? SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                      child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor))
                   : Text('등록', style: TextStyle(
-                      color: accent, fontWeight: FontWeight.w800, fontSize: 15)),
+                      color: context.accentColor, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
         ],
@@ -162,10 +161,10 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
               height: 260,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _image == null ? divColor : accent,
+                  color: _image == null ? divColor : context.accentColor,
                   width: _image == null ? 1 : 2,
                 ),
               ),
@@ -199,14 +198,14 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
+                          color: context.accentColor.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.camera_alt_rounded, size: 32, color: accent),
+                        child: Icon(Icons.camera_alt_rounded, size: 32, color: context.accentColor),
                       ),
                       const SizedBox(height: 14),
                       Text('탭하여 촬영하기',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: accent)),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: context.accentColor)),
                       const SizedBox(height: 4),
                       Text('잡은 물고기를 카메라로 촬영해주세요',
                           style: TextStyle(fontSize: 12, color: sub)),
@@ -216,7 +215,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 계측값 입력 (룰에 따라 하나만) ─────────
-          SectionLabel(text: measureLabel, color: accent),
+          SectionLabel(text: measureLabel, color: context.accentColor),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -253,7 +252,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
           const SizedBox(height: 24),
 
           // ── 메모 ──────────────────────────────────
-          SectionLabel(text: '메모 (선택)', color: accent),
+          SectionLabel(text: '메모 (선택)', color: context.accentColor),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(

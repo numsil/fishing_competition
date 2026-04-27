@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../data/auth_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -53,9 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
 
     return Scaffold(
       body: SafeArea(
@@ -134,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               width: 20, height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: isDark ? Colors.black : Colors.white,
+                                color: context.isDark ? Colors.black : Colors.white,
                               ),
                             )
                           : const Text('로그인'),
@@ -149,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text('계정이 없으신가요?  ', style: TextStyle(color: sub, fontSize: 13)),
                   GestureDetector(
                     onTap: () => context.go(AppRoutes.signup),
-                    child: Text('회원가입', style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 13)),
+                    child: Text('회원가입', style: TextStyle(color: context.accentColor, fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
                 ],
               ),

@@ -14,6 +14,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import 'league_create_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/extensions/theme_extensions.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  상태 enum
@@ -325,12 +326,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    final bg = isDark ? AppColors.darkBg : AppColors.lightBg;
+    final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
+    final divColor = context.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final bg = context.isDark ? AppColors.darkBg : AppColors.lightBg;
 
     final leagueAsync = ref.watch(leagueDetailProvider(widget.leagueId));
     final rankingAsync = ref.watch(leagueRankingProvider(widget.leagueId));
@@ -358,7 +357,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
         return Scaffold(
           backgroundColor: bg,
           appBar: AppBar(
-            backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+            backgroundColor: context.isDark ? AppColors.darkBg : AppColors.lightBg,
             elevation: 0,
             title: const Text('대회 관리',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
@@ -379,7 +378,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                   ref.invalidate(leagueDetailProvider(widget.leagueId));
                 },
                 child: Text('수정',
-                    style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 14)),
+                    style: TextStyle(color: context.accentColor, fontWeight: FontWeight.w700, fontSize: 14)),
               ),
             ],
           ),
@@ -397,8 +396,8 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 maxParticipants: league.maxParticipants,
                 fee: league.entryFee,
                 currentParticipants: participants.length,
-                isDark: isDark,
-                accent: accent,
+                isDark: context.isDark,
+                accent: context.accentColor,
                 sub: sub,
                 cardBg: cardBg,
                 divColor: divColor,
@@ -414,33 +413,33 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: accent,
-                        side: BorderSide(color: accent.withValues(alpha: 0.5)),
+                        foregroundColor: context.accentColor,
+                        side: BorderSide(color: context.accentColor.withValues(alpha: 0.5)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      icon: Icon(Icons.person_add_outlined, size: 18, color: accent),
+                      icon: Icon(Icons.person_add_outlined, size: 18, color: context.accentColor),
                       label: Text('+ 참가자 초대',
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
-                              color: accent)),
-                      onPressed: () => _showInviteSheet(context, accent, isDark),
+                              color: context.accentColor)),
+                      onPressed: () => _showInviteSheet(context, context.accentColor, context.isDark),
                     ),
                   ),
                 ),
 
               // ── 탭바 ───────────────────────────────────────────
               Container(
-                color: isDark ? AppColors.darkBg : AppColors.lightBg,
+                color: context.isDark ? AppColors.darkBg : AppColors.lightBg,
                 child: TabBar(
                   controller: _tab,
                   labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   unselectedLabelStyle:
                       const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-                  indicatorColor: accent,
-                  labelColor: accent,
+                  indicatorColor: context.accentColor,
+                  labelColor: context.accentColor,
                   unselectedLabelColor: sub,
                   indicatorSize: TabBarIndicatorSize.tab,
                   tabs: [
@@ -483,8 +482,8 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                     _ParticipantsTab(
                       participants: participants,
                       status: status,
-                      isDark: isDark,
-                      accent: accent,
+                      isDark: context.isDark,
+                      accent: context.accentColor,
                       sub: sub,
                       cardBg: cardBg,
                       divColor: divColor,
@@ -496,8 +495,8 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                     ),
                     _PendingTab(
                       pending: pending,
-                      isDark: isDark,
-                      accent: accent,
+                      isDark: context.isDark,
+                      accent: context.accentColor,
                       sub: sub,
                       cardBg: cardBg,
                       divColor: divColor,
