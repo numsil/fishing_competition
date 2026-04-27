@@ -63,29 +63,28 @@ class DmRepository {
 
     final data = await _supabase
         .from('conversations')
-        .select()
+        .select(
+          'id, user1_id, user2_id, last_message, last_message_at, '
+          'user1:users!user1_id(id, username, avatar_url), '
+          'user2:users!user2_id(id, username, avatar_url)',
+        )
         .or('user1_id.eq.$myId,user2_id.eq.$myId')
         .order('last_message_at', ascending: false);
 
     final conversations = <DmConversation>[];
     for (final row in data as List) {
-      final otherUserId =
-          (row['user1_id'] as String) == myId ? row['user2_id'] as String : row['user1_id'] as String;
-      try {
-        final userRes = await _supabase
-            .from('users')
-            .select('id, username, avatar_url')
-            .eq('id', otherUserId)
-            .single();
-        conversations.add(DmConversation(
-          id: row['id'] as String,
-          otherUserId: otherUserId,
-          otherUsername: userRes['username'] as String,
-          otherAvatarUrl: userRes['avatar_url'] as String?,
-          lastMessage: row['last_message'] as String?,
-          lastMessageAt: DateTime.parse(row['last_message_at'] as String),
-        ));
-      } catch (_) {}
+      final isUser1 = (row['user1_id'] as String) == myId;
+      final otherUserId = isUser1 ? row['user2_id'] as String : row['user1_id'] as String;
+      final otherUser = (isUser1 ? row['user2'] : row['user1']) as Map<String, dynamic>?;
+      if (otherUser == null) continue;
+      conversations.add(DmConversation(
+        id: row['id'] as String,
+        otherUserId: otherUserId,
+        otherUsername: otherUser['username'] as String,
+        otherAvatarUrl: otherUser['avatar_url'] as String?,
+        lastMessage: row['last_message'] as String?,
+        lastMessageAt: DateTime.parse(row['last_message_at'] as String),
+      ));
     }
     return conversations;
   }

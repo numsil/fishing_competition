@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -176,5 +177,7 @@ FeedRepository feedRepository(FeedRepositoryRef ref) {
 
 @riverpod
 Future<List<Post>> feedPosts(FeedPostsRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(feedRepositoryProvider).getPosts();
 }

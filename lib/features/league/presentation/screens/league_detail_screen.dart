@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -61,7 +60,6 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   TabController? _tab;
   bool _joining = false;
   bool _cancelling = false;
-  Timer? _refreshTimer;
 
   bool get _hasTabs =>
       widget.league.status == 'in_progress' ||
@@ -80,7 +78,6 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       _tab = TabController(length: 2, vsync: this);
     }
     WidgetsBinding.instance.addObserver(this);
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAll());
   }
 
   @override
@@ -100,7 +97,6 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _tab?.dispose();
     super.dispose();

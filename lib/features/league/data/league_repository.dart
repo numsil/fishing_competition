@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -418,6 +419,8 @@ LeagueRepository leagueRepository(LeagueRepositoryRef ref) {
 
 @riverpod
 Future<List<League>> leagues(LeaguesRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(leagueRepositoryProvider).getLeagues();
 }
 

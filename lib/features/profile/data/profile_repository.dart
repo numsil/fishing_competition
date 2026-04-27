@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,47 +35,18 @@ class ProfileRepository {
 
   ProfileRepository(this._supabase);
 
-  Future<UserProfile> getMyProfile() async {
+  /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
+  Future<UserProfile> buildMyProfileFromPosts(List<Post> posts) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
 
-    // Get user data
-    final userRes = await _supabase.from('users').select().eq('id', userId).single();
+    final userRes = await _supabase
+        .from('users')
+        .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
+        .eq('id', userId)
+        .single();
 
-    // Get posts stats (일반 피드 게시물만: 리그·개인기록 제외)
-    final postsRes = await _supabase
-        .from('posts')
-        .select('length, is_lunker')
-        .eq('user_id', userId)
-        .isFilter('league_id', null)
-        .eq('is_personal_record', false)
-        .or('is_deleted.is.null,is_deleted.eq.false');
-
-    int postCount = postsRes.length;
-    int lunkerCount = 0;
-    double? maxLen;
-
-    for (var post in postsRes) {
-      if (post['is_lunker'] == true) lunkerCount++;
-      if (post['length'] != null) {
-        final double len = (post['length'] as num).toDouble();
-        if (maxLen == null || len > maxLen) {
-          maxLen = len;
-        }
-      }
-    }
-
-    return UserProfile(
-      id: userRes['id'],
-      email: userRes['email'],
-      username: userRes['username'],
-      avatarUrl: userRes['avatar_url'],
-      mannerTemperature: (userRes['manner_temperature'] as num).toDouble(),
-      isLunkerClub: userRes['is_lunker_club'] ?? false,
-      postCount: postCount,
-      lunkerCount: lunkerCount,
-      maxFishLength: maxLen,
-    );
+    return _buildUserProfile(userRes: userRes, posts: posts);
   }
 
   Future<String> uploadAvatar(File imageFile) async {
@@ -147,37 +119,39 @@ class ProfileRepository {
     return post.copyWith(username: username, avatarUrl: avatarUrl);
   }
 
-  Future<UserProfile> getUserProfile(String userId) async {
-    final userRes = await _supabase.from('users').select().eq('id', userId).single();
+  /// posts는 userPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
+  Future<UserProfile> buildUserProfileFromPosts(String userId, List<Post> posts) async {
+    final userRes = await _supabase
+        .from('users')
+        .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
+        .eq('id', userId)
+        .single();
 
-    final postsRes = await _supabase
-        .from('posts')
-        .select('length, is_lunker')
-        .eq('user_id', userId)
-        .isFilter('league_id', null)
-        .eq('is_personal_record', false)
-        .or('is_deleted.is.null,is_deleted.eq.false');
+    return _buildUserProfile(userRes: userRes, posts: posts, emailFallback: '');
+  }
 
-    int postCount = postsRes.length;
+  UserProfile _buildUserProfile({
+    required Map<String, dynamic> userRes,
+    required List<Post> posts,
+    String emailFallback = '',
+  }) {
     int lunkerCount = 0;
     double? maxLen;
-
-    for (var post in postsRes) {
-      if (post['is_lunker'] == true) lunkerCount++;
-      if (post['length'] != null) {
-        final double len = (post['length'] as num).toDouble();
+    for (final post in posts) {
+      if (post.isLunker) lunkerCount++;
+      if (post.length != null) {
+        final len = post.length!;
         if (maxLen == null || len > maxLen) maxLen = len;
       }
     }
-
     return UserProfile(
       id: userRes['id'],
-      email: userRes['email'] ?? '',
+      email: userRes['email'] ?? emailFallback,
       username: userRes['username'],
       avatarUrl: userRes['avatar_url'],
       mannerTemperature: (userRes['manner_temperature'] as num).toDouble(),
       isLunkerClub: userRes['is_lunker_club'] ?? false,
-      postCount: postCount,
+      postCount: posts.length,
       lunkerCount: lunkerCount,
       maxFishLength: maxLen,
     );
@@ -186,14 +160,18 @@ class ProfileRepository {
   Future<List<Post>> getUserPosts(String userId) async {
     final response = await _supabase
         .from('posts')
-        .select()
+        .select(
+          'id, user_id, league_id, image_url, video_url, caption, '
+          'fish_type, length, location, is_lunker, is_personal_record, '
+          'created_at, users(username, avatar_url)',
+        )
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false')
         .order('created_at', ascending: false);
 
-    return response.map((data) => Post.fromJson(data)).toList();
+    return response.map((data) => _mapPost(data)).toList();
   }
 }
 
@@ -203,8 +181,12 @@ ProfileRepository profileRepository(ProfileRepositoryRef ref) {
 }
 
 @riverpod
-Future<UserProfile> myProfile(MyProfileRef ref) {
-  return ref.watch(profileRepositoryProvider).getMyProfile();
+Future<UserProfile> myProfile(MyProfileRef ref) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  // myPosts는 이미 Riverpod이 캐싱 — posts DB 호출 1회로 통계+목록 모두 처리
+  final posts = await ref.watch(myPostsProvider.future);
+  return ref.watch(profileRepositoryProvider).buildMyProfileFromPosts(posts);
 }
 
 @riverpod
@@ -218,8 +200,12 @@ Future<List<Post>> myPersonalRecords(MyPersonalRecordsRef ref) {
 }
 
 @riverpod
-Future<UserProfile> userProfile(UserProfileRef ref, String userId) {
-  return ref.watch(profileRepositoryProvider).getUserProfile(userId);
+Future<UserProfile> userProfile(UserProfileRef ref, String userId) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  // userPosts는 이미 Riverpod이 캐싱 — posts DB 호출 1회로 통계+목록 모두 처리
+  final posts = await ref.watch(userPostsProvider(userId).future);
+  return ref.watch(profileRepositoryProvider).buildUserProfileFromPosts(userId, posts);
 }
 
 @riverpod

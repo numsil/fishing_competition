@@ -27,7 +27,7 @@ class RankingRepository {
   Future<List<RankingEntry>> getTopRankings() async {
     final res = await _supabase
         .from('posts')
-        .select('*, users!inner(username)')
+        .select('user_id, length, fish_type, location, users!inner(username)')
         .eq('is_deleted', false)
         .order('length', ascending: false)
         .limit(10);
