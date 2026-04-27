@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
@@ -235,13 +236,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ]),
                   const SizedBox(height: 16),
 
-                  Container(
+                  AppCard(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-                    ),
+                    radius: 14,
+                    borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                     child: Column(children: [
                       Row(children: [
                         Text('앵글러 온도', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),

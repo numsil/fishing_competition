@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_svg.dart';
 import '../../data/auth_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/widgets/app_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -126,17 +127,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Text('비밀번호 찾기', style: TextStyle(color: sub, fontSize: 12)),
                       ),
                     ),
-                    ElevatedButton(
+                    AppButton(
+                      label: '로그인',
                       onPressed: _loading ? null : _login,
-                      child: _loading
-                          ? SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: context.isDark ? Colors.black : Colors.white,
-                              ),
-                            )
-                          : const Text('로그인'),
+                      loading: _loading,
                     ),
                   ],
                 ),

@@ -9,6 +9,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../data/auth_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/widgets/app_button.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -222,17 +223,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       },
                     ),
                     const SizedBox(height: 28),
-                    ElevatedButton(
+                    AppButton(
+                      label: '가입하기',
                       onPressed: _loading ? null : _signup,
-                      child: _loading
-                          ? SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: context.isDark ? Colors.black : Colors.white,
-                              ),
-                            )
-                          : const Text('가입하기'),
+                      loading: _loading,
                     ),
                     const SizedBox(height: 20),
                     Row(

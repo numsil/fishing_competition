@@ -10,6 +10,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 // ── 라우터에서 extras로 전달할 args ─────────────────────────
@@ -337,15 +338,13 @@ class _CatchCard extends StatelessWidget {
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: divColor),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: EdgeInsets.zero,
+        radius: 14,
+        borderColor: divColor,
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

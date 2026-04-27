@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
@@ -538,12 +540,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('완료 ($totalCount장)'),
-                    ),
+                  AppButton(
+                    label: '완료 ($totalCount장)',
+                    onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
               ),
@@ -1111,14 +1110,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             ),
 
             // ── 공개 설정 + 앨범 허용 ──
-            Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: divColor),
-              ),
-              child: Column(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: AppCard(
+                padding: EdgeInsets.zero,
+                radius: 12,
+                borderColor: divColor,
+                child: Column(
                 children: [
                   SwitchListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1150,17 +1148,15 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     onChanged: (v) => setState(() => _allowGallery = v),
                   ),
                 ],
+                ),
               ),
             ),
 
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : Text(_isEditMode ? '수정 완료' : '리그 개설하기'),
-              ),
+            AppButton(
+              label: _isEditMode ? '수정 완료' : '리그 개설하기',
+              onPressed: _submitting ? null : _submit,
+              loading: _submitting,
+              size: AppButtonSize.lg,
             ),
           ],
         ),

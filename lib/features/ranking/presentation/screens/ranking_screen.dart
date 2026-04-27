@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/ranking_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/widgets/app_card.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -75,13 +76,10 @@ class _LeagueTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         // 리그 선택 헤더
-        Container(
+        AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-          ),
+          radius: 12,
+          borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
           child: Row(
             children: [
               Icon(LucideIcons.trophy, size: 16, color: accent),
@@ -247,15 +245,13 @@ class _RegionTab extends StatelessWidget {
         final top = entry.username;
         final record = '${entry.length}cm';
         final count = 1;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-          ),
-          child: Row(children: [
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            padding: const EdgeInsets.all(16),
+            radius: 12,
+            borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+            child: Row(children: [
             Container(
               width: 32, height: 32,
               decoration: BoxDecoration(
@@ -286,7 +282,8 @@ class _RegionTab extends StatelessWidget {
                 Text('$count명 참여', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
               ]),
             ),
-          ]),
+            ]),
+          ),
         );
       },
     );
@@ -317,13 +314,10 @@ class _MonthlyTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         // 이달의 앵글러
-        Container(
+        AppCard(
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-          ),
+          radius: 20,
+          borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
           child: Column(children: [
             Text('4월의 앵글러', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
@@ -360,12 +354,10 @@ class _MonthlyTab extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           childAspectRatio: 1.1,
-          children: _badges.map((b) => Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-            ),
+          children: _badges.map((b) => AppCard(
+            padding: EdgeInsets.zero,
+            radius: 14,
+            borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(b.$1 as IconData, size: 28, color: accent.withValues(alpha: 0.8)),
               const SizedBox(height: 8),

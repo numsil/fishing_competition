@@ -10,6 +10,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
@@ -205,16 +206,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     const SizedBox(height: 16),
 
                     // 앵글러 온도
-                    Container(
+                    AppCard(
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: context.isDark
-                                ? AppColors.darkSurface2
-                                : AppColors.lightDivider),
-                      ),
+                      radius: 14,
+                      borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                       child: Column(children: [
                         Row(children: [
                           Text('앵글러 온도',

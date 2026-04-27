@@ -10,6 +10,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_catch_screen.dart';
@@ -632,14 +633,10 @@ class _InfoTab extends StatelessWidget {
           icon: LucideIcons.trophy,
           accent: accent,
           isDark: isDark,
-          child: Container(
-            width: double.infinity,
+          child: AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: divColor),
-            ),
+            radius: 10,
+            borderColor: divColor,
             child: Row(children: [
               Icon(LucideIcons.barChart2, size: 16, color: accent),
               const SizedBox(width: 8),
@@ -689,14 +686,10 @@ class _InfoTab extends StatelessWidget {
             icon: LucideIcons.fileText,
             accent: accent,
             isDark: isDark,
-            child: Container(
-              width: double.infinity,
+            child: AppCard(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: divColor),
-              ),
+              radius: 12,
+              borderColor: divColor,
               child: Text(
                 league.description!,
                 style: TextStyle(

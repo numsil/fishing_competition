@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../league/data/league_repository.dart';
@@ -181,13 +183,10 @@ class _MySummaryCard extends ConsumerWidget {
       fishValue = '-';
     }
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-      ),
+      radius: 16,
+      borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -697,13 +696,10 @@ class _CatchDashboard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 메인 통계
-        Container(
+        AppCard(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: divColor),
-          ),
+          radius: 16,
+          borderColor: divColor,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -783,13 +779,10 @@ class _CatchDashboard extends StatelessWidget {
         ),
         if (mannerTemperature != null) ...[
           const SizedBox(height: 10),
-          Container(
+          AppCard(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: divColor),
-            ),
+            radius: 14,
+            borderColor: divColor,
             child: Column(
               children: [
                 Row(
@@ -872,7 +865,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(message, style: TextStyle(fontSize: 15, color: sub)),
           const SizedBox(height: 20),
-          ElevatedButton(onPressed: onTap, child: Text(buttonLabel)),
+          AppButton(label: buttonLabel, onPressed: onTap),
         ],
       ),
     );
@@ -929,13 +922,10 @@ class _MyLeaguesTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         // 요약 카드
-        Container(
+        AppCard(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: divColor),
-          ),
+          radius: 16,
+          borderColor: divColor,
           child: Row(
             children: [
               Expanded(

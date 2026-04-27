@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
@@ -218,12 +219,10 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
           // ── 위치 (GPS) ────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-              ),
+            child: AppCard(
+              padding: EdgeInsets.zero,
+              radius: 14,
+              borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

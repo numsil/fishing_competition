@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
@@ -292,13 +293,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           // ── 길이 입력 ──────────────────────────
           SectionLabel(text: '길이 (cm)', color: context.accentColor),
           const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: divColor),
-            ),
+          AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            radius: 14,
+            borderColor: divColor,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -362,12 +360,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: divColor),
-            ),
+          AppCard(
+            padding: EdgeInsets.zero,
+            radius: 12,
+            borderColor: divColor,
             child: TextField(
               controller: _locationCtrl,
               style: const TextStyle(fontSize: 14),
@@ -385,12 +381,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           // ── 메모 ──────────────────────────
           SectionLabel(text: '메모 (선택)', color: context.accentColor),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: divColor),
-            ),
+          AppCard(
+            padding: EdgeInsets.zero,
+            radius: 12,
+            borderColor: divColor,
             child: TextField(
               controller: _captionCtrl,
               maxLines: 3,
