@@ -38,7 +38,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
         if (mounted) setState(() {});
       }
     } else {
-      if (_wasPlayingBeforeHide && !_controller!.value.isPlaying) {
+      if (_wasPlayingBeforeHide && !_hasEnded && !_controller!.value.isPlaying) {
         _wasPlayingBeforeHide = false;
         _controller!.setVolume(ref.read(videoMutedProvider) ? 0.0 : 1.0);
         _controller!.play();
