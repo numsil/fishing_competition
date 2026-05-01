@@ -48,17 +48,30 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
   }
 
   Future<void> _togglePlay() async {
+    if (_isLoading) return;
+
     if (_controller == null) {
-      final isMuted = ref.read(videoMutedProvider);
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.post.videoUrl!));
-      await ctrl.initialize();
-      ctrl.setLooping(true);
-      ctrl.setVolume(isMuted ? 0.0 : 1.0);
-      await ctrl.play();
-      ctrl.addListener(() { if (mounted) setState(() {}); });
-      setState(() { _controller = ctrl; _initialized = true; });
+      setState(() => _isLoading = true);
+      try {
+        final isMuted = ref.read(videoMutedProvider);
+        final file = await DefaultCacheManager().getSingleFile(widget.post.videoUrl!);
+        final ctrl = VideoPlayerController.file(file);
+        await ctrl.initialize();
+        ctrl.setLooping(false);
+        ctrl.setVolume(isMuted ? 0.0 : 1.0);
+        await ctrl.play();
+        ctrl.addListener(_onControllerUpdate);
+        setState(() {
+          _controller = ctrl;
+          _initialized = true;
+          _isLoading = false;
+        });
+      } catch (_) {
+        setState(() => _isLoading = false);
+      }
       return;
     }
+
     if (_controller!.value.isPlaying) {
       _wasPlayingBeforeHide = false;
       await _controller!.pause();
@@ -66,6 +79,13 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
       await _controller!.play();
     }
     setState(() {});
+  }
+
+  Future<void> _replay() async {
+    if (_controller == null) return;
+    setState(() => _hasEnded = false);
+    await _controller!.seekTo(Duration.zero);
+    await _controller!.play();
   }
 
   void _onControllerUpdate() {
