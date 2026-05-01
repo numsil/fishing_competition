@@ -61,6 +61,11 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
         ctrl.setVolume(isMuted ? 0.0 : 1.0);
         await ctrl.play();
         ctrl.addListener(_onControllerUpdate);
+        if (!mounted) {
+          ctrl.removeListener(_onControllerUpdate);
+          ctrl.dispose();
+          return;
+        }
         setState(() {
           _controller = ctrl;
           _initialized = true;
