@@ -161,6 +161,10 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
     final isPlaying = _controller?.value.isPlaying ?? false;
     final isMuted = ref.watch(videoMutedProvider);
 
+    ref.listen<bool>(videoMutedProvider, (_, muted) {
+      _controller?.setVolume(muted ? 0.0 : 1.0);
+    });
+
     return VisibilityDetector(
       key: Key('video_${p.id}'),
       onVisibilityChanged: _onVisibilityChanged,
