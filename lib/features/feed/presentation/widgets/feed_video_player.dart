@@ -185,12 +185,12 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
 
           // 전체 탭 영역 (재생/일시정지)
           GestureDetector(
-            onTap: _togglePlay,
+            onTap: _hasEnded ? null : _togglePlay,
             child: Container(color: Colors.transparent),
           ),
 
           // 재생 버튼
-          if (!isPlaying)
+          if (!isPlaying && !_hasEnded)
             Center(
               child: GestureDetector(
                 onTap: _togglePlay,
@@ -202,6 +202,31 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                   ),
                   child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 38),
                 ),
+              ),
+            ),
+
+          // 재생 완료 버튼
+          if (_hasEnded)
+            Center(
+              child: GestureDetector(
+                onTap: _replay,
+                child: Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.replay_rounded, color: Colors.white, size: 38),
+                ),
+              ),
+            ),
+
+          // 로딩 스피너
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
               ),
             ),
 
