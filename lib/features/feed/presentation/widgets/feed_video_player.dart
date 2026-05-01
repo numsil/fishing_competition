@@ -68,6 +68,19 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
     setState(() {});
   }
 
+  void _onControllerUpdate() {
+    if (!mounted || _controller == null) return;
+    final value = _controller!.value;
+    if (!_hasEnded &&
+        !value.isPlaying &&
+        value.duration > Duration.zero &&
+        value.position >= value.duration) {
+      setState(() => _hasEnded = true);
+    } else {
+      setState(() {});
+    }
+  }
+
   void _toggleMute() {
     if (_controller == null) return;
     final isMuted = ref.read(videoMutedProvider);
