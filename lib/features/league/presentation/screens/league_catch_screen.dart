@@ -84,12 +84,12 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
 
   Future<void> _submit() async {
     if (_image == null) {
-            AppSnackBar.info(context, '사진을 촬영해주세요');
+            AppSnackBar.warning(context, '사진을 촬영해주세요');
       return;
     }
     final val = double.tryParse(_measureCtrl.text.trim());
     if (val == null || val <= 0) {
-            AppSnackBar.info(context, _isWeightRule ? '무게를 입력해주세요' : '길이를 입력해주세요');
+            AppSnackBar.warning(context, _isWeightRule ? '무게를 입력해주세요' : '길이를 입력해주세요');
       return;
     }
 

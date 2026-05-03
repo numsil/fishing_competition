@@ -122,7 +122,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     ref.invalidate(leagueRankingProvider(widget.leagueId));
     if (mounted) {
-            AppSnackBar.info(context, '🎣 대회가 시작되었습니다!');
+            AppSnackBar.success(context, '🎣 대회가 시작되었습니다!');
     }
   }
 
@@ -153,7 +153,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.info(context, '추방 실패: $e');
+                AppSnackBar.error(context, '추방 실패: $e');
       }
     }
   }
@@ -165,7 +165,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     ref.invalidate(leagueRankingProvider(widget.leagueId));
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     if (mounted) {
-            AppSnackBar.info(context, '${p.name} 님의 참가 신청을 수락했습니다.');
+            AppSnackBar.success(context, '${p.name} 님의 참가 신청을 수락했습니다.');
     }
   }
 
@@ -308,7 +308,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                       onPressed: () {
                         if (ctrl.text.isNotEmpty) {
                           Navigator.pop(context);
-                                                    AppSnackBar.info(context, '${ctrl.text} 님에게 초대장을 보냈습니다.');
+                                                    AppSnackBar.success(context, '${ctrl.text} 님에게 초대장을 보냈습니다.');
                         }
                       },
                       child: const Text('초대', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -331,9 +331,8 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     final divColor = context.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
     final bg = context.isDark ? AppColors.darkBg : AppColors.lightBg;
 
+    // leagueDetailProvider만 watch — ranking/pending은 각 탭 ConsumerWidget이 담당
     final leagueAsync = ref.watch(leagueDetailProvider(widget.leagueId));
-    final rankingAsync = ref.watch(leagueRankingProvider(widget.leagueId));
-    final pendingAsync = ref.watch(leaguePendingProvider(widget.leagueId));
 
     return leagueAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -343,14 +342,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
       ),
       data: (league) {
         final status = _statusFromString(league.status);
-        final participants = rankingAsync.maybeWhen(
-          data: (entries) => _rankEntriesToParticipants(entries),
-          orElse: () => <_Participant>[],
-        );
-        final pending = pendingAsync.maybeWhen(
-          data: (entries) => _pendingEntriesToParticipants(entries),
-          orElse: () => <_Participant>[],
-        );
         final dateRange =
             '${DateFormat('yyyy.MM.dd').format(league.startTime)} ~ ${DateFormat('MM.dd').format(league.endTime)}';
 
@@ -395,7 +386,8 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 rule: league.rule,
                 maxParticipants: league.maxParticipants,
                 fee: league.entryFee,
-                currentParticipants: participants.length,
+                // leagueDetailProvider에서 직접 가져옴 (rankingProvider 불필요)
+                currentParticipants: league.participantsCount,
                 isDark: context.isDark,
                 accent: context.accentColor,
                 sub: sub,
@@ -443,33 +435,9 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                   unselectedLabelColor: sub,
                   indicatorSize: TabBarIndicatorSize.tab,
                   tabs: [
-                    Tab(text: '참가자 관리 (${participants.length}명)'),
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('참가 신청'),
-                          if (pending.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.liveRed,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${pending.length}',
-                                style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    // 각 탭 라벨이 자신의 provider만 구독
+                    _RankingTabLabel(leagueId: widget.leagueId),
+                    _PendingTabLabel(leagueId: widget.leagueId),
                   ],
                 ),
               ),
@@ -479,8 +447,9 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 child: TabBarView(
                   controller: _tab,
                   children: [
-                    _ParticipantsTab(
-                      participants: participants,
+                    // 참가자 탭: leagueRankingProvider만 구독
+                    _RankingTabBody(
+                      leagueId: widget.leagueId,
                       status: status,
                       isDark: context.isDark,
                       accent: context.accentColor,
@@ -493,8 +462,9 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                         ref.invalidate(leagueDetailProvider(widget.leagueId));
                       },
                     ),
-                    _PendingTab(
-                      pending: pending,
+                    // 대기 탭: leaguePendingProvider만 구독
+                    _PendingTabBody(
+                      leagueId: widget.leagueId,
                       isDark: context.isDark,
                       accent: context.accentColor,
                       sub: sub,
@@ -514,6 +484,152 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  탭 라벨 ConsumerWidget — leagueRankingProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _RankingTabLabel extends ConsumerWidget {
+  const _RankingTabLabel({required this.leagueId});
+  final String leagueId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(leagueRankingProvider(leagueId)).maybeWhen(
+      data: (entries) => entries.length,
+      orElse: () => 0,
+    );
+    return Tab(text: '참가자 관리 ($count명)');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  탭 라벨 ConsumerWidget — leaguePendingProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _PendingTabLabel extends ConsumerWidget {
+  const _PendingTabLabel({required this.leagueId});
+  final String leagueId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(leaguePendingProvider(leagueId)).maybeWhen(
+      data: (entries) => entries,
+      orElse: () => <LeaguePendingEntry>[],
+    );
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('참가 신청'),
+          if (pending.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.liveRed,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${pending.length}',
+                style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  탭 바디 ConsumerWidget — leagueRankingProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _RankingTabBody extends ConsumerWidget {
+  const _RankingTabBody({
+    required this.leagueId,
+    required this.status,
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.cardBg,
+    required this.divColor,
+    required this.onKick,
+    required this.onRefresh,
+  });
+  final String leagueId;
+  final LeagueManageStatus status;
+  final bool isDark;
+  final Color accent, sub, cardBg, divColor;
+  final void Function(_Participant) onKick;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final participants = ref.watch(leagueRankingProvider(leagueId)).maybeWhen(
+      data: (entries) => _rankEntriesToParticipants(entries),
+      orElse: () => <_Participant>[],
+    );
+    return _ParticipantsTab(
+      participants: participants,
+      status: status,
+      isDark: isDark,
+      accent: accent,
+      sub: sub,
+      cardBg: cardBg,
+      divColor: divColor,
+      onKick: onKick,
+      onRefresh: onRefresh,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  탭 바디 ConsumerWidget — leaguePendingProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _PendingTabBody extends ConsumerWidget {
+  const _PendingTabBody({
+    required this.leagueId,
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.cardBg,
+    required this.divColor,
+    required this.onApprove,
+    required this.onReject,
+    required this.onRefresh,
+  });
+  final String leagueId;
+  final bool isDark;
+  final Color accent, sub, cardBg, divColor;
+  final void Function(_Participant) onApprove;
+  final void Function(_Participant) onReject;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(leaguePendingProvider(leagueId)).maybeWhen(
+      data: (entries) => _pendingEntriesToParticipants(entries),
+      orElse: () => <_Participant>[],
+    );
+    return _PendingTab(
+      pending: pending,
+      isDark: isDark,
+      accent: accent,
+      sub: sub,
+      cardBg: cardBg,
+      divColor: divColor,
+      onApprove: onApprove,
+      onReject: onReject,
+      onRefresh: onRefresh,
     );
   }
 }
@@ -1207,4 +1323,3 @@ class _EndButton extends StatelessWidget {
     );
   }
 }
-

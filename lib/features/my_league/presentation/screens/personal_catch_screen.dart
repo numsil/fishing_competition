@@ -56,7 +56,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
     setState(() => _fetchingLocation = true);
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        if (mounted) AppSnackBar.info(context, '위치 서비스를 켜주세요');
+        if (mounted) AppSnackBar.warning(context, '위치 서비스를 켜주세요');
         return;
       }
       var perm = await Geolocator.checkPermission();
@@ -64,7 +64,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
         perm = await Geolocator.requestPermission();
       }
       if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
-        if (mounted) AppSnackBar.info(context, '위치 권한이 거부되었습니다');
+        if (mounted) AppSnackBar.warning(context, '위치 권한이 거부되었습니다');
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -159,7 +159,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
 
   Future<void> _submit() async {
     if (_image == null) {
-            AppSnackBar.info(context, '사진을 촬영해주세요');
+            AppSnackBar.warning(context, '사진을 촬영해주세요');
       return;
     }
     final user = ref.read(currentUserProvider);

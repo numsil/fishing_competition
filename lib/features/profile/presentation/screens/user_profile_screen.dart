@@ -60,7 +60,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.info(context, '메시지를 시작할 수 없습니다');
+                AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
       }
     } finally {
       if (mounted) setState(() => _dmLoading = false);
@@ -424,6 +424,20 @@ class _UserGrid extends ConsumerWidget {
                               : const Color(0xFFA1A1AA)),
                     ),
                   ),
+                  if (post.videoUrl != null)
+                    const Positioned(
+                      top: 6, right: 6,
+                      child: Icon(Icons.videocam, color: Colors.white, size: 16, shadows: [
+                        Shadow(color: Colors.black54, blurRadius: 4),
+                      ]),
+                    )
+                  else if ((post.imageUrls?.length ?? 0) > 1)
+                    const Positioned(
+                      top: 6, right: 6,
+                      child: Icon(Icons.filter_none, color: Colors.white, size: 16, shadows: [
+                        Shadow(color: Colors.black54, blurRadius: 4),
+                      ]),
+                    ),
                   if (post.isLunker)
                     Positioned(
                       bottom: 4,

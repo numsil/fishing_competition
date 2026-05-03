@@ -24,7 +24,7 @@ final profileRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProfileRepositoryRef = AutoDisposeProviderRef<ProfileRepository>;
-String _$myProfileHash() => r'e7f41fddac6f1b89cc5375da7a99d70806ae5239';
+String _$myProfileHash() => r'ab14caf3e07470e7eeeb3da7f2117bdc5dfba342';
 
 /// See also [myProfile].
 @ProviderFor(myProfile)
@@ -76,7 +76,7 @@ final myPersonalRecordsProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyPersonalRecordsRef = AutoDisposeFutureProviderRef<List<Post>>;
-String _$userProfileHash() => r'9a6d276547cebe0787cd0d2d00bbf4473fda6007';
+String _$userProfileHash() => r'3e1ab8f322708d53e480219abe92476050a358dd';
 
 /// Copied from Dart SDK
 class _SystemHash {

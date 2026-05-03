@@ -438,11 +438,11 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   Future<void> _share() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      AppSnackBar.info(context, '로그인이 필요합니다.');
+      AppSnackBar.warning(context, '로그인이 필요합니다.');
       return;
     }
     if (!widget.isVideo && _images.isEmpty) {
-      AppSnackBar.info(context, '사진을 최소 1장 선택해주세요.');
+      AppSnackBar.warning(context, '사진을 최소 1장 선택해주세요.');
       return;
     }
 

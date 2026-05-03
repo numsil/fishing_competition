@@ -13,8 +13,11 @@ class AppSnackBar {
   static void error(BuildContext context, String message) =>
       _show(context, message, AppColors.error, Icons.error_outline_rounded);
 
-  static void info(BuildContext context, String message, {Color? color}) =>
-      _show(context, message, color ?? AppColors.neonGreen, Icons.info_outline_rounded);
+  static void warning(BuildContext context, String message) =>
+      _show(context, message, AppColors.warning, Icons.warning_amber_rounded);
+
+  static void info(BuildContext context, String message) =>
+      _show(context, message, AppColors.info, Icons.info_outline_rounded);
 
   static void _show(BuildContext context, String message, Color color, IconData icon) {
     _current?.remove();

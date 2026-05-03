@@ -88,7 +88,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
           .sendMessage(widget.conversation.id, text);
     } catch (e) {
       if (mounted) {
-                AppSnackBar.info(context, '메시지 전송에 실패했습니다');
+                AppSnackBar.error(context, '메시지 전송에 실패했습니다');
         _ctrl.text = text;
       }
     } finally {

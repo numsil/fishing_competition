@@ -410,6 +410,13 @@ class _Grid extends ConsumerWidget {
                     child: Icon(Icons.videocam, color: Colors.white, size: 16, shadows: [
                       Shadow(color: Colors.black54, blurRadius: 4),
                     ]),
+                  )
+                else if ((post.imageUrls?.length ?? 0) > 1)
+                  const Positioned(
+                    top: 6, right: 6,
+                    child: Icon(Icons.filter_none, color: Colors.white, size: 16, shadows: [
+                      Shadow(color: Colors.black54, blurRadius: 4),
+                    ]),
                   ),
                 if (post.isLunker)
                   Positioned(

@@ -23,7 +23,7 @@ final leagueRepositoryProvider = AutoDisposeProvider<LeagueRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LeagueRepositoryRef = AutoDisposeProviderRef<LeagueRepository>;
-String _$leaguesHash() => r'b828117aa3941b980ba9212233082c670263b991';
+String _$leaguesHash() => r'79e8b292e2d37b69418e5b961ee6a654cb8087d6';
 
 /// See also [leagues].
 @ProviderFor(leagues)
@@ -40,7 +40,7 @@ final leaguesProvider = AutoDisposeFutureProvider<List<League>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LeaguesRef = AutoDisposeFutureProviderRef<List<League>>;
-String _$isJoinedHash() => r'344c9650023e497e3640e8b2c98b08e3f32d35f0';
+String _$isJoinedHash() => r'4b099d59414dbac4d5fa2aa8ebff80675c837f21';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -175,7 +175,7 @@ class _IsJoinedProviderElement extends AutoDisposeFutureProviderElement<bool>
   String get leagueId => (origin as IsJoinedProvider).leagueId;
 }
 
-String _$leagueRankingHash() => r'ecf48ae2cdd3cf92f0329c22558ba9a51a1af64f';
+String _$leagueRankingHash() => r'03ba07038b93db85ae943ea5ef0770f56f007bdf';
 
 /// See also [leagueRanking].
 @ProviderFor(leagueRanking)

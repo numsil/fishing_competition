@@ -216,10 +216,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                       Row(children: [
                         Text(p.username,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                        if (p.isLunker) ...[
-                          const SizedBox(width: 4),
-                          Icon(LucideIcons.checkCircle, size: 13, color: context.accentColor),
-                        ],
                       ]),
                       if (p.location != null)
                         Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),

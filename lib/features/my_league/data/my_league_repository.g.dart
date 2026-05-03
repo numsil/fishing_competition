@@ -43,5 +43,22 @@ final myLeaguesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyLeaguesRef = AutoDisposeFutureProviderRef<Map<String, List<League>>>;
+String _$mySeasonStatsHash() => r'464ef4c0e9f915a97da853609123888433e55a0f';
+
+/// See also [mySeasonStats].
+@ProviderFor(mySeasonStats)
+final mySeasonStatsProvider = AutoDisposeFutureProvider<SeasonStats>.internal(
+  mySeasonStats,
+  name: r'mySeasonStatsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$mySeasonStatsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef MySeasonStatsRef = AutoDisposeFutureProviderRef<SeasonStats>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

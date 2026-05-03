@@ -487,10 +487,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                             p.username,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                           ),
-                          if (p.isLunker) ...[
-                            const SizedBox(width: 4),
-                            Icon(LucideIcons.checkCircle, size: 13, color: accent),
-                          ],
                         ],
                       ),
                       if (p.location != null)

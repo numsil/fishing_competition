@@ -110,11 +110,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
     if (_dateRange == null) {
-            AppSnackBar.info(context, '일정을 선택해주세요.');
+            AppSnackBar.warning(context, '일정을 선택해주세요.');
       return;
     }
     if (_locationCtrl.text.trim().isEmpty) {
-            AppSnackBar.info(context, '장소를 입력해주세요.');
+            AppSnackBar.warning(context, '장소를 입력해주세요.');
       return;
     }
 
@@ -146,14 +146,14 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         ref.invalidate(leagueDetailProvider(widget.league!.id));
         ref.invalidate(leaguesProvider);
         if (mounted) {
-                    AppSnackBar.info(context, '대회 정보가 수정되었습니다.');
+                    AppSnackBar.success(context, '대회 정보가 수정되었습니다.');
           context.pop();
         }
       } else {
         final user = ref.read(currentUserProvider);
         if (user == null) {
           setState(() => _submitting = false);
-                    AppSnackBar.info(context, '로그인이 필요합니다.');
+                    AppSnackBar.warning(context, '로그인이 필요합니다.');
           return;
         }
         await ref.read(leagueRepositoryProvider).createLeague(
