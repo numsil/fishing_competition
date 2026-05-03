@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,6 +14,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/utils/image_downloader.dart';
 
 class PersonalRecordDetailScreen extends ConsumerStatefulWidget {
   const PersonalRecordDetailScreen({super.key, required this.post});
@@ -24,6 +26,7 @@ class PersonalRecordDetailScreen extends ConsumerStatefulWidget {
 
 class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetailScreen> {
   bool _sharing = false;
+  bool _downloading = false;
 
   Post get post => widget.post;
 
@@ -77,6 +80,16 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
             ),
             Divider(height: 1, color: divColor),
             _MenuItem(
+              icon: LucideIcons.download,
+              label: '사진 저장',
+              color: accent,
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _downloadImage();
+              },
+            ),
+            Divider(height: 1, color: divColor),
+            _MenuItem(
               icon: LucideIcons.trash2,
               label: '기록 삭제',
               color: AppColors.error,
@@ -90,6 +103,19 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         ),
       ),
     );
+  }
+
+  Future<void> _downloadImage() async {
+    if (_downloading) return;
+    setState(() => _downloading = true);
+    try {
+      await downloadImageToGallery(post.imageUrl);
+      if (mounted) AppSnackBar.success(context, '갤러리에 저장되었습니다');
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '저장 실패: $e');
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
   }
 
   Future<void> _shareToFeed() async {
@@ -130,7 +156,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         ),
         actions: [
           if (isOwner)
-            _sharing
+            (_sharing || _downloading)
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Center(
@@ -150,17 +176,16 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         children: [
           // ── 사진 ───────────────────────────────
           AspectRatio(
-            aspectRatio: 1,
+            aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
             child: Container(
               color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
-              child: Image.network(
-                post.imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: post.imageUrl,
                 fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor));
-                },
-                errorBuilder: (_, __, ___) => Center(
+                placeholder: (_, __) => Center(
+                  child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
+                ),
+                errorWidget: (_, __, ___) => Center(
                   child: Icon(LucideIcons.image, size: 60, color: sub),
                 ),
               ),

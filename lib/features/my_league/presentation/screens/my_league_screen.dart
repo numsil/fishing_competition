@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,43 +46,128 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
     final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final divColor = context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
 
+    // Scaffold는 myLeaguesProvider 밖에 위치 — AppBar/TabBar는 rebuild되지 않음
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('나의 리그', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+        bottom: TabBar(
+          controller: _tab,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+          indicatorColor: context.accentColor,
+          labelColor: context.accentColor,
+          unselectedLabelColor: sub,
+          tabs: const [
+            Tab(text: '참여 리그'),
+            Tab(text: '개인 기록'),
+            Tab(text: '개설한 리그'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tab,
+        children: [
+          // 각 탭이 myLeaguesProvider를 독립적으로 구독
+          _ActiveTabConsumer(
+            isDark: context.isDark,
+            accent: context.accentColor,
+            sub: sub,
+            cardBg: cardBg,
+            divColor: divColor,
+          ),
+          _PersonalRecordTab(
+            isDark: context.isDark,
+            accent: context.accentColor,
+            sub: sub,
+            cardBg: cardBg,
+            divColor: divColor,
+          ),
+          _MyLeaguesConsumer(
+            isDark: context.isDark,
+            accent: context.accentColor,
+            sub: sub,
+            cardBg: cardBg,
+            divColor: divColor,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  참여 리그 탭 ConsumerWidget — myLeaguesProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _ActiveTabConsumer extends ConsumerWidget {
+  const _ActiveTabConsumer({
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.cardBg,
+    required this.divColor,
+  });
+  final bool isDark;
+  final Color accent, sub, cardBg, divColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(myLeaguesProvider).when(
+      skipLoadingOnReload: true,
+      data: (myLeaguesMap) {
+        final participated = myLeaguesMap['participated'] ?? [];
+        final activeLeagues = participated
+            .where((l) => l.status != 'completed' && l.status != 'canceled')
+            .toList();
+        return _ActiveTab(
+          leagues: activeLeagues,
+          isDark: isDark,
+          accent: accent,
+          sub: sub,
+          cardBg: cardBg,
+          divColor: divColor,
+          onRefresh: () async => ref.invalidate(myLeaguesProvider),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('오류: $e')),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  개설한 리그 탭 ConsumerWidget — myLeaguesProvider 전용
+// ─────────────────────────────────────────────────────────────────
+
+class _MyLeaguesConsumer extends ConsumerWidget {
+  const _MyLeaguesConsumer({
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.cardBg,
+    required this.divColor,
+  });
+  final bool isDark;
+  final Color accent, sub, cardBg, divColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(myLeaguesProvider).when(
       skipLoadingOnReload: true,
       data: (myLeaguesMap) {
         final hosted = myLeaguesMap['hosted'] ?? [];
-        final participated = myLeaguesMap['participated'] ?? [];
-
-        final activeLeagues = participated.where((l) => l.status != 'completed' && l.status != 'canceled').toList();
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('나의 리그', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-            bottom: TabBar(
-              controller: _tab,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-              indicatorColor: context.accentColor,
-              labelColor: context.accentColor,
-              unselectedLabelColor: sub,
-              tabs: const [
-                Tab(text: '참여 리그'),
-                Tab(text: '개인 기록'),
-                Tab(text: '개설한 리그'),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            controller: _tab,
-            children: [
-              _ActiveTab(leagues: activeLeagues, isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
-              _PersonalRecordTab(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor),
-              _MyLeaguesTab(leagues: hosted, isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg, divColor: divColor, onRefresh: () async => ref.invalidate(myLeaguesProvider)),
-            ],
-          ),
+        return _MyLeaguesTab(
+          leagues: hosted,
+          isDark: isDark,
+          accent: accent,
+          sub: sub,
+          cardBg: cardBg,
+          divColor: divColor,
+          onRefresh: () async => ref.invalidate(myLeaguesProvider),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, st) => Scaffold(body: Center(child: Text('오류: $e'))),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('오류: $e')),
     );
   }
 }
@@ -528,10 +614,10 @@ class _PersonalRecordTab extends ConsumerWidget {
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Image.network(
-                                    post.imageUrl,
+                                  CachedNetworkImage(
+                                    imageUrl: post.imageUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                                    errorWidget: (_, __, ___) => Container(
                                       color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                                       child: Icon(LucideIcons.image, size: 24, color: sub),
                                     ),
@@ -850,9 +936,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── 데이터 모델 ───────────────────────────────────────────
-// _LeagueEntry is removed
-
 // ── 개설한 리그 탭 ────────────────────────────────────────
 class _MyLeaguesTab extends StatelessWidget {
   const _MyLeaguesTab({
@@ -967,7 +1050,7 @@ class _MyLeagueCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLive = league.status == 'in_progress';
     final isUpcoming = league.status == 'recruiting';
-    
+
     final startStr = DateFormat('yyyy.MM.dd').format(league.startTime);
     final endStr = DateFormat('yyyy.MM.dd').format(league.endTime);
 
@@ -1070,8 +1153,8 @@ class _MyLeagueCard extends ConsumerWidget {
                 children: [
                   _InfoChip(
                     icon: Icons.group_outlined,
-                    label: '${league.participantsCount}/${league.maxParticipants ?? "무제한"}명',
-                    color: isLive && league.maxParticipants != null && league.participantsCount >= league.maxParticipants!
+                    label: '${league.participantsCount}/${league.maxParticipants}명',
+                    color: isLive && league.participantsCount >= league.maxParticipants
                         ? AppColors.liveRed
                         : accent,
                   ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -765,18 +766,16 @@ class _IntroImageGalleryState extends State<_IntroImageGallery> {
               onPageChanged: (i) => setState(() => _currentIndex = i),
               itemBuilder: (_, i) => GestureDetector(
                 onTap: () => _openFullscreen(i),
-                child: Image.network(
-                  urls[i],
+                child: CachedNetworkImage(
+                  imageUrl: urls[i],
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
+                  errorWidget: (_, __, ___) => Container(
                     color: widget.divColor,
                     child: const Center(
                       child: Icon(Icons.broken_image_outlined, size: 36, color: Colors.grey),
                     ),
                   ),
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : const Center(child: CircularProgressIndicator()),
                 ),
               ),
             ),
@@ -846,10 +845,10 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
         onPageChanged: (i) => setState(() => _current = i),
         itemBuilder: (_, i) => InteractiveViewer(
           child: Center(
-            child: Image.network(
-              widget.imageUrls[i],
+            child: CachedNetworkImage(
+              imageUrl: widget.imageUrls[i],
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
+              errorWidget: (_, __, ___) => const Icon(
                 Icons.broken_image_outlined, size: 64, color: Colors.white54),
             ),
           ),

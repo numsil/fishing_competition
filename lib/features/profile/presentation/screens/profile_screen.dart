@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -395,10 +396,10 @@ class _Grid extends ConsumerWidget {
               child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  post.imageUrl,
+                CachedNetworkImage(
+                  imageUrl: post.imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorWidget: (_, __, ___) => Container(
                     color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                     child: Icon(LucideIcons.image, size: 24, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
                   ),

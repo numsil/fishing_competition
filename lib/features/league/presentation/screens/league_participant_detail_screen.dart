@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/utils/image_downloader.dart';
 
 // ── 라우터에서 extras로 전달할 args ─────────────────────────
 class LeagueParticipantArgs {
@@ -254,11 +256,23 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                           await ref.read(feedRepositoryProvider).sharePostToFeed(posts[index]);
                           ref.invalidate(feedPostsProvider);
                           if (context.mounted) {
-                                                        AppSnackBar.success(context, '내 피드에 공유되었습니다.');
+                            AppSnackBar.success(context, '내 피드에 공유되었습니다.');
                           }
                         } catch (e) {
                           if (context.mounted) {
-                                                        AppSnackBar.error(context, '공유 실패: $e');
+                            AppSnackBar.error(context, '공유 실패: $e');
+                          }
+                        }
+                      } : null,
+                      onDownload: isMyPost ? () async {
+                        try {
+                          await downloadImageToGallery(posts[index].imageUrl);
+                          if (context.mounted) {
+                            AppSnackBar.success(context, '갤러리에 저장되었습니다');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppSnackBar.error(context, '저장 실패: $e');
                           }
                         }
                       } : null,
@@ -324,6 +338,7 @@ class _CatchCard extends StatelessWidget {
     required this.onTap,
     this.isMyPost = false,
     this.onShareToFeed,
+    this.onDownload,
   });
   final Post post;
   final bool isDark;
@@ -331,6 +346,7 @@ class _CatchCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isMyPost;
   final VoidCallback? onShareToFeed;
+  final VoidCallback? onDownload;
 
   @override
   Widget build(BuildContext context) {
@@ -353,11 +369,11 @@ class _CatchCard extends StatelessWidget {
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(13)),
               child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  post.imageUrl,
+                aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorWidget: (_, __, ___) => Container(
                     color: isDark
                         ? AppColors.darkSurface2
                         : AppColors.lightDivider,
@@ -453,27 +469,59 @@ class _CatchCard extends StatelessWidget {
                       style: TextStyle(fontSize: 13, color: sub, height: 1.4),
                     ),
                   ],
-                  if (isMyPost && onShareToFeed != null) ...[
+                  if (isMyPost && (onShareToFeed != null || onDownload != null)) ...[
                     const SizedBox(height: 10),
                     Divider(height: 1, color: divColor),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: onShareToFeed,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(LucideIcons.share2, size: 13, color: accent),
-                          const SizedBox(width: 5),
-                          Text(
-                            '내 피드에 공유',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: accent,
+                    Row(
+                      children: [
+                        if (onShareToFeed != null) ...[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: onShareToFeed,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(LucideIcons.share2, size: 13, color: accent),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '피드에 공유',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
-                      ),
+                        if (onShareToFeed != null && onDownload != null)
+                          Container(width: 1, height: 16, color: divColor),
+                        if (onDownload != null) ...[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: onDownload,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(LucideIcons.download, size: 13, color: accent),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '사진 저장',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ],

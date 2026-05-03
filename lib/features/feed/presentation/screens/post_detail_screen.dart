@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -13,7 +12,7 @@ import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
-import '../widgets/feed_video_player.dart';
+import '../widgets/post_image_carousel.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -230,70 +229,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               ]),
             ),
 
-            // 미디어 (이미지 or 동영상)
-            GestureDetector(
-              onDoubleTap: p.videoUrl != null ? null : _doubleTapLike,
-              child: Container(
-                width: double.infinity,
-                color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Stack(fit: StackFit.expand, children: [
-                    if (p.videoUrl != null)
-                      FeedVideoPlayer(post: p, accent: context.accentColor)
-                    else
-                      Image.network(
-                        p.imageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (_, child, progress) {
-                          if (progress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                                  : null,
-                              strokeWidth: 2,
-                              color: context.accentColor,
-                            ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Center(
-                          child: Icon(LucideIcons.image, size: 60,
-                              color: context.isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+            // 미디어 (이미지 슬라이드 or 동영상)
+            PostImageCarousel(
+              post: p,
+              isDark: context.isDark,
+              accent: context.accentColor,
+              onDoubleTap: _doubleTapLike,
+              overlay: (_showHeart && p.videoUrl == null)
+                  ? AnimatedBuilder(
+                      animation: _heartAnim,
+                      builder: (_, __) => Center(
+                        child: Transform.scale(
+                          scale: _heartAnim.value,
+                          child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 80),
                         ),
                       ),
-                    if (p.leagueId != null)
-                      Positioned(
-                        top: 12, left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(LucideIcons.trophy, size: 10, color: AppColors.gold),
-                            const SizedBox(width: 5),
-                            Text('리그 게시물',
-                                style: TextStyle(color: context.accentColor, fontSize: 11,
-                                    fontWeight: FontWeight.w600)),
-                          ]),
-                        ),
-                      ),
-                    if (_showHeart)
-                      Center(
-                        child: AnimatedBuilder(
-                          animation: _heartAnim,
-                          builder: (_, __) => Transform.scale(
-                            scale: _heartAnim.value,
-                            child: const Icon(Icons.favorite_rounded,
-                                color: Colors.white, size: 80),
-                          ),
-                        ),
-                      ),
-                  ]),
-                ),
-              ),
+                    )
+                  : null,
             ),
 
             // 액션 버튼

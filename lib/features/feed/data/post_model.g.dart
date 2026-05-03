@@ -11,6 +11,10 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   userId: json['user_id'] as String,
   leagueId: json['league_id'] as String?,
   imageUrl: json['image_url'] as String,
+  imageUrls: (json['image_urls'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  aspectRatio: (json['aspect_ratio'] as num?)?.toDouble(),
   videoUrl: json['video_url'] as String?,
   caption: json['caption'] as String?,
   fishType: json['fish_type'] as String? ?? '배스',
@@ -33,6 +37,8 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'user_id': instance.userId,
   'league_id': instance.leagueId,
   'image_url': instance.imageUrl,
+  'image_urls': instance.imageUrls,
+  'aspect_ratio': instance.aspectRatio,
   'video_url': instance.videoUrl,
   'caption': instance.caption,
   'fish_type': instance.fishType,

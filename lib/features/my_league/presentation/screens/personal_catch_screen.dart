@@ -12,6 +12,7 @@ import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -26,6 +27,7 @@ class PersonalCatchScreen extends ConsumerStatefulWidget {
 
 class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   File? _image;
+  double? _previewRatio;
   final String _fishType = '배스';
   final _lengthCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
@@ -40,7 +42,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
     super.initState();
     if (widget.initialImage != null) {
       _image = widget.initialImage;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final ratio = await getAspectRatioForUpload(widget.initialImage!);
+        if (mounted) setState(() => _previewRatio = ratio);
         if (mounted) _captureCurrentLocation();
       });
     }
@@ -103,7 +108,9 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       maxWidth: 1280,
     );
     if (picked != null) {
-      setState(() => _image = File(picked.path));
+      final file = File(picked.path);
+      final ratio = await getAspectRatioForUpload(file);
+      if (mounted) setState(() { _image = file; _previewRatio = ratio; });
       if (_capturedLat == null) {
         await _captureCurrentLocation();
       }
@@ -165,6 +172,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: _image!,
+        aspectRatio: _previewRatio,
         fishType: _fishType,
         length: lengthVal,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
@@ -232,45 +240,52 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           // ── 사진 촬영 영역 ──────────────────────────
           GestureDetector(
             onTap: _showSourceSheet,
-            child: Container(
-              height: 260,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _image == null ? divColor : context.accentColor,
-                  width: _image == null ? 1 : 2,
-                ),
-              ),
-              child: _image != null
-                  ? Stack(fit: StackFit.expand, children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Image.file(_image!, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        bottom: 12, right: 12,
-                        child: GestureDetector(
-                          onTap: _showSourceSheet,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(20),
+            child: _image != null
+                ? Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: context.accentColor, width: 2),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: (_previewRatio ?? (4 / 3)).clamp(0.8, 1.91),
+                      child: Stack(fit: StackFit.expand, children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: Image.file(_image!, fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          bottom: 12, right: 12,
+                          child: GestureDetector(
+                            onTap: _showSourceSheet,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                                SizedBox(width: 6),
+                                Text('다시 촬영',
+                                    style: TextStyle(color: Colors.white,
+                                        fontSize: 13, fontWeight: FontWeight.w600)),
+                              ]),
                             ),
-                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
-                              SizedBox(width: 6),
-                              Text('다시 촬영',
-                                  style: TextStyle(color: Colors.white,
-                                      fontSize: 13, fontWeight: FontWeight.w600)),
-                            ]),
                           ),
                         ),
-                      ),
-                    ])
-                  : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      ]),
+                    ),
+                  )
+                : Container(
+                    height: 260,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: divColor),
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
@@ -286,7 +301,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
                       Text('잡은 물고기를 촬영하거나 갤러리에서 선택하세요',
                           style: TextStyle(fontSize: 12, color: sub)),
                     ]),
-            ),
+                  ),
           ),
           const SizedBox(height: 24),
 

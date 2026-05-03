@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// 어디서든 재사용 가능한 유저 아바타 위젯.
@@ -28,7 +29,7 @@ class UserAvatar extends StatelessWidget {
         height: size,
         color: bg,
         child: url != null
-            ? Image.network(url, fit: BoxFit.cover, width: size, height: size)
+            ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, width: size, height: size)
             : Center(
                 child: Text(
                   username.isNotEmpty ? username[0].toUpperCase() : '?',

@@ -23,7 +23,7 @@ final feedRepositoryProvider = AutoDisposeProvider<FeedRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef FeedRepositoryRef = AutoDisposeProviderRef<FeedRepository>;
-String _$feedPostsHash() => r'f7a725b87edd0f2d04e87472277dbda585d973e4';
+String _$feedPostsHash() => r'd58ec7310c89c996c832bd0ca41dc1f88d24d394';
 
 /// See also [feedPosts].
 @ProviderFor(feedPosts)

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -184,10 +185,10 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
               ),
             )
           else if (p.imageUrl.isNotEmpty)
-            Image.network(
-              p.imageUrl,
+            CachedNetworkImage(
+              imageUrl: p.imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A)),
+              errorWidget: (_, __, ___) => Container(color: const Color(0xFF1A1A1A)),
             )
           else
             Container(color: const Color(0xFF1A1A1A)),

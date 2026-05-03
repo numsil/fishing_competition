@@ -16,7 +16,7 @@ class FeedRepository {
   Future<List<Post>> getPosts() async {
     final response = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url), post_likes(count), post_comments(count)')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url), post_likes(count), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -73,13 +73,15 @@ class FeedRepository {
     await _supabase.from('posts').delete().eq('id', postId);
   }
 
-  // 리그 조과 / 개인 기록을 일반 피드에 공유 (league_id 없고 is_personal_record=false 복사본)
+  // 리그 조과 / 개인 기록을 일반 피드에 공유
   Future<void> sharePostToFeed(Post post) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
     await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': post.imageUrl,
+      'image_urls': post.imageUrls,
+      'aspect_ratio': post.aspectRatio,
       'caption': post.caption,
       'fish_type': post.fishType,
       'lure_type': post.lureType,
@@ -95,9 +97,11 @@ class FeedRepository {
 
   Future<void> createPost({
     required String userId,
-    File? imageFile,
+    File? imageFile,           // 단일 이미지 (리그 조과 등 하위 호환)
+    List<File>? imageFiles,   // 다중 이미지 (피드 업로드)
     File? videoFile,
     Uint8List? videoThumbnailBytes,
+    double? aspectRatio,
     String? caption,
     String fishType = '배스',
     String? lureType,
@@ -113,9 +117,9 @@ class FeedRepository {
     final ts = DateTime.now().millisecondsSinceEpoch;
     String imageUrl;
     String? videoUrl;
+    List<String>? imageUrls;
 
     if (videoFile != null) {
-      // 썸네일 → post_images 버킷에 업로드
       if (videoThumbnailBytes != null) {
         final thumbPath = 'posts/${userId}_${ts}_thumb.jpg';
         await _supabase.storage.from('post_images').uploadBinary(
@@ -128,7 +132,6 @@ class FeedRepository {
         imageUrl = '';
       }
 
-      // 압축된 동영상 → post_videos 버킷에 업로드
       final videoPath = 'posts/${userId}_$ts.mp4';
       await _supabase.storage.from('post_videos').upload(
         videoPath,
@@ -136,6 +139,20 @@ class FeedRepository {
         fileOptions: const FileOptions(contentType: 'video/mp4', upsert: false),
       );
       videoUrl = _supabase.storage.from('post_videos').getPublicUrl(videoPath);
+    } else if (imageFiles != null && imageFiles.isNotEmpty) {
+      final urls = <String>[];
+      for (int i = 0; i < imageFiles.length; i++) {
+        final compressed = await compressForUpload(imageFiles[i]);
+        final storagePath = 'posts/${userId}_${ts}_$i.jpg';
+        await _supabase.storage.from('post_images').upload(
+          storagePath,
+          compressed,
+          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+        );
+        urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+      }
+      imageUrl = urls.first;
+      imageUrls = urls;
     } else if (imageFile != null) {
       final compressed = await compressForUpload(imageFile);
       final storagePath = 'posts/${userId}_$ts.jpg';
@@ -152,6 +169,8 @@ class FeedRepository {
     await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': imageUrl,
+      'image_urls': imageUrls,
+      'aspect_ratio': aspectRatio,
       'video_url': videoUrl,
       'caption': caption,
       'fish_type': fishType,
