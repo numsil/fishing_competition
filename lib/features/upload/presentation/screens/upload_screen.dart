@@ -9,7 +9,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
-import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
@@ -402,10 +401,10 @@ class _CaptionStep extends ConsumerStatefulWidget {
 class _CaptionStepState extends ConsumerState<_CaptionStep> {
   final _captionCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _tagCtrl = TextEditingController();
   final _lengthCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
   final String _fish = '배스';
-  String? _selectedLeagueId;
   bool _sharing = false;
   double _compressProgress = 0.0;
   dynamic _compressSub;
@@ -423,6 +422,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   void dispose() {
     _captionCtrl.dispose();
     _locationCtrl.dispose();
+    _tagCtrl.dispose();
     _lengthCtrl.dispose();
     _weightCtrl.dispose();
     _compressSub?.unsubscribe();
@@ -486,16 +486,23 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         aspectRatio = await getAspectRatioForUpload(File(_images.first.path));
       }
 
+      final rawCaption = _captionCtrl.text.trim();
+      final rawTags = _tagCtrl.text.trim();
+      final combinedCaption = [
+        if (rawCaption.isNotEmpty) rawCaption,
+        if (rawTags.isNotEmpty) rawTags,
+      ].join('\n\n');
+
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFiles: widget.isVideo ? null : _images.map((f) => File(f.path)).toList(),
         videoFile: compressedVideo,
         videoThumbnailBytes: widget.thumbnailBytes,
         aspectRatio: aspectRatio,
-        caption: _captionCtrl.text.trim().isEmpty ? null : _captionCtrl.text.trim(),
+        caption: combinedCaption.isEmpty ? null : combinedCaption,
         fishType: _fish,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-        leagueId: _selectedLeagueId,
+        leagueId: null,
         length: lengthVal,
         weight: weightVal,
       );
@@ -706,7 +713,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
             // ── 첫 번째 썸네일 + 캡션 ──
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -736,26 +743,24 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                         ),
                     ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ClipRect(
-                      child: TextField(
-                        controller: _captionCtrl,
-                        maxLines: 5,
-                        minLines: 3,
-                        autofocus: true,
-                        style: TextStyle(fontSize: 14, color: textColor),
-                        decoration: InputDecoration(
-                          hintText: '문구를 작성하세요...',
-                          hintStyle: TextStyle(color: sub, fontSize: 14),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.only(top: 2),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+              child: TextField(
+                controller: _captionCtrl,
+                maxLines: null,
+                minLines: 6,
+                autofocus: true,
+                style: TextStyle(fontSize: 15, color: textColor),
+                decoration: InputDecoration(
+                  hintText: '문구를 작성하세요...',
+                  hintStyle: TextStyle(color: sub, fontSize: 15),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  isDense: false,
+                ),
               ),
             ),
 
@@ -772,6 +777,29 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                   hintStyle: TextStyle(color: sub, fontSize: 14),
                   border: InputBorder.none,
                   suffixIcon: Icon(Icons.location_on_outlined, color: sub, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  isDense: true,
+                ),
+              ),
+            ),
+
+            Divider(height: 1, color: divColor),
+
+            // ── 태그 ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TextField(
+                controller: _tagCtrl,
+                style: TextStyle(fontSize: 14, color: textColor),
+                decoration: InputDecoration(
+                  hintText: '#배스 #낚시 #충주호',
+                  hintStyle: TextStyle(color: sub, fontSize: 14),
+                  border: InputBorder.none,
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 0, right: 8),
+                    child: Text('#', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: sub)),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   isDense: true,
                 ),
@@ -838,79 +866,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             ),
 
             const SizedBox(height: 20),
-            Divider(height: 1, color: divColor),
-
-            // ── 리그 태그 ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('리그 태그', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
-                  const SizedBox(height: 10),
-                  InkWell(
-                    onTap: () => setState(() => _selectedLeagueId = null),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          Icon(Icons.block_rounded, size: 14, color: _selectedLeagueId == null ? accent : sub),
-                          const SizedBox(width: 10),
-                          Text('없음',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _selectedLeagueId == null ? accent : textColor,
-                                fontWeight: _selectedLeagueId == null ? FontWeight.w600 : FontWeight.w400,
-                              )),
-                          const Spacer(),
-                          if (_selectedLeagueId == null) Icon(Icons.check_rounded, size: 18, color: accent),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ref.watch(myJoinedLeaguesProvider).when(
-                    data: (leagues) => Column(
-                      children: leagues.isEmpty
-                          ? [Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Text('참가 중인 리그가 없습니다.', style: TextStyle(fontSize: 13, color: sub)),
-                            )]
-                          : leagues.map((l) {
-                        final selected = _selectedLeagueId == l.id;
-                        return InkWell(
-                          onTap: () => setState(() => _selectedLeagueId = l.id),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Row(
-                              children: [
-                                AppSvg(AppIcons.trophy, size: 14, color: selected ? accent : sub),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(l.title,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: selected ? accent : textColor,
-                                        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                                      )),
-                                ),
-                                if (selected) Icon(Icons.check_rounded, size: 18, color: accent),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    loading: () => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
             Divider(height: 1, color: divColor),
 
             _SettingRow(label: '공개 범위', value: '전체 공개', sub: sub, textColor: textColor, divColor: divColor),
