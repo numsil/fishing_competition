@@ -16,6 +16,7 @@ import 'league_create_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../widgets/catch_review_tab.dart';
+import '../widgets/league_ranking_tab.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  상태 enum
@@ -454,19 +455,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                   children: status == LeagueManageStatus.live
                       ? [
                           // 진행 중: 실시간 순위 + 심사
-                          _RankingTabBody(
-                            leagueId: widget.leagueId,
-                            status: status,
+                          LeagueRankingTab(
+                            league: league,
                             isDark: context.isDark,
                             accent: context.accentColor,
-                            sub: sub,
-                            cardBg: cardBg,
-                            divColor: divColor,
-                            onKick: _kickParticipant,
-                            onRefresh: () async {
-                              ref.invalidate(leagueRankingProvider(widget.leagueId));
-                              ref.invalidate(leagueDetailProvider(widget.leagueId));
-                            },
                           ),
                           CatchReviewTab(leagueId: widget.leagueId),
                         ]
