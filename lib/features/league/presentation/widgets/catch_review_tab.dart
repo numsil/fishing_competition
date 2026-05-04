@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../data/league_repository.dart';
+import '../screens/catch_review_detail_screen.dart';
 import 'catch_review_item.dart';
 
 class CatchReviewTab extends ConsumerWidget {
@@ -44,37 +45,51 @@ class CatchReviewTab extends ConsumerWidget {
           onRefresh: () async =>
               ref.invalidate(leagueCatchesForReviewProvider(leagueId)),
           child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final post = posts[index];
-            return CatchReviewItem(
-              post: post,
-              isDark: isDark,
-              onHold: () async {
-                try {
-                  await ref.read(leagueRepositoryProvider).holdPost(post.id);
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              final post = posts[index];
+              return CatchReviewItem(
+                post: post,
+                isDark: isDark,
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CatchReviewDetailScreen(
+                        post: post,
+                        leagueId: leagueId,
+                      ),
+                    ),
+                  );
+                  // 상세 화면에서 보류/해지 후 목록 갱신
                   ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                   ref.invalidate(leagueRankingProvider(leagueId));
-                } catch (e) {
-                  if (context.mounted) {
-                    AppSnackBar.error(context, '보류 처리 실패: $e');
+                },
+                onHold: () async {
+                  try {
+                    await ref.read(leagueRepositoryProvider).holdPost(post.id);
+                    ref.invalidate(leagueCatchesForReviewProvider(leagueId));
+                    ref.invalidate(leagueRankingProvider(leagueId));
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '보류 처리 실패: $e');
+                    }
                   }
-                }
-              },
-              onUnhold: () async {
-                try {
-                  await ref.read(leagueRepositoryProvider).unholdPost(post.id);
-                  ref.invalidate(leagueCatchesForReviewProvider(leagueId));
-                  ref.invalidate(leagueRankingProvider(leagueId));
-                } catch (e) {
-                  if (context.mounted) {
-                    AppSnackBar.error(context, '보류 해지 실패: $e');
+                },
+                onUnhold: () async {
+                  try {
+                    await ref.read(leagueRepositoryProvider).unholdPost(post.id);
+                    ref.invalidate(leagueCatchesForReviewProvider(leagueId));
+                    ref.invalidate(leagueRankingProvider(leagueId));
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '보류 해지 실패: $e');
+                    }
                   }
-                }
-              },
-            );
-          },
+                },
+              );
+            },
           ),
         );
       },
