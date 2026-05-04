@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/image_compress.dart';
 import '../../../core/utils/score_calculator.dart';
 import 'post_model.dart';
+import '../../verification/data/verification_repository.dart';
 
 part 'feed_repository.g.dart';
 
@@ -188,7 +189,7 @@ class FeedRepository {
       throw Exception('이미지 또는 동영상을 선택해주세요');
     }
 
-    await _supabase.from('posts').insert({
+    final inserted = await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': imageUrl,
       'image_urls': imageUrls,
@@ -208,7 +209,15 @@ class FeedRepository {
       'catch_count': catchCount,
       'is_lunker': length != null && length >= 50.0,
       'score': calculateFishScore(length),
-    });
+      'review_status': 'pending',
+    }).select('id').single();
+
+    // 인증 요청 생성
+    final verificationRepo = VerificationRepository(_supabase);
+    await verificationRepo.createVerificationRequest(
+      inserted['id'] as String,
+      userId,
+    );
   }
 }
 

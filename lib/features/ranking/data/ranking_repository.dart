@@ -66,7 +66,8 @@ class RankingRepository {
           .from('posts')
           .select('user_id, score, length, users!inner(username, avatar_url)')
           .not('league_id', 'is', null)
-          .eq('is_deleted', false),
+          .eq('is_deleted', false)
+          .eq('review_status', 'approved'),
       // 순위 보너스
       _supabase
           .from('league_participants')
@@ -86,7 +87,8 @@ class RankingRepository {
         .from('posts')
         .select('user_id, score, length, users!inner(username, avatar_url)')
         .eq('is_personal_record', true)
-        .eq('is_deleted', false);
+        .eq('is_deleted', false)
+        .eq('review_status', 'approved');
 
     final userMap = <String, Map<String, dynamic>>{};
     _mergeRows(userMap, res as List, scoreKey: 'score', lengthKey: 'length');
