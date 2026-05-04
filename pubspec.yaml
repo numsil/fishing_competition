@@ -64,6 +64,7 @@ dependencies:
   supabase_flutter: ^2.12.4
   flutter_dotenv: ^6.0.1
   lucide_icons: ^0.257.0
+  flutter_slidable: ^4.0.3
 
 dev_dependencies:
   flutter_test:

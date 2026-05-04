@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -80,20 +82,39 @@ class DmListScreen extends ConsumerWidget {
                     ? const Color(0xFF222222)
                     : const Color(0xFFEEEEEE);
 
-                return Dismissible(
+                return Slidable(
                   key: ValueKey(conv.id),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    color: Colors.red,
-                    child: const Icon(Icons.delete_outline,
-                        color: Colors.white, size: 24),
+                  endActionPane: ActionPane(
+                    motion: const DrawerMotion(),
+                    extentRatio: 0.22,
+                    children: [
+                      CustomSlidableAction(
+                        onPressed: (context) async {
+                          final confirmed = await showConfirmDialog(
+                            context,
+                            title: '대화방 삭제',
+                            content: '${conv.otherUsername}와의 대화를 삭제할까요?\n상대방이 새 메시지를 보내면 다시 나타납니다.',
+                            confirmText: '삭제',
+                            confirmColor: Colors.red,
+                          );
+                          if (confirmed) {
+                            ref.read(dmRepositoryProvider).hideConversation(conv.id);
+                            ref.invalidate(dmConversationsProvider);
+                          }
+                        },
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.delete_outline, size: 22),
+                            SizedBox(height: 4),
+                            Text('삭제', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  onDismissed: (_) {
-                    ref.read(dmRepositoryProvider).hideConversation(conv.id);
-                    ref.invalidate(dmConversationsProvider);
-                  },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
