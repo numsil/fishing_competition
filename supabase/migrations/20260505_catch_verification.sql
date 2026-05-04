@@ -44,6 +44,20 @@ CREATE POLICY "verif_select" ON catch_verifications FOR SELECT
 CREATE POLICY "verif_insert" ON catch_verifications FOR INSERT
   WITH CHECK (submitter_id = auth.uid());
 
+CREATE POLICY "verif_update" ON catch_verifications FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM verification_votes v
+      WHERE v.verification_id = id AND v.voter_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM verification_votes v
+      WHERE v.verification_id = id AND v.voter_id = auth.uid()
+    )
+  );
+
 CREATE POLICY "vote_select" ON verification_votes FOR SELECT
   USING (voter_id = auth.uid());
 
@@ -51,7 +65,9 @@ CREATE POLICY "vote_insert" ON verification_votes FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM catch_verifications cv
-      WHERE cv.id = verification_id AND cv.submitter_id != auth.uid()
+      WHERE cv.id = verification_id
+        AND cv.submitter_id != auth.uid()
+        AND cv.status = 'pending'
     )
   );
 
