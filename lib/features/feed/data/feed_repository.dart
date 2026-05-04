@@ -61,6 +61,36 @@ class FeedRepository {
     await _supabase.from('posts').delete().eq('id', postId);
   }
 
+  /// 조과 앨범에서 선택한 여러 Post를 하나의 피드 포스트로 공유.
+  /// 이미지는 재업로드 없이 기존 URL을 그대로 참조한다.
+  Future<void> shareMultiplePostsToFeed({
+    required List<Post> posts,
+    String? caption,
+    String? location,
+    double? length,
+    double? weight,
+    String? leagueId,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not logged in');
+    final first = posts.first;
+    await _supabase.from('posts').insert({
+      'user_id': userId,
+      'image_url': first.imageUrl,
+      'image_urls': posts.map((p) => p.imageUrl).toList(),
+      'aspect_ratio': first.aspectRatio,
+      'caption': caption,
+      'fish_type': first.fishType,
+      'location': location,
+      'league_id': leagueId,
+      'is_personal_record': false,
+      'length': length,
+      'weight': weight,
+      'catch_count': posts.length,
+      'is_lunker': length != null && length >= 50.0,
+    });
+  }
+
   // 리그 조과 / 개인 기록을 일반 피드에 공유
   Future<void> sharePostToFeed(Post post) async {
     final userId = _supabase.auth.currentUser?.id;
