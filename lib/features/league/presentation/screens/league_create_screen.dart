@@ -39,8 +39,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _introCtrl = TextEditingController();
 
   DateTimeRange? _dateRange;
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
+  final _startTimeCtrl = TextEditingController();
+  final _endTimeCtrl = TextEditingController();
   String _rule = '최대어';
   int _catchLimit = 1; // 0=전체, 1,3,5,10
   bool _isPublic = true;
@@ -89,10 +89,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _introCtrl.text = l.description ?? '';
       _dateRange = DateTimeRange(start: l.startTime, end: l.endTime);
       if (l.startTime.hour != 0 || l.startTime.minute != 0) {
-        _startTime = TimeOfDay(hour: l.startTime.hour, minute: l.startTime.minute);
+        _startTimeCtrl.text = '${l.startTime.hour.toString().padLeft(2, '0')}:${l.startTime.minute.toString().padLeft(2, '0')}';
       }
       if (l.endTime.hour != 0 || l.endTime.minute != 0) {
-        _endTime = TimeOfDay(hour: l.endTime.hour, minute: l.endTime.minute);
+        _endTimeCtrl.text = '${l.endTime.hour.toString().padLeft(2, '0')}:${l.endTime.minute.toString().padLeft(2, '0')}';
       }
       _rule = l.rule;
       _catchLimit = l.catchLimit;
@@ -120,6 +120,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     _shortDescCtrl.dispose();
     _introCtrl.dispose();
     _etcPrizeCtrl.dispose();
+    _startTimeCtrl.dispose();
+    _endTimeCtrl.dispose();
     super.dispose();
   }
 
@@ -174,8 +176,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTime),
-          endTime: _applyTime(_dateRange!.end, _endTime),
+          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
+          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
           entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
           maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
           rule: _rule,
@@ -208,8 +210,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTime),
-          endTime: _applyTime(_dateRange!.end, _endTime),
+          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
+          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
           entryFee: int.tryParse(_feeCtrl.text) ?? 0,
           maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
@@ -283,9 +285,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   }
 
   // ── 날짜+시간 조합 ──
-  DateTime _applyTime(DateTime date, TimeOfDay? time) {
-    if (time == null) return date;
-    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  DateTime _applyTime(DateTime date, String timeText) {
+    final parts = timeText.trim().split(':');
+    if (parts.length != 2) return date;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return date;
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
   // ── 날짜 선택 ──
@@ -309,31 +315,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       },
     );
     if (result != null) setState(() => _dateRange = result);
-  }
-
-  // ── 시간 선택 ──
-  Future<void> _pickStartTime() async {
-    final result = await showTimePicker(
-      context: context,
-      initialTime: _startTime ?? const TimeOfDay(hour: 6, minute: 0),
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      ),
-    );
-    if (result != null) setState(() => _startTime = result);
-  }
-
-  Future<void> _pickEndTime() async {
-    final result = await showTimePicker(
-      context: context,
-      initialTime: _endTime ?? const TimeOfDay(hour: 18, minute: 0),
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      ),
-    );
-    if (result != null) setState(() => _endTime = result);
   }
 
   // ── 지도 선택 팝업 ──
@@ -809,87 +790,38 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: _pickStartTime,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _startTime != null ? context.accentColor : divColor,
-                            ),
+                      child: TextField(
+                        controller: _startTimeCtrl,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          hintText: '시작 (09:00)',
+                          hintStyle: TextStyle(color: sub, fontSize: 13),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 12, right: 8),
+                            child: Icon(LucideIcons.clock, size: 14, color: sub),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.clock, size: 14,
-                                  color: _startTime != null ? context.accentColor : sub),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _startTime != null
-                                      ? '${_startTime!.hour.toString().padLeft(2, '0')}:${_startTime!.minute.toString().padLeft(2, '0')}'
-                                      : '시작 시간',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: _startTime != null
-                                        ? (context.isDark ? Colors.white : Colors.black)
-                                        : sub,
-                                    fontWeight: _startTime != null ? FontWeight.w600 : FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              if (_startTime != null)
-                                GestureDetector(
-                                  onTap: () => setState(() => _startTime = null),
-                                  behavior: HitTestBehavior.opaque,
-                                  child: Icon(Icons.close_rounded, size: 14, color: sub),
-                                ),
-                            ],
-                          ),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text('~', style: TextStyle(color: sub, fontSize: 14)),
+                    ),
                     Expanded(
-                      child: GestureDetector(
-                        onTap: _pickEndTime,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _endTime != null ? context.accentColor : divColor,
-                            ),
+                      child: TextField(
+                        controller: _endTimeCtrl,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          hintText: '종료 (18:00)',
+                          hintStyle: TextStyle(color: sub, fontSize: 13),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 12, right: 8),
+                            child: Icon(LucideIcons.clock, size: 14, color: sub),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.clock, size: 14,
-                                  color: _endTime != null ? context.accentColor : sub),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _endTime != null
-                                      ? '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')}'
-                                      : '종료 시간',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: _endTime != null
-                                        ? (context.isDark ? Colors.white : Colors.black)
-                                        : sub,
-                                    fontWeight: _endTime != null ? FontWeight.w600 : FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              if (_endTime != null)
-                                GestureDetector(
-                                  onTap: () => setState(() => _endTime = null),
-                                  behavior: HitTestBehavior.opaque,
-                                  child: Icon(Icons.close_rounded, size: 14, color: sub),
-                                ),
-                            ],
-                          ),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         ),
                       ),
                     ),
