@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../feed/data/post_model.dart';
 
@@ -71,9 +72,30 @@ class CatchReviewItem extends StatelessWidget {
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      _measureText(),
-                      style: TextStyle(fontSize: 12, color: sub),
+                    Row(
+                      children: [
+                        Text(
+                          _measureText(),
+                          style: TextStyle(fontSize: 12, color: sub),
+                        ),
+                        if (post.reviewStatus == 'approved') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(LucideIcons.badgeCheck, size: 10, color: Colors.green[700]),
+                              const SizedBox(width: 2),
+                              Text('인증',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.green[700])),
+                            ]),
+                          ),
+                        ],
+                      ],
                     ),
                     if (_isHeld)
                       Padding(

@@ -236,6 +236,23 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                       ]),
                     ),
                   ],
+                  if (post.reviewStatus == 'approved') ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(LucideIcons.badgeCheck, size: 11, color: Colors.green[700]),
+                        const SizedBox(width: 3),
+                        Text('인증',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green[700])),
+                      ]),
+                    ),
+                  ],
                 ]),
               ),
             ),
