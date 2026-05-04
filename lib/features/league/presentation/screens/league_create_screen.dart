@@ -39,6 +39,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _introCtrl = TextEditingController();
 
   DateTimeRange? _dateRange;
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
   String _rule = '최대어';
   int _catchLimit = 1; // 0=전체, 1,3,5,10
   bool _isPublic = true;
@@ -86,6 +88,12 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _shortDescCtrl.text = l.shortDescription ?? '';
       _introCtrl.text = l.description ?? '';
       _dateRange = DateTimeRange(start: l.startTime, end: l.endTime);
+      if (l.startTime.hour != 0 || l.startTime.minute != 0) {
+        _startTime = TimeOfDay(hour: l.startTime.hour, minute: l.startTime.minute);
+      }
+      if (l.endTime.hour != 0 || l.endTime.minute != 0) {
+        _endTime = TimeOfDay(hour: l.endTime.hour, minute: l.endTime.minute);
+      }
       _rule = l.rule;
       _catchLimit = l.catchLimit;
       _isPublic = l.isPublic;
@@ -166,8 +174,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _dateRange!.start,
-          endTime: _dateRange!.end,
+          startTime: _applyTime(_dateRange!.start, _startTime),
+          endTime: _applyTime(_dateRange!.end, _endTime),
           entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
           maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
           rule: _rule,
@@ -200,8 +208,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _dateRange!.start,
-          endTime: _dateRange!.end,
+          startTime: _applyTime(_dateRange!.start, _startTime),
+          endTime: _applyTime(_dateRange!.end, _endTime),
           entryFee: int.tryParse(_feeCtrl.text) ?? 0,
           maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
@@ -274,6 +282,12 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     return lines.isEmpty ? null : lines.join('\n');
   }
 
+  // ── 날짜+시간 조합 ──
+  DateTime _applyTime(DateTime date, TimeOfDay? time) {
+    if (time == null) return date;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
   // ── 날짜 선택 ──
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
@@ -295,6 +309,31 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       },
     );
     if (result != null) setState(() => _dateRange = result);
+  }
+
+  // ── 시간 선택 ──
+  Future<void> _pickStartTime() async {
+    final result = await showTimePicker(
+      context: context,
+      initialTime: _startTime ?? TimeOfDay.now(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (result != null) setState(() => _startTime = result);
+  }
+
+  Future<void> _pickEndTime() async {
+    final result = await showTimePicker(
+      context: context,
+      initialTime: _endTime ?? TimeOfDay.now(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (result != null) setState(() => _endTime = result);
   }
 
   // ── 지도 선택 팝업 ──
