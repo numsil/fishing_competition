@@ -525,7 +525,7 @@ class _RecordChip extends StatelessWidget {
 }
 
 // ── 개인 기록 탭 ─────────────────────────────────────────
-class _PersonalRecordTab extends ConsumerWidget {
+class _PersonalRecordTab extends ConsumerStatefulWidget {
   const _PersonalRecordTab({
     required this.isDark,
     required this.accent,
@@ -537,7 +537,40 @@ class _PersonalRecordTab extends ConsumerWidget {
   final Color accent, sub, cardBg, divColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PersonalRecordTab> createState() => _PersonalRecordTabState();
+}
+
+class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
+  bool _selectMode = false;
+  final List<Post> _orderedSelected = [];
+
+  void _toggleSelect(Post post) {
+    setState(() {
+      final already = _orderedSelected.any((p) => p.id == post.id);
+      if (already) {
+        _orderedSelected.removeWhere((p) => p.id == post.id);
+      } else {
+        if (_orderedSelected.length >= 5) return;
+        _orderedSelected.add(post);
+      }
+    });
+  }
+
+  void _exitSelectMode() {
+    setState(() {
+      _selectMode = false;
+      _orderedSelected.clear();
+    });
+  }
+
+  bool get isDark => widget.isDark;
+  Color get accent => widget.accent;
+  Color get sub => widget.sub;
+  Color get cardBg => widget.cardBg;
+  Color get divColor => widget.divColor;
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(myProfileProvider);
     final postsAsync = ref.watch(myPersonalRecordsProvider);
 
@@ -595,6 +628,23 @@ class _PersonalRecordTab extends ConsumerWidget {
                           const SizedBox(width: 6),
                           Text('내 조과 앨범 ${posts.length}장',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+                          const Spacer(),
+                          if (posts.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectMode = !_selectMode;
+                                  if (!_selectMode) _orderedSelected.clear();
+                                });
+                              },
+                              child: Text(
+                                _selectMode ? '취소' : '선택',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: accent),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -615,35 +665,86 @@ class _PersonalRecordTab extends ConsumerWidget {
                         delegate: SliverChildBuilderDelegate(
                           (_, i) {
                             final post = posts[i];
+                            final isSelected = _orderedSelected.any((p) => p.id == post.id);
+                            final selectedIndex = _orderedSelected.indexWhere((p) => p.id == post.id);
+                            final maxReached = _orderedSelected.length >= 5;
+                            final dimmed = _selectMode && !isSelected && maxReached;
+
                             return GestureDetector(
-                              onTap: () => context.push(AppRoutes.personalRecordDetail, extra: post),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CachedNetworkImage(
-                                    imageUrl: post.imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
-                                      color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                                      child: Icon(LucideIcons.image, size: 24, color: sub),
-                                    ),
-                                  ),
-                                  if (post.isLunker)
-                                    Positioned(
-                                      bottom: 4, right: 4,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.gold,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          post.length != null ? '${post.length}cm' : '런커',
-                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black),
-                                        ),
+                              onTap: () {
+                                if (_selectMode) {
+                                  if (!isSelected && maxReached) return;
+                                  _toggleSelect(post);
+                                } else {
+                                  context.push(AppRoutes.personalRecordDetail, extra: post);
+                                }
+                              },
+                              child: Opacity(
+                                opacity: dimmed ? 0.4 : 1.0,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CachedNetworkImage(
+                                      imageUrl: post.imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                                        child: Icon(LucideIcons.image, size: 24, color: sub),
                                       ),
                                     ),
-                                ],
+                                    // 선택 오버레이
+                                    if (_selectMode && isSelected)
+                                      Container(color: Colors.blue.withValues(alpha: 0.35)),
+                                    // 선택 순번 뱃지
+                                    if (_selectMode)
+                                      Positioned(
+                                        top: 6, right: 6,
+                                        child: isSelected
+                                            ? Container(
+                                                width: 22, height: 22,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: Colors.white, width: 1.5),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    '${selectedIndex + 1}',
+                                                    style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w800),
+                                                  ),
+                                                ),
+                                              )
+                                            : Container(
+                                                width: 22, height: 22,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: Colors.white, width: 1.5),
+                                                  color: Colors.black.withValues(alpha: 0.3),
+                                                ),
+                                              ),
+                                      ),
+                                    // 런커 뱃지
+                                    if (post.isLunker)
+                                      Positioned(
+                                        bottom: 4, right: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.gold,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            post.length != null ? '${post.length}cm' : '런커',
+                                            style: const TextStyle(
+                                                fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -660,77 +761,111 @@ class _PersonalRecordTab extends ConsumerWidget {
             error: (e, _) => Center(child: Text('불러오기 실패: $e', style: TextStyle(color: sub))),
           ),
         ),
-        // ── 하단 고정 버튼 (카메라 + 앨범) ──
+        // ── 하단 고정 버튼 (카메라 + 앨범 / 선택 모드) ──
         Positioned(
           left: 16, right: 16, bottom: 16,
-          child: Row(
-            children: [
-              // 앨범 버튼
-              SizedBox(
-                width: 54, height: 54,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    File? picked;
-                    try {
-                      final img = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 85,
-                        maxWidth: 1280,
-                      );
-                      if (img != null) picked = File(img.path);
-                    } catch (e) {
-                      if (context.mounted) AppSnackBar.error(context, '갤러리 실행 실패: $e');
-                      return;
-                    }
-                    if (picked == null || !context.mounted) return;
-                    await context.push(AppRoutes.personalCatch, extra: picked);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    side: BorderSide(color: accent.withValues(alpha: 0.6)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-                  ),
-                  child: Icon(Icons.photo_library_rounded, size: 22, color: accent),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // 카메라 버튼
-              Expanded(
-                child: SizedBox(
+          child: _selectMode
+              ? SizedBox(
                   height: 54,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      File? captured;
-                      try {
-                        final picked = await ImagePicker().pickImage(
-                          source: ImageSource.camera,
-                          imageQuality: 85,
-                          maxWidth: 1280,
-                        );
-                        if (picked != null) captured = File(picked.path);
-                      } catch (e) {
-                        if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
-                        return;
-                      }
-                      if (captured == null || !context.mounted) return;
-                      await context.push(AppRoutes.personalCatch, extra: captured);
-                    },
-                    icon: const Icon(Icons.camera_alt_rounded, size: 22),
-                    label: const Text('사진 촬영하기',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: ElevatedButton(
+                    onPressed: _orderedSelected.isEmpty
+                        ? null
+                        : () async {
+                            final ctx = context;
+                            final result = await ctx.push<bool>(
+                              AppRoutes.albumBundleShare,
+                              extra: List<Post>.from(_orderedSelected),
+                            );
+                            if (result == true && mounted) {
+                              _exitSelectMode();
+                              // ignore: use_build_context_synchronously
+                              AppSnackBar.success(ctx, '피드에 공유되었습니다 🎣');
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
+                      backgroundColor:
+                          _orderedSelected.isEmpty ? null : accent,
                       foregroundColor: isDark ? Colors.black : Colors.white,
-                      elevation: 6,
-                      shadowColor: accent.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(
+                      _orderedSelected.isEmpty
+                          ? '사진을 선택하세요'
+                          : '${_orderedSelected.length}장 선택됨 · 피드에 공유하기',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                   ),
+                )
+              : Row(
+                  children: [
+                    // 앨범 버튼
+                    SizedBox(
+                      width: 54, height: 54,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          File? picked;
+                          try {
+                            final img = await ImagePicker().pickImage(
+                              source: ImageSource.gallery,
+                              imageQuality: 85,
+                              maxWidth: 1280,
+                            );
+                            if (img != null) picked = File(img.path);
+                          } catch (e) {
+                            if (context.mounted) AppSnackBar.error(context, '갤러리 실행 실패: $e');
+                            return;
+                          }
+                          if (picked == null || !context.mounted) return;
+                          await context.push(AppRoutes.personalCatch, extra: picked);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(color: accent.withValues(alpha: 0.6)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+                        ),
+                        child: Icon(Icons.photo_library_rounded, size: 22, color: accent),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // 카메라 버튼
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            File? captured;
+                            try {
+                              final picked = await ImagePicker().pickImage(
+                                source: ImageSource.camera,
+                                imageQuality: 85,
+                                maxWidth: 1280,
+                              );
+                              if (picked != null) captured = File(picked.path);
+                            } catch (e) {
+                              if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
+                              return;
+                            }
+                            if (captured == null || !context.mounted) return;
+                            await context.push(AppRoutes.personalCatch, extra: captured);
+                          },
+                          icon: const Icon(Icons.camera_alt_rounded, size: 22),
+                          label: const Text('사진 촬영하기',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accent,
+                            foregroundColor: isDark ? Colors.black : Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ],
     );
