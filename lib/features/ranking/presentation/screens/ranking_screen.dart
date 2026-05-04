@@ -27,7 +27,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 4, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -57,7 +57,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
                 tabs: [
                   const Tab(text: '리그'),
                   const Tab(text: '개인'),
-                  const Tab(text: '이달의'),
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -88,7 +87,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
         children: [
           _LeagueScoreTab(isDark: context.isDark, accent: context.accentColor),
           _PersonalScoreTab(isDark: context.isDark, accent: context.accentColor),
-          _MonthlyTab(isDark: context.isDark, accent: context.accentColor),
           const VerificationTab(),
         ],
       ),

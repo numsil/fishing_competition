@@ -25,20 +25,43 @@ class VerificationRepository {
         .single();
     final verifId = verif['id'] as String;
 
-    // 2. 적격 유저 풀 조회 (본인 제외)
-    final candidates = await _supabase
+    // 2. 인증자 권한 유저 최대 5명 (is_verifier=true, 본인 제외)
+    final verifierCandidates = await _supabase
         .from('users')
         .select('id')
+        .eq('is_verifier', true)
         .neq('id', submitterId)
-        .limit(200);
+        .limit(20);
 
-    if (candidates.isEmpty) return;
+    final verifiers = List<Map<String, dynamic>>.from(verifierCandidates);
+    verifiers.shuffle();
+    final selectedVerifiers = verifiers.take(5).toList();
 
-    final ids = List<Map<String, dynamic>>.from(candidates);
-    ids.shuffle();
-    final selected = ids.take(10).toList();
+    // 3. 나머지 자리를 랜덤 유저로 채우기 (인증자 + 본인 제외)
+    final verifierIds = selectedVerifiers.map((v) => v['id'] as String).toList();
+    final needed = 10 - selectedVerifiers.length;
 
-    // 3. verification_votes 생성
+    final List<Map<String, dynamic>> selectedRandom;
+    if (needed > 0) {
+      final excludeIds = [...verifierIds, submitterId];
+      final excludeFilter = '(${excludeIds.map((id) => '"$id"').join(',')})';
+      final randomCandidates = await _supabase
+          .from('users')
+          .select('id')
+          .not('id', 'in', excludeFilter)
+          .limit(200);
+
+      final randomPool = List<Map<String, dynamic>>.from(randomCandidates);
+      randomPool.shuffle();
+      selectedRandom = randomPool.take(needed).toList();
+    } else {
+      selectedRandom = [];
+    }
+
+    final selected = [...selectedVerifiers, ...selectedRandom];
+    if (selected.isEmpty) return;
+
+    // 4. verification_votes 생성
     final votes = selected.map((u) => {
       'verification_id': verifId,
       'voter_id': u['id'],
