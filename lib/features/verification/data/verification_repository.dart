@@ -10,7 +10,14 @@ class VerificationRepository {
 
   // 조과 제출 후 호출 - 인증 요청 생성 + 랜덤 10명 배정
   Future<void> createVerificationRequest(String postId, String submitterId) async {
-    // 1. catch_verifications 생성
+    // 1. catch_verifications 생성 (idempotent - 이미 존재하면 기존 ID 반환)
+    final existing = await _supabase
+        .from('catch_verifications')
+        .select('id')
+        .eq('post_id', postId)
+        .maybeSingle();
+    if (existing != null) return; // 이미 인증 요청이 있음
+
     final verif = await _supabase
         .from('catch_verifications')
         .insert({'post_id': postId, 'submitter_id': submitterId})

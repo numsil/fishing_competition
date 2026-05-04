@@ -122,7 +122,7 @@ class RankingRepository {
   }
 
   List<ScoreRankingEntry> _buildEntries(Map<String, Map<String, dynamic>> userMap) {
-    return userMap.entries
+    final entries = userMap.entries
         .map((e) => ScoreRankingEntry(
               userId: e.key,
               username: e.value['username'] as String,
@@ -130,9 +130,9 @@ class RankingRepository {
               score: e.value['score'] as int,
             ))
         .where((e) => e.score > 0)
-        .toList()
-      ..sort((a, b) => b.score.compareTo(a.score))
-      ..take(10);
+        .toList();
+    entries.sort((a, b) => b.score.compareTo(a.score));
+    return entries.take(10).toList();
   }
 
   int _calcScore(double length) {

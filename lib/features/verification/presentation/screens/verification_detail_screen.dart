@@ -21,14 +21,19 @@ class _VerificationDetailScreenState
     extends ConsumerState<VerificationDetailScreen> {
   bool _loading = false;
 
-  String get _userId => Supabase.instance.client.auth.currentUser!.id;
+  String? get _userId => Supabase.instance.client.auth.currentUser?.id;
 
   Future<void> _vote(String vote) async {
     setState(() => _loading = true);
     try {
+      final uid = _userId;
+      if (uid == null) {
+        AppSnackBar.error(context, '로그인이 필요합니다');
+        return;
+      }
       await ref
           .read(verificationRepositoryProvider)
-          .submitVote(widget.request.id, _userId, vote);
+          .submitVote(widget.request.id, uid, vote);
       ref.invalidate(myPendingVerificationsProvider);
       ref.invalidate(myVerificationHistoryProvider);
       if (mounted) Navigator.of(context).pop(true);
