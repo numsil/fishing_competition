@@ -72,68 +72,115 @@ class DmListScreen extends ConsumerWidget {
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(dmConversationsProvider),
-            child: ListView.separated(
+            child: ListView.builder(
               itemCount: conversations.length,
-              separatorBuilder: (_, __) => Divider(
-                height: 0.5,
-                thickness: 0.5,
-                indent: 76,
-                color: context.isDark ? const Color(0xFF222222) : const Color(0xFFEEEEEE),
-              ),
               itemBuilder: (context, i) {
                 final conv = conversations[i];
-                return InkWell(
-                  onTap: () => context.push(
-                    AppRoutes.dmChat,
-                    extra: conv,
+                final dividerColor = context.isDark
+                    ? const Color(0xFF222222)
+                    : const Color(0xFFEEEEEE);
+
+                return Dismissible(
+                  key: ValueKey(conv.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    color: Colors.red,
+                    child: const Icon(Icons.delete_outline,
+                        color: Colors.white, size: 24),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        UserAvatar(
-                          username: conv.otherUsername,
-                          avatarUrl: conv.otherAvatarUrl,
-                          radius: 26,
-                          isDark: context.isDark,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  onDismissed: (_) {
+                    ref.read(dmRepositoryProvider).hideConversation(conv.id);
+                    ref.invalidate(dmConversationsProvider);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: () =>
+                            context.push(AppRoutes.dmChat, extra: conv),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
                             children: [
-                              Text(
-                                conv.otherUsername,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  UserAvatar(
+                                    username: conv.otherUsername,
+                                    avatarUrl: conv.otherAvatarUrl,
+                                    radius: 26,
+                                    isDark: context.isDark,
+                                  ),
+                                  if (conv.hasUnread)
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0084FF),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: context.isDark
+                                                ? AppColors.darkBg
+                                                : Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      conv.otherUsername,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      conv.lastMessage ?? '대화를 시작해보세요',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: conv.lastMessage != null
+                                            ? (context.isDark
+                                                ? const Color(0xFFAAAAAA)
+                                                : const Color(0xFF888888))
+                                            : sub,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 3),
+                              const SizedBox(width: 8),
                               Text(
-                                conv.lastMessage ?? '대화를 시작해보세요',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: conv.lastMessage != null
-                                      ? (context.isDark
-                                          ? const Color(0xFFAAAAAA)
-                                          : const Color(0xFF888888))
-                                      : sub,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                _formatTime(conv.lastMessageAt),
+                                style: TextStyle(fontSize: 11, color: sub),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatTime(conv.lastMessageAt),
-                          style: TextStyle(fontSize: 11, color: sub),
+                      ),
+                      if (i < conversations.length - 1)
+                        Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          indent: 76,
+                          color: dividerColor,
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 );
               },
