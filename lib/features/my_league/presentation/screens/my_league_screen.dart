@@ -476,6 +476,16 @@ class _ActiveLeagueCard extends StatelessWidget {
                 Icon(LucideIcons.calendar, size: 12, color: sub),
                 const SizedBox(width: 4),
                 Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
+                if (league.startTime.hour != 0 || league.startTime.minute != 0 ||
+                    league.endTime.hour != 0 || league.endTime.minute != 0) ...[
+                  const SizedBox(width: 12),
+                  Icon(LucideIcons.clock, size: 12, color: sub),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${DateFormat('HH:mm').format(league.startTime)} ~ ${DateFormat('HH:mm').format(league.endTime)}',
+                    style: TextStyle(fontSize: 12, color: sub),
+                  ),
+                ],
               ],
             ),
           ),
@@ -627,7 +637,7 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
           child: postsAsync.when(
             skipLoadingOnReload: true,
             data: (posts) {
-              final totalCatches = posts.fold<int>(0, (s, p) => s + p.catchCount);
+              final verifiedCount = posts.where((p) => p.reviewStatus == 'approved').length;
               final lunkerCount = posts.where((p) => p.isLunker).length;
               final speciesCount = posts.map((p) => p.fishType).toSet().length;
               double? maxLen;
@@ -652,7 +662,7 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                         cardBg: cardBg,
                         divColor: divColor,
                         postsCount: posts.length,
-                        totalCatches: totalCatches,
+                        verifiedCount: verifiedCount,
                         lunkerCount: lunkerCount,
                         speciesCount: speciesCount,
                         maxLength: maxLen,
@@ -784,6 +794,19 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                                             style: const TextStyle(
                                                 fontSize: 8, fontWeight: FontWeight.w800, color: Colors.black),
                                           ),
+                                        ),
+                                      ),
+                                    // 인증 뱃지
+                                    if (post.reviewStatus == 'approved')
+                                      Positioned(
+                                        bottom: 4, left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withValues(alpha: 0.85),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Icon(LucideIcons.badgeCheck, size: 12, color: Colors.white),
                                         ),
                                       ),
                                   ],
@@ -924,7 +947,7 @@ class _CatchDashboard extends StatelessWidget {
     required this.cardBg,
     required this.divColor,
     required this.postsCount,
-    required this.totalCatches,
+    required this.verifiedCount,
     required this.lunkerCount,
     required this.speciesCount,
     required this.maxLength,
@@ -934,7 +957,7 @@ class _CatchDashboard extends StatelessWidget {
 
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
-  final int postsCount, totalCatches, lunkerCount, speciesCount;
+  final int postsCount, verifiedCount, lunkerCount, speciesCount;
   final double? maxLength;
   final Post? maxPost;
   final int anglerScore;
@@ -965,7 +988,7 @@ class _CatchDashboard extends StatelessWidget {
                 children: [
                   _SummaryItem(value: '$postsCount', label: '기록', accent: accent),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '$totalCatches', label: '총 마릿수', accent: accent),
+                  _SummaryItem(value: '$verifiedCount', label: '인증 조과', accent: Colors.green),
                   _Divider(divColor: divColor),
                   _SummaryItem(value: '$lunkerCount', label: '런커', accent: AppColors.gold),
                   _Divider(divColor: divColor),
@@ -1294,6 +1317,16 @@ class _MyLeagueCard extends ConsumerWidget {
                   Icon(Icons.calendar_today_outlined, size: 12, color: sub),
                   const SizedBox(width: 3),
                   Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
+                  if (league.startTime.hour != 0 || league.startTime.minute != 0 ||
+                      league.endTime.hour != 0 || league.endTime.minute != 0) ...[
+                    const SizedBox(width: 10),
+                    Icon(Icons.access_time_rounded, size: 12, color: sub),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${DateFormat('HH:mm').format(league.startTime)} ~ ${DateFormat('HH:mm').format(league.endTime)}',
+                      style: TextStyle(fontSize: 12, color: sub),
+                    ),
+                  ],
                 ],
               ),
             ),
