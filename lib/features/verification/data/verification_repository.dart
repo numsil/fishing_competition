@@ -23,7 +23,7 @@ class VerificationRepository {
         .from('users')
         .select('id')
         .neq('id', submitterId)
-        .limit(50);
+        .limit(200);
 
     if (candidates.isEmpty) return;
 
@@ -167,7 +167,7 @@ Future<List<VerificationRequest>> myPendingVerifications(
 ) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];
-  return ref.watch(verificationRepositoryProvider).getPendingForMe(userId);
+  return ref.read(verificationRepositoryProvider).getPendingForMe(userId);
 }
 
 @riverpod
@@ -176,5 +176,5 @@ Future<List<VerificationRequest>> myVerificationHistory(
 ) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];
-  return ref.watch(verificationRepositoryProvider).getMyVerificationHistory(userId);
+  return ref.read(verificationRepositoryProvider).getMyVerificationHistory(userId);
 }
