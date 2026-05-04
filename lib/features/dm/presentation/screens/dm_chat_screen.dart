@@ -41,17 +41,25 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
         .streamMessages(widget.conversation.id)
         .listen((msgs) {
       if (!mounted) return;
-      final shouldScroll = _isNearBottom || msgs.length > _messages.length;
+      final hasNew = msgs.length > _messages.length;
+      final shouldScroll = _isNearBottom || hasNew;
       setState(() {
         _messages = msgs;
         _isLoading = false;
       });
       if (shouldScroll) _scrollToBottom();
+      // 채팅방 열린 상태에서 새 메시지 수신 시 즉시 읽음 처리
+      if (hasNew) {
+        ref.read(dmRepositoryProvider).markAsRead(widget.conversation.id);
+      }
     });
   }
 
   @override
   void dispose() {
+    // 채팅방 나갈 때 배지 즉시 갱신
+    ref.invalidate(hasUnreadDmsProvider);
+    ref.invalidate(dmConversationsProvider);
     _sub?.cancel();
     _ctrl.dispose();
     _scrollCtrl.dispose();
