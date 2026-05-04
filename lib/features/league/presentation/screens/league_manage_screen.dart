@@ -400,7 +400,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
               ),
 
               // ── 참가자 초대 버튼 ────────────────────────────────
-              if (status != LeagueManageStatus.ended)
+              if (status == LeagueManageStatus.upcoming)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: SizedBox(
