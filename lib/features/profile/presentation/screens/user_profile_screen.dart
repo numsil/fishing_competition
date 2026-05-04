@@ -56,6 +56,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             otherUsername: otherUsername,
             otherAvatarUrl: otherAvatarUrl,
             lastMessageAt: DateTime.now(),
+            hasUnread: false,
           ),
         );
       }
