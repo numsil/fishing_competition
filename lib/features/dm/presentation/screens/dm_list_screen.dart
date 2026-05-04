@@ -6,7 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -89,18 +89,16 @@ class DmListScreen extends ConsumerWidget {
                     extentRatio: 0.22,
                     children: [
                       CustomSlidableAction(
-                        onPressed: (context) async {
-                          final confirmed = await showConfirmDialog(
-                            context,
+                        onPressed: (ctx) async {
+                          await showDeleteConfirmSheet(
+                            ctx,
                             title: '대화방 삭제',
                             content: '${conv.otherUsername}와의 대화를 삭제할까요?\n상대방이 새 메시지를 보내면 다시 나타납니다.',
-                            confirmText: '삭제',
-                            confirmColor: Colors.red,
+                            onConfirmed: () {
+                              ref.read(dmRepositoryProvider).hideConversation(conv.id);
+                              ref.invalidate(dmConversationsProvider);
+                            },
                           );
-                          if (confirmed) {
-                            ref.read(dmRepositoryProvider).hideConversation(conv.id);
-                            ref.invalidate(dmConversationsProvider);
-                          }
                         },
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,

@@ -1,0 +1,119 @@
+<h2>피드 검색 설계 — 전체 플로우</h2>
+<p class="subtitle">상태 전환과 UI 구조를 확인해주세요</p>
+
+<div class="section">
+  <div class="split" style="gap:12px;align-items:flex-start">
+
+    <!-- 상태 1: 기본 피드 -->
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">① 기본 상태</div>
+      <div class="mockup-body" style="padding:0;background:#0d0d0d;font-family:sans-serif">
+        <!-- AppBar -->
+        <div style="background:#0d0d0d;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1a1a1a">
+          <span style="color:#fff;font-size:12px;font-weight:700;letter-spacing:1px">nakstar</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="width:20px;height:20px;border-radius:50%;background:#4A9ECC;display:flex;align-items:center;justify-content:center"><span style="color:#000;font-size:10px;font-weight:700">+</span></div>
+            <span style="color:#fff;font-size:12px">♡</span>
+            <span style="color:#fff;font-size:13px">🔍</span>
+            <span style="color:#fff;font-size:12px">✉</span>
+          </div>
+        </div>
+        <!-- 즐겨찾기 바 -->
+        <div style="padding:6px 10px;border-bottom:1px solid #1a1a1a">
+          <div style="color:#777;font-size:9px;margin-bottom:5px">★ 즐겨찾기</div>
+          <div style="display:flex;gap:8px">
+            <div style="text-align:center"><div style="width:34px;height:34px;border-radius:50%;background:#222;margin:0 auto 3px"></div><div style="color:#666;font-size:8px">충주호</div></div>
+            <div style="text-align:center"><div style="width:34px;height:34px;border-radius:50%;background:#222;margin:0 auto 3px"></div><div style="color:#666;font-size:8px">김민준</div></div>
+            <div style="text-align:center"><div style="width:34px;height:34px;border-radius:50%;background:#222;margin:0 auto 3px"></div><div style="color:#666;font-size:8px">소양강</div></div>
+          </div>
+        </div>
+        <!-- 피드 -->
+        <div style="padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #1a1a1a">
+          <div style="width:22px;height:22px;border-radius:50%;background:#222"></div>
+          <span style="color:#aaa;font-size:10px;font-weight:700">김민준</span>
+        </div>
+        <div style="background:#222;height:60px;display:flex;align-items:center;justify-content:center"><span style="color:#444;font-size:9px">📷</span></div>
+        <div style="padding:5px 10px;color:#666;font-size:9px">#배스 #루어낚시</div>
+      </div>
+    </div>
+
+    <!-- 화살표 -->
+    <div style="padding-top:60px;color:#4A9ECC;font-size:18px;font-weight:700">→</div>
+
+    <!-- 상태 2: 검색 활성화 -->
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">② 🔍 탭 → 검색 활성</div>
+      <div class="mockup-body" style="padding:0;background:#0d0d0d;font-family:sans-serif">
+        <!-- AppBar: 로고 숨김, 검색바 전체 차지 -->
+        <div style="background:#0d0d0d;padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1a1a1a">
+          <div style="flex:1;background:#1c1c1e;border-radius:18px;padding:5px 10px;display:flex;align-items:center;gap:5px;border:1px solid #4A9ECC">
+            <span style="color:#4A9ECC;font-size:10px">🔍</span>
+            <span style="color:#555;font-size:10px">유저명 또는 #태그...</span>
+          </div>
+          <span style="color:#4A9ECC;font-size:10px;font-weight:600">취소</span>
+        </div>
+        <!-- 즐겨찾기 숨김, 전체 피드 표시 -->
+        <div style="padding:5px 10px;color:#666;font-size:9px;border-bottom:1px solid #1a1a1a">전체 피드</div>
+        <div style="padding:7px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #1a1a1a">
+          <div style="width:22px;height:22px;border-radius:50%;background:#222"></div>
+          <span style="color:#aaa;font-size:10px;font-weight:700">김민준</span>
+        </div>
+        <div style="background:#222;height:55px;display:flex;align-items:center;justify-content:center"><span style="color:#444;font-size:9px">📷</span></div>
+        <div style="padding:5px 10px;color:#666;font-size:9px">#배스 #루어낚시</div>
+      </div>
+    </div>
+
+    <!-- 화살표 -->
+    <div style="padding-top:60px;color:#4A9ECC;font-size:18px;font-weight:700">→</div>
+
+    <!-- 상태 3: 검색 결과 -->
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">③ "배스" 입력 → 필터 결과</div>
+      <div class="mockup-body" style="padding:0;background:#0d0d0d;font-family:sans-serif">
+        <!-- AppBar with query -->
+        <div style="background:#0d0d0d;padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1a1a1a">
+          <div style="flex:1;background:#1c1c1e;border-radius:18px;padding:5px 10px;display:flex;align-items:center;gap:5px;border:1px solid #4A9ECC">
+            <span style="color:#4A9ECC;font-size:10px">🔍</span>
+            <span style="color:#fff;font-size:10px">배스</span>
+            <span style="color:#555;font-size:10px;margin-left:auto">✕</span>
+          </div>
+          <span style="color:#4A9ECC;font-size:10px;font-weight:600">취소</span>
+        </div>
+        <!-- 결과 카운트 -->
+        <div style="padding:5px 10px;color:#888;font-size:9px;border-bottom:1px solid #1a1a1a">결과 12개</div>
+        <!-- 필터된 포스트들 -->
+        <div style="padding:6px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #1a1a1a">
+          <div style="width:22px;height:22px;border-radius:50%;background:#222"></div>
+          <span style="color:#aaa;font-size:10px;font-weight:700">배스왕김씨</span>
+          <span style="color:#4A9ECC;font-size:8px;margin-left:4px">← 이름 매칭</span>
+        </div>
+        <div style="background:#222;height:45px;display:flex;align-items:center;justify-content:center"><span style="color:#444;font-size:9px">📷</span></div>
+        <div style="padding:4px 10px;font-size:8px"><span style="color:#666">caption... </span><span style="color:#4A9ECC;font-weight:700">#배스</span><span style="color:#666"> ← 태그 매칭</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>필터 로직</h3>
+  <div style="background:#1a1a1a;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:11px;color:#aaa;line-height:1.8">
+    <span style="color:#666">// 클라이언트 사이드 — Supabase 쿼리 없음</span><br>
+    posts<span style="color:#4A9ECC">.where</span>((p) =&gt;<br>
+    &nbsp;&nbsp;p.username.<span style="color:#4A9ECC">contains</span>(query, ignoreCase: true)<br>
+    &nbsp;&nbsp;<span style="color:#e06c75">||</span><br>
+    &nbsp;&nbsp;p.caption.<span style="color:#4A9ECC">extractHashtags</span>().<span style="color:#4A9ECC">any</span>((tag) =&gt;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;tag.<span style="color:#4A9ECC">contains</span>(query, ignoreCase: true))<br>
+    )
+  </div>
+</div>
+
+<div class="section">
+  <h3>상태 변수 (FeedScreen 로컬)</h3>
+  <div style="background:#1a1a1a;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:11px;color:#aaa;line-height:1.8">
+    <span style="color:#e06c75">bool</span> _isSearching = <span style="color:#98c379">false</span>;<br>
+    <span style="color:#e06c75">String</span> _searchQuery = <span style="color:#98c379">''</span>;<br>
+    <span style="color:#e06c75">TextEditingController</span> _searchCtrl;<br>
+    <span style="color:#666">// feedPostsProvider 캐시 변경 없음 ✅</span>
+  </div>
+</div>

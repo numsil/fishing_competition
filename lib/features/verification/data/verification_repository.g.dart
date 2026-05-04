@@ -26,8 +26,25 @@ final verificationRepositoryProvider =
 // ignore: unused_element
 typedef VerificationRepositoryRef =
     AutoDisposeProviderRef<VerificationRepository>;
+String _$isAdminUserHash() => r'32002fef4d5bc197e0b0c26c0a99dc7acbd2bb75';
+
+/// See also [isAdminUser].
+@ProviderFor(isAdminUser)
+final isAdminUserProvider = AutoDisposeFutureProvider<bool>.internal(
+  isAdminUser,
+  name: r'isAdminUserProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$isAdminUserHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef IsAdminUserRef = AutoDisposeFutureProviderRef<bool>;
 String _$myPendingVerificationsHash() =>
-    r'28b517c3c2bb1425737aed3d1a16ebbc9502c4d2';
+    r'5f5e8e2a3c46ab1df62b5503e7f88b87a238e6fb';
 
 /// See also [myPendingVerifications].
 @ProviderFor(myPendingVerifications)
@@ -47,7 +64,7 @@ final myPendingVerificationsProvider =
 typedef MyPendingVerificationsRef =
     AutoDisposeFutureProviderRef<List<VerificationRequest>>;
 String _$myVerificationHistoryHash() =>
-    r'6afb3f27c8936761c3d57b8dfd00822ff14f4f4c';
+    r'1ce194a31453577f0e2b99d3e48df62c2000bb3b';
 
 /// See also [myVerificationHistory].
 @ProviderFor(myVerificationHistory)

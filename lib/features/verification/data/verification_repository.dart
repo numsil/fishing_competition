@@ -98,6 +98,31 @@ class VerificationRepository {
     }).toList();
   }
 
+  // 운영자용 전체 pending 인증 조회
+  Future<List<VerificationRequest>> getAllPendingVerifications() async {
+    final rows = await _supabase
+        .from('catch_verifications')
+        .select(
+          'id, post_id, submitter_id, status, approve_count, reject_count, created_at, posts!inner(image_url, fish_type, length, weight, location, users!inner(username, avatar_url))'
+        )
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+
+    return rows.map((cv) {
+      final post = cv['posts'] as Map<String, dynamic>;
+      final user = post['users'] as Map<String, dynamic>;
+      return VerificationRequest.fromJson(cv).copyWith(
+        imageUrl: post['image_url'] as String? ?? '',
+        submitterName: user['username'] as String? ?? '',
+        submitterAvatar: user['avatar_url'] as String? ?? '',
+        fishType: post['fish_type'] as String? ?? '배스',
+        length: (post['length'] as num?)?.toDouble(),
+        weight: (post['weight'] as num?)?.toDouble(),
+        location: post['location'] as String?,
+      );
+    }).toList();
+  }
+
   // 투표 제출 + 결과 자동 판정
   Future<void> submitVote(String verificationId, String voterId, String vote) async {
     // 1. 투표 기록
@@ -192,11 +217,27 @@ VerificationRepository verificationRepository(VerificationRepositoryRef ref) {
 }
 
 @riverpod
+Future<bool> isAdminUser(IsAdminUserRef ref) async {
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+  if (userId == null) return false;
+  final row = await Supabase.instance.client
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+  return row?['role'] == 'admin';
+}
+
+@riverpod
 Future<List<VerificationRequest>> myPendingVerifications(
   MyPendingVerificationsRef ref,
 ) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];
+  final isAdmin = await ref.read(isAdminUserProvider.future);
+  if (isAdmin) {
+    return ref.read(verificationRepositoryProvider).getAllPendingVerifications();
+  }
   return ref.read(verificationRepositoryProvider).getPendingForMe(userId);
 }
 

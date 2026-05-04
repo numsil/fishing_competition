@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'score_card.dart';
 import 'user_avatar.dart';
 
-// ── 그랜드마스터: 심홍 + 골드 (LoL Grandmaster 스타일) ────
+// ── 그랜드마스터: 심홍 + 골드 ────────────────────────────
 const _gmColors = [
   Color(0xFF3D0000), Color(0xFFAA0000), Color(0xFFEE0000),
   Color(0xFFFF5500), Color(0xFFFFCC00), Color(0xFFFF5500),
   Color(0xFFEE0000), Color(0xFFAA0000), Color(0xFF3D0000),
 ];
-const _gmGlow   = Color(0xFFDD0000);
-const _gmGem    = Color(0xFFFFCC00);
+const _gmGlow = Color(0xFFDD0000);
+const _gmGem  = Color(0xFFFFCC00);
 
-// ── 레전드: 순금 + 백금 (LoL Challenger 스타일) ──────────
+// ── 레전드: 순금 + 백금 ──────────────────────────────────
 const _legendColors = [
   Color(0xFF3D2800), Color(0xFFAA7700), Color(0xFFFFCC00),
   Color(0xFFFFEE99), Color(0xFFFFFFFF), Color(0xFFFFEE99),
@@ -22,7 +22,13 @@ const _legendGlow = Color(0xFFFFCC00);
 const _legendGem  = Color(0xFFFFFFFF);
 
 // ── 마스터: 보라 + 글로우 ─────────────────────────────────
+const _masterColors = [
+  Color(0xFF1A0028), Color(0xFF6A0080), Color(0xFF9C27B0),
+  Color(0xFFCE93D8), Color(0xFF9C27B0), Color(0xFF6A0080),
+  Color(0xFF1A0028),
+];
 const _masterGlow = Color(0xFF9C27B0);
+const _masterGem  = Color(0xFFCE93D8);
 
 class TierAvatar extends StatefulWidget {
   const TierAvatar({
@@ -50,25 +56,25 @@ class _TierAvatarState extends State<TierAvatar>
     with SingleTickerProviderStateMixin {
   AnimationController? _ctrl;
 
+  Duration _duration() => Duration(
+    seconds: widget.score >= 20000 ? 2 : widget.score >= 10000 ? 3 : 4,
+  );
+
   @override
   void initState() {
     super.initState();
-    if (widget.score >= 10000) {
-      _ctrl = AnimationController(
-        vsync: this,
-        duration: Duration(seconds: widget.score >= 20000 ? 2 : 3),
-      )..repeat();
+    if (widget.score >= 5000) {
+      _ctrl = AnimationController(vsync: this, duration: _duration())
+        ..repeat();
     }
   }
 
   @override
   void didUpdateWidget(TierAvatar old) {
     super.didUpdateWidget(old);
-    if (widget.score >= 10000 && _ctrl == null) {
-      _ctrl = AnimationController(
-        vsync: this,
-        duration: Duration(seconds: widget.score >= 20000 ? 2 : 3),
-      )..repeat();
+    if (widget.score >= 5000 && _ctrl == null) {
+      _ctrl = AnimationController(vsync: this, duration: _duration())
+        ..repeat();
     }
   }
 
@@ -88,7 +94,6 @@ class _TierAvatarState extends State<TierAvatar>
       isDark: widget.isDark,
     );
 
-    // 레전드
     if (widget.score >= 20000) {
       return _FancyFrame(
         ctrl: _ctrl!,
@@ -102,7 +107,6 @@ class _TierAvatarState extends State<TierAvatar>
       );
     }
 
-    // 그랜드마스터
     if (widget.score >= 10000) {
       return _FancyFrame(
         ctrl: _ctrl!,
@@ -116,18 +120,19 @@ class _TierAvatarState extends State<TierAvatar>
       );
     }
 
-    // 마스터: 글로우 + 단색
     if (widget.score >= 5000) {
-      return _GlowFrame(
+      return _FancyFrame(
+        ctrl: _ctrl!,
         radius: widget.radius,
         bw: widget.borderWidth,
-        color: tier.color,
+        colors: _masterColors,
         glow: _masterGlow,
+        gem: _masterGem,
+        gemCount: 2,
         child: inner,
       );
     }
 
-    // 루키~다이아몬드: 단색 테두리
     return UserAvatar(
       username: widget.username,
       avatarUrl: widget.avatarUrl,
@@ -139,7 +144,7 @@ class _TierAvatarState extends State<TierAvatar>
   }
 }
 
-// ── 화려한 프레임 (GM / Legend) ───────────────────────────
+// ── 화려한 프레임 (Master / GM / Legend) ─────────────────
 class _FancyFrame extends AnimatedWidget {
   const _FancyFrame({
     required AnimationController ctrl,
@@ -172,36 +177,8 @@ class _FancyFrame extends AnimatedWidget {
           glow: glow,
           gem: gem,
           gemCount: gemCount,
-          rotation: t * 2 * pi,
+          progress: t,
         ),
-        child: Center(child: child),
-      ),
-    );
-  }
-}
-
-// ── 글로우 프레임 (Master) ────────────────────────────────
-class _GlowFrame extends StatelessWidget {
-  const _GlowFrame({
-    required this.radius,
-    required this.bw,
-    required this.color,
-    required this.glow,
-    required this.child,
-  });
-
-  final double radius, bw;
-  final Color color, glow;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = radius * 2;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _GlowPainter(color: color, glow: glow, bw: bw),
         child: Center(child: child),
       ),
     );
@@ -216,11 +193,11 @@ class _FancyPainter extends CustomPainter {
     required this.glow,
     required this.gem,
     required this.gemCount,
-    required this.rotation,
+    required this.progress,
   });
 
   final List<Color> colors;
-  final double bw, rotation;
+  final double bw, progress;
   final Color glow, gem;
   final int gemCount;
 
@@ -234,65 +211,60 @@ class _FancyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
     final rr = _rrect(size);
+    final rect = Offset.zero & size;
 
-    // 1. 외부 글로우
+    // 1. 외부 글로우 (정적)
     canvas.drawRRect(rr, Paint()
       ..color = glow.withValues(alpha: 0.55)
       ..maskFilter = MaskFilter.blur(BlurStyle.outer, bw * 2.0)
       ..style = PaintingStyle.stroke
       ..strokeWidth = bw);
 
-    // 2. 내부 글로우 (얇게)
+    // 2. 내부 글로우 (정적)
     canvas.drawRRect(rr, Paint()
       ..color = glow.withValues(alpha: 0.25)
       ..maskFilter = MaskFilter.blur(BlurStyle.inner, bw * 0.8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = bw);
 
-    // 3. 그라데이션 테두리
+    // 3. 그라데이션 테두리 — 테두리 모양 고정, 색상만 순환 회전
     canvas.drawRRect(rr, Paint()
       ..shader = SweepGradient(
         colors: colors,
-        startAngle: rotation,
-        endAngle: rotation + 2 * pi,
+        startAngle: -pi / 2,
+        endAngle: 3 * pi / 2,
+        transform: GradientRotation(progress * 2 * pi),
       ).createShader(rect)
       ..strokeWidth = bw
       ..style = PaintingStyle.stroke);
 
-    // 4. 보석 장식
+    // 4. 보석 (정적)
     _drawGems(canvas, size);
   }
 
   void _drawGems(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final cy = size.height / 2;
-    // 스쿼클에서 보석 위치: 테두리 중심선 위
-    final r = size.width / 2 - bw * 0.5;
-    final gs = bw * 1.1; // 보석 크기
+    final r  = size.width / 2 - bw * 0.5;
+    final gs = bw * 1.1;
 
     for (int i = 0; i < gemCount; i++) {
       final angle = (2 * pi * i / gemCount) - pi / 2;
-      // squircle 근사: 원형 + 약간 압축
       final mx = cx + cos(angle) * r * 0.91;
       final my = cy + sin(angle) * r * 0.91;
 
-      // 그림자
       canvas.drawPath(_diamond(mx, my, gs + 0.5),
           Paint()
             ..color = Colors.black.withValues(alpha: 0.45)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5));
 
-      // 외곽 (어두운 색)
       canvas.drawPath(_diamond(mx, my, gs + 0.3),
           Paint()..color = glow.withValues(alpha: 0.6));
 
-      // 보석 본체
       canvas.drawPath(_diamond(mx, my, gs),
           Paint()..color = gem);
 
-      // 하이라이트 (상단 작은 점)
       canvas.drawCircle(
         Offset(mx - gs * 0.15, my - gs * 0.3),
         gs * 0.22,
@@ -310,40 +282,5 @@ class _FancyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FancyPainter old) =>
-      old.rotation != rotation;
-}
-
-// ── Glow Painter (Master) ─────────────────────────────────
-class _GlowPainter extends CustomPainter {
-  const _GlowPainter({
-    required this.color,
-    required this.glow,
-    required this.bw,
-  });
-
-  final Color color, glow;
-  final double bw;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cr = (size.width / 2 - bw) * 0.32 + bw * 0.4;
-    final rr = RRect.fromRectAndRadius(
-      (Offset.zero & size).deflate(bw / 2),
-      Radius.circular(cr),
-    );
-
-    canvas.drawRRect(rr, Paint()
-      ..color = glow.withValues(alpha: 0.45)
-      ..maskFilter = MaskFilter.blur(BlurStyle.outer, bw * 1.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = bw);
-
-    canvas.drawRRect(rr, Paint()
-      ..color = color
-      ..strokeWidth = bw
-      ..style = PaintingStyle.stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant _GlowPainter old) => old.color != color;
+      old.progress != progress;
 }

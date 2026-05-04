@@ -1,0 +1,115 @@
+<h2>심사 기능 진입점 — 어디서 접근할까요?</h2>
+<p class="subtitle">리그 개설자가 조과 심사 화면에 어떻게 들어가야 할까요?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:12px;padding:16px;font-family:sans-serif;color:#fff;max-width:240px;margin:0 auto">
+        <div style="background:#0f3460;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;font-weight:600">🏆 낚시왕 대회 2026</div>
+        <div style="display:flex;gap:0;border-bottom:2px solid #333;margin-bottom:12px">
+          <div style="padding:8px 12px;font-size:11px;color:#aaa">랭킹</div>
+          <div style="padding:8px 12px;font-size:11px;color:#aaa">조과</div>
+          <div style="padding:8px 12px;font-size:11px;color:#e94560;border-bottom:2px solid #e94560;margin-bottom:-2px;font-weight:700">심사 ✓</div>
+          <div style="padding:8px 12px;font-size:11px;color:#aaa">정보</div>
+        </div>
+        <div style="background:#16213e;border-radius:8px;padding:10px">
+          <div style="font-size:11px;color:#e94560;font-weight:600;margin-bottom:8px">대기 중 3건</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="width:32px;height:32px;background:#333;border-radius:6px"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">김철수 · 45cm</div>
+              <div style="font-size:10px;color:#aaa">2분 전</div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <div style="background:#e94560;border-radius:4px;padding:3px 7px;font-size:10px">보류</div>
+              <div style="background:#27ae60;border-radius:4px;padding:3px 7px;font-size:10px">승인</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:32px;height:32px;background:#333;border-radius:6px"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">박영희 · 52cm</div>
+              <div style="font-size:10px;color:#aaa">15분 전</div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <div style="background:#e94560;border-radius:4px;padding:3px 7px;font-size:10px">보류</div>
+              <div style="background:#27ae60;border-radius:4px;padding:3px 7px;font-size:10px">승인</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 리그 탭으로 추가</h3>
+      <p>리그 상세 페이지에 "심사" 탭을 추가. 개설자만 볼 수 있고, 대기 중 건수 뱃지 표시.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:12px;padding:16px;font-family:sans-serif;color:#fff;max-width:240px;margin:0 auto">
+        <div style="background:#0f3460;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;font-weight:600">🏆 낚시왕 대회 2026</div>
+        <div style="display:flex;gap:0;border-bottom:2px solid #333;margin-bottom:12px">
+          <div style="padding:8px 12px;font-size:11px;color:#e94560;border-bottom:2px solid #e94560;margin-bottom:-2px;font-weight:700">랭킹</div>
+          <div style="padding:8px 12px;font-size:11px;color:#aaa">조과</div>
+          <div style="padding:8px 12px;font-size:11px;color:#aaa">정보</div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#16213e;border-radius:8px;margin-bottom:6px">
+            <div style="font-size:14px;font-weight:700;color:#f7c948;width:20px">1</div>
+            <div style="width:28px;height:28px;background:#333;border-radius:50%"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">김철수</div>
+              <div style="font-size:10px;color:#aaa">1,240점</div>
+            </div>
+            <div style="background:#e94560;border-radius:12px;padding:2px 8px;font-size:10px">심사 2 ▶</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#16213e;border-radius:8px;margin-bottom:6px">
+            <div style="font-size:14px;font-weight:700;color:#c0c0c0;width:20px">2</div>
+            <div style="width:28px;height:28px;background:#333;border-radius:50%"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">박영희</div>
+              <div style="font-size:10px;color:#aaa">980점</div>
+            </div>
+            <div style="background:#555;border-radius:12px;padding:2px 8px;font-size:10px">조과 보기 ▶</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 랭킹에서 참가자별 심사</h3>
+      <p>랭킹 목록에서 각 참가자를 탭하면 해당 참가자의 조과를 심사. 대기 중 조과가 있으면 뱃지 표시.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a2e;border-radius:12px;padding:16px;font-family:sans-serif;color:#fff;max-width:240px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600">🏆 낚시왕 대회 2026</div>
+          <div style="position:relative">
+            <div style="background:#333;border-radius:8px;padding:6px 10px;font-size:11px">⚙️ 관리</div>
+            <div style="position:absolute;top:-4px;right:-4px;background:#e94560;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center">3</div>
+          </div>
+        </div>
+        <div style="background:#16213e;border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="font-size:11px;color:#aaa;margin-bottom:8px">관리 메뉴</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="background:#0f3460;border-radius:6px;padding:8px 10px;font-size:11px;display:flex;justify-content:space-between">
+              <span>📋 조과 심사</span>
+              <span style="color:#e94560;font-weight:700">3건 대기</span>
+            </div>
+            <div style="background:#0f3460;border-radius:6px;padding:8px 10px;font-size:11px">👥 참가자 관리</div>
+            <div style="background:#0f3460;border-radius:6px;padding:8px 10px;font-size:11px">⚙️ 리그 설정</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 리그 관리 메뉴</h3>
+      <p>기존 "⚙️ 관리" 버튼에 "조과 심사" 항목 추가. 참가자 관리와 같은 맥락으로 관리 기능 통합.</p>
+    </div>
+  </div>
+
+</div>
