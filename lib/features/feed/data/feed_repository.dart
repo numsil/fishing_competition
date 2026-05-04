@@ -73,7 +73,9 @@ class FeedRepository {
   }) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
+    if (posts.isEmpty) throw ArgumentError('posts must not be empty');
     final first = posts.first;
+    // lure_type은 의도적으로 생략: 번들 공유는 여러 조과를 묶으므로 루어가 다를 수 있음
     await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': first.imageUrl,
@@ -84,10 +86,12 @@ class FeedRepository {
       'location': location,
       'league_id': leagueId,
       'is_personal_record': false,
+      'is_deleted': false,
       'length': length,
       'weight': weight,
       'catch_count': posts.length,
       'is_lunker': length != null && length >= 50.0,
+      'score': calculateFishScore(length),
     });
   }
 
