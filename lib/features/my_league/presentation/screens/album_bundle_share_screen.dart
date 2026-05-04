@@ -44,6 +44,9 @@ class _AlbumBundleShareScreenState
     if (first.length != null) {
       _lengthCtrl.text = first.length.toString();
     }
+    if (first.weight != null) {
+      _weightCtrl.text = first.weight.toString();
+    }
   }
 
   @override
@@ -332,6 +335,7 @@ class _AlbumBundleShareScreenState
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           inputFormatters: [
+                            // TODO: 전체 앱에서 소수점 입력 유효성 개선 필요 (#inherited)
                             FilteringTextInputFormatter.allow(
                                 RegExp(r'^\d*\.?\d*')),
                           ],
@@ -372,6 +376,7 @@ class _AlbumBundleShareScreenState
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           inputFormatters: [
+                            // TODO: 전체 앱에서 소수점 입력 유효성 개선 필요 (#inherited)
                             FilteringTextInputFormatter.allow(
                                 RegExp(r'^\d*\.?\d*')),
                           ],
