@@ -119,12 +119,7 @@ class _ActiveTabConsumer extends ConsumerWidget {
         final participated = myLeaguesMap['participated'] ?? [];
         final activeLeagues = participated
             .where((l) => l.status != 'completed' && l.status != 'canceled')
-            .toList()
-          ..sort((a, b) {
-            if (a.status == 'in_progress' && b.status != 'in_progress') return -1;
-            if (a.status != 'in_progress' && b.status == 'in_progress') return 1;
-            return 0;
-          });
+            .toList();
         return _ActiveTab(
           leagues: activeLeagues,
           isDark: isDark,
@@ -218,26 +213,61 @@ class _ActiveTab extends StatelessWidget {
       );
     }
 
+    final liveLeagues = leagues.where((l) => l.status == 'in_progress').toList();
+    final otherLeagues = leagues.where((l) => l.status != 'in_progress').toList();
+
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      children: [
-        _MySummaryCard(activeCount: leagues.length, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
-        const SizedBox(height: 20),
-        Text('참여중인 리그 ${leagues.length}개',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
-        const SizedBox(height: 10),
-        ...leagues.map((e) => _ActiveLeagueCard(
-              league: e,
-              isDark: isDark,
-              accent: accent,
-              sub: sub,
-              cardBg: cardBg,
-              divColor: divColor,
-            )),
-      ],
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          _MySummaryCard(activeCount: leagues.length, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
+
+          // ── 진행중 리그 섹션 ─────────────────────────
+          if (liveLeagues.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.liveRed,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('LIVE',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+              const SizedBox(width: 8),
+              Text('진행중 리그 ${liveLeagues.length}개',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+            ]),
+            const SizedBox(height: 10),
+            ...liveLeagues.map((e) => _ActiveLeagueCard(
+                  league: e,
+                  isDark: isDark,
+                  accent: accent,
+                  sub: sub,
+                  cardBg: cardBg,
+                  divColor: divColor,
+                )),
+          ],
+
+          // ── 참여중 리그 섹션 ─────────────────────────
+          if (otherLeagues.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('참여중인 리그 ${otherLeagues.length}개',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+            const SizedBox(height: 10),
+            ...otherLeagues.map((e) => _ActiveLeagueCard(
+                  league: e,
+                  isDark: isDark,
+                  accent: accent,
+                  sub: sub,
+                  cardBg: cardBg,
+                  divColor: divColor,
+                )),
+          ],
+        ],
       ),
     );
   }
