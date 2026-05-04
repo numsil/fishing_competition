@@ -812,10 +812,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       child: GestureDetector(
                         onTap: _pickStartTime,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
                             color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _startTime != null ? context.accentColor : divColor,
                             ),
@@ -842,6 +842,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               if (_startTime != null)
                                 GestureDetector(
                                   onTap: () => setState(() => _startTime = null),
+                                  behavior: HitTestBehavior.opaque,
                                   child: Icon(Icons.close_rounded, size: 14, color: sub),
                                 ),
                             ],
@@ -854,10 +855,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       child: GestureDetector(
                         onTap: _pickEndTime,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
                             color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _endTime != null ? context.accentColor : divColor,
                             ),
@@ -884,6 +885,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               if (_endTime != null)
                                 GestureDetector(
                                   onTap: () => setState(() => _endTime = null),
+                                  behavior: HitTestBehavior.opaque,
                                   child: Icon(Icons.close_rounded, size: 14, color: sub),
                                 ),
                             ],
