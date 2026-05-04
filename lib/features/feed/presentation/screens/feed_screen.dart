@@ -13,6 +13,7 @@ import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../dm/data/dm_repository.dart';
 import '../utils/feed_search_utils.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
@@ -292,11 +293,35 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
         ),
-        IconButton(
-          onPressed: () => context.push(AppRoutes.dm),
-          icon: Icon(LucideIcons.send,
-              color: isDark ? Colors.white : Colors.black, size: 22),
-          visualDensity: VisualDensity.compact,
+        Consumer(
+          builder: (context, ref, _) {
+            final hasUnread =
+                ref.watch(hasUnreadDmsProvider).valueOrNull ?? false;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: () => context.push(AppRoutes.dm),
+                  icon: Icon(LucideIcons.send,
+                      color: isDark ? Colors.white : Colors.black, size: 22),
+                  visualDensity: VisualDensity.compact,
+                ),
+                if (hasUnread)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(width: 4),
       ],
