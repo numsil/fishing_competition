@@ -267,26 +267,6 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
         colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
       ),
       actions: [
-        GestureDetector(
-          onTap: () => context.push(AppRoutes.upload),
-          child: Container(
-            width: 32,
-            height: 32,
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-            child: Icon(
-              LucideIcons.plus,
-              color: isDark ? Colors.black : Colors.white,
-              size: 20,
-            ),
-          ),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: Icon(LucideIcons.heart,
-              color: isDark ? Colors.white : Colors.black, size: 24),
-          visualDensity: VisualDensity.compact,
-        ),
         IconButton(
           onPressed: onSearchToggle,
           icon: Icon(LucideIcons.search,
@@ -323,7 +303,20 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             );
           },
         ),
-        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => context.push(AppRoutes.upload),
+          child: Container(
+            width: 30,
+            height: 30,
+            margin: const EdgeInsets.only(left: 4, right: 12),
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+            child: Icon(
+              LucideIcons.plus,
+              color: isDark ? Colors.black : Colors.white,
+              size: 18,
+            ),
+          ),
+        ),
       ],
     );
   }
