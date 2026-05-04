@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../screens/league_participant_detail_screen.dart';
 
 class LeagueRankingTab extends ConsumerWidget {
   const LeagueRankingTab({
