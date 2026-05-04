@@ -738,18 +738,20 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: TextField(
-                      controller: _captionCtrl,
-                      maxLines: 5,
-                      minLines: 3,
-                      autofocus: true,
-                      style: TextStyle(fontSize: 14, color: textColor),
-                      decoration: InputDecoration(
-                        hintText: '문구를 작성하거나 설문을 추가하세요...',
-                        hintStyle: TextStyle(color: sub, fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
+                    child: ClipRect(
+                      child: TextField(
+                        controller: _captionCtrl,
+                        maxLines: 5,
+                        minLines: 3,
+                        autofocus: true,
+                        style: TextStyle(fontSize: 14, color: textColor),
+                        decoration: InputDecoration(
+                          hintText: '문구를 작성하세요...',
+                          hintStyle: TextStyle(color: sub, fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.only(top: 2),
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ),
@@ -866,11 +868,14 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                       ),
                     ),
                   ),
-                  ref.watch(leaguesProvider).when(
+                  ref.watch(myJoinedLeaguesProvider).when(
                     data: (leagues) => Column(
-                      children: leagues
-                          .where((l) => l.status == 'recruiting' || l.status == 'in_progress')
-                          .map((l) {
+                      children: leagues.isEmpty
+                          ? [Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text('참가 중인 리그가 없습니다.', style: TextStyle(fontSize: 13, color: sub)),
+                            )]
+                          : leagues.map((l) {
                         final selected = _selectedLeagueId == l.id;
                         return InkWell(
                           onTap: () => setState(() => _selectedLeagueId = l.id),
@@ -908,7 +913,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             const SizedBox(height: 8),
             Divider(height: 1, color: divColor),
 
-            _SettingRow(label: '사람 태그', sub: sub, textColor: textColor, divColor: divColor),
             _SettingRow(label: '공개 범위', value: '전체 공개', sub: sub, textColor: textColor, divColor: divColor),
           ],
         ),

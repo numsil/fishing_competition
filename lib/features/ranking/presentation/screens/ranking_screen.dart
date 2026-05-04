@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/widgets/tier_avatar.dart';
 import '../../data/ranking_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../auth/data/auth_repository.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -31,146 +36,240 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('랭킹', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+        bottom: TabBar(
+          controller: _tab,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
+          tabs: const [Tab(text: '리그'), Tab(text: '개인'), Tab(text: '이달의')],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tab,
+        children: [
+          _LeagueScoreTab(isDark: context.isDark, accent: context.accentColor),
+          _PersonalScoreTab(isDark: context.isDark, accent: context.accentColor),
+          _MonthlyTab(isDark: context.isDark, accent: context.accentColor),
+        ],
+      ),
+    );
+  }
+}
 
-    return ref.watch(topRankingsProvider).when(
-      data: (rankings) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('랭킹', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-            bottom: TabBar(
-              controller: _tab,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-              tabs: const [Tab(text: '리그'), Tab(text: '지역'), Tab(text: '이달의')],
-            ),
-          ),
-          body: TabBarView(
-            controller: _tab,
+// ── 리그 점수 탭 ─────────────────────────────────────────
+class _LeagueScoreTab extends ConsumerWidget {
+  const _LeagueScoreTab({required this.isDark, required this.accent});
+  final bool isDark;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+    final myId = ref.watch(currentUserProvider)?.id;
+
+    return ref.watch(leagueScoreRankingProvider).when(
+      data: (entries) {
+        if (entries.isEmpty) {
+          return Center(child: Text('아직 리그 점수 기록이 없습니다', style: TextStyle(color: sub)));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(leagueScoreRankingProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              _LeagueTab(entries: rankings, isDark: context.isDark, accent: context.accentColor),
-              _RegionTab(entries: rankings, isDark: context.isDark, accent: context.accentColor),
-              _MonthlyTab(isDark: context.isDark, accent: context.accentColor),
+              _SeasonBadge(year: DateTime.now().year, accent: accent, isDark: isDark),
+              const SizedBox(height: 20),
+              _ScorePodium(entries: entries.take(3).toList(), isDark: isDark),
+              const SizedBox(height: 16),
+              ...entries.skip(3).toList().asMap().entries.map((e) => _ScoreRankRow(
+                    entry: e.value,
+                    rank: e.key + 4,
+                    isDark: isDark,
+                    accent: accent,
+                    sub: sub,
+                    isMe: e.value.userId == myId,
+                  )),
             ],
           ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, st) => Scaffold(body: Center(child: Text('오류: $e'))),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('오류: $e', style: TextStyle(color: sub))),
     );
   }
 }
 
-// ── 리그 탭 ─────────────────────────────────────────────
-class _LeagueTab extends StatelessWidget {
-  const _LeagueTab({required this.entries, required this.isDark, required this.accent});
-  final List<RankingEntry> entries;
+// ── 개인 점수 탭 ─────────────────────────────────────────
+class _PersonalScoreTab extends ConsumerWidget {
+  const _PersonalScoreTab({required this.isDark, required this.accent});
   final bool isDark;
   final Color accent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+    final myId = ref.watch(currentUserProvider)?.id;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 리그 선택 헤더
-        AppCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          radius: 12,
-          borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-          child: Row(
+    return ref.watch(personalScoreRankingProvider).when(
+      data: (entries) {
+        if (entries.isEmpty) {
+          return Center(child: Text('아직 개인 기록 점수가 없습니다', style: TextStyle(color: sub)));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(personalScoreRankingProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              Icon(LucideIcons.trophy, size: 16, color: accent),
-              const SizedBox(width: 8),
-              Text('2026 충주호 배스 오픈', style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
-              const Spacer(),
-              Row(children: [
-                Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.liveRed, shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-                const Text('LIVE', style: TextStyle(color: AppColors.liveRed, fontSize: 11, fontWeight: FontWeight.w800)),
-                const SizedBox(width: 4),
-                Icon(LucideIcons.chevronDown, size: 16, color: sub),
-              ]),
+              _SeasonBadge(year: DateTime.now().year, accent: accent, isDark: isDark),
+              const SizedBox(height: 20),
+              _ScorePodium(entries: entries.take(3).toList(), isDark: isDark),
+              const SizedBox(height: 16),
+              ...entries.skip(3).toList().asMap().entries.map((e) => _ScoreRankRow(
+                    entry: e.value,
+                    rank: e.key + 4,
+                    isDark: isDark,
+                    accent: accent,
+                    sub: sub,
+                    isMe: e.value.userId == myId,
+                  )),
             ],
           ),
-        ),
-        const SizedBox(height: 20),
-
-        // 상위 3
-        _Podium(entries: entries.take(3).toList(), isDark: isDark, accent: accent),
-        const SizedBox(height: 16),
-
-        // 4위~
-        ...entries.skip(3).toList().asMap().entries.map((e) => _RankRow(entry: e.value, rank: e.key + 4, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, isMe: false)),
-      ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('오류: $e', style: TextStyle(color: sub))),
     );
   }
 }
 
-class _Podium extends StatelessWidget {
-  const _Podium({required this.entries, required this.isDark, required this.accent});
-  final List<RankingEntry> entries;
-  final bool isDark;
+// ── 시즌 배지 ────────────────────────────────────────────
+class _SeasonBadge extends StatelessWidget {
+  const _SeasonBadge({required this.year, required this.accent, required this.isDark});
+  final int year;
   final Color accent;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(LucideIcons.calendar, size: 13, color: accent),
+          const SizedBox(width: 6),
+          Text('$year 시즌', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── 포디움 ───────────────────────────────────────────────
+class _ScorePodium extends StatelessWidget {
+  const _ScorePodium({required this.entries, required this.isDark});
+  final List<ScoreRankingEntry> entries;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox();
-    
-    final e = entries;
-    final heights = [100.0, 75.0, 55.0];
-    // 2위, 1위, 3위 순서인데 항목 수가 부족할 수 있음
-    final order = [];
-    if (e.length > 1) order.add(1); // 2위
-    if (e.isNotEmpty) order.add(0); // 1위
-    if (e.length > 2) order.add(2); // 3위
 
-    final medals = [AppColors.silver, AppColors.gold, AppColors.bronze];
+    // 화면 순서: 2위(좌) → 1위(중) → 3위(우)
+    final displayOrder = <int>[];
+    if (entries.length > 1) displayOrder.add(1); // 2위
+    if (entries.isNotEmpty) displayOrder.add(0); // 1위
+    if (entries.length > 2) displayOrder.add(2); // 3위
+
+    final medals = [AppColors.gold, AppColors.silver, AppColors.bronze];
+    // 포디움 바 높이: rank 기준 (1위=100, 2위=72, 3위=50)
+    final barHeights = [100.0, 72.0, 50.0];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisAlignment: MainAxisAlignment.center,
-      children: order.map((idx) {
+      children: displayOrder.map((idx) {
         final rank = idx + 1;
-        final entry = e[idx];
-        final pos = rank == 1 ? 1 : rank == 2 ? 0 : 2;
-        final medal = medals[pos];
+        final entry = entries[idx];
+        final medal = medals[idx];
+        final barH = barHeights[idx];
+        final isFirst = rank == 1;
 
         return Expanded(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (rank == 1) Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Icon(LucideIcons.crown, size: 22, color: AppColors.gold),
+              // 왕관 (1위만)
+              if (isFirst)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Icon(LucideIcons.crown, size: 20, color: AppColors.gold),
+                ),
+              // 아바타 (티어 스킨)
+              GestureDetector(
+                onTap: () => context.push('${AppRoutes.userProfile}/${entry.userId}'),
+                child: TierAvatar(
+                  username: entry.username,
+                  avatarUrl: entry.avatarUrl,
+                  score: entry.score,
+                  radius: isFirst ? 29 : 23,
+                  isDark: isDark,
+                  borderWidth: isFirst ? 3.0 : 2.5,
+                ),
               ),
+              const SizedBox(height: 8),
+              // 이름
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  entry.username,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: isFirst ? 13 : 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 2),
+              // 점수
+              Text(
+                '${entry.score}pt',
+                style: TextStyle(
+                  fontSize: isFirst ? 14 : 12,
+                  fontWeight: FontWeight.w900,
+                  color: medal,
+                ),
+              ),
+              const SizedBox(height: 6),
+              // 포디움 바
               Container(
-                width: rank == 1 ? 48 : 38,
-                height: rank == 1 ? 48 : 38,
+                height: barH,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: medal.withValues(alpha: 0.15),
-                  border: Border.all(color: medal, width: 2),
+                  color: medal.withValues(alpha: isDark ? 0.15 : 0.1),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  border: Border(
+                    top: BorderSide(color: medal, width: 3),
+                    left: BorderSide(color: medal.withValues(alpha: 0.3), width: 1),
+                    right: BorderSide(color: medal.withValues(alpha: 0.3), width: 1),
+                  ),
                 ),
                 child: Center(
-                  child: Text('$rank', style: TextStyle(fontSize: rank == 1 ? 22 : 18, fontWeight: FontWeight.w900, color: medal)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(entry.username, style: TextStyle(fontWeight: FontWeight.w700, fontSize: rank == 1 ? 13 : 12), overflow: TextOverflow.ellipsis),
-              Text('${entry.length}cm', style: TextStyle(fontSize: rank == 1 ? 14 : 12, fontWeight: FontWeight.w800, color: medal)),
-              const SizedBox(height: 4),
-              Container(
-                height: heights[pos],
-                margin: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  color: medal.withValues(alpha: 0.08),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  border: Border(top: BorderSide(color: medal.withValues(alpha: 0.4), width: 3)),
-                ),
-                child: Center(
-                  child: Text('$rank위', style: TextStyle(fontWeight: FontWeight.w900, color: medal, fontSize: 16)),
+                  child: Text(
+                    '$rank위',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: isFirst ? 18 : 15,
+                      color: medal,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -181,111 +280,78 @@ class _Podium extends StatelessWidget {
   }
 }
 
-class _RankRow extends StatelessWidget {
-  const _RankRow({required this.entry, required this.rank, required this.isDark, required this.accent, required this.sub, required this.cardBg, required this.isMe});
-  final RankingEntry entry;
+// ── 4위~ 행 ──────────────────────────────────────────────
+class _ScoreRankRow extends StatelessWidget {
+  const _ScoreRankRow({
+    required this.entry,
+    required this.rank,
+    required this.isDark,
+    required this.accent,
+    required this.sub,
+    required this.isMe,
+  });
+  final ScoreRankingEntry entry;
   final int rank;
   final bool isDark, isMe;
-  final Color accent, sub, cardBg;
+  final Color accent, sub;
 
   @override
   Widget build(BuildContext context) {
+    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: isMe ? accent.withValues(alpha: 0.07) : cardBg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isMe ? accent.withValues(alpha: 0.3) : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+          color: isMe
+              ? accent.withValues(alpha: 0.3)
+              : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
         ),
       ),
-      child: Row(
-        children: [
-          SizedBox(width: 28, child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w800, color: sub, fontSize: 16), textAlign: TextAlign.center)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Row(children: [
-              Text(entry.username, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              if (isMe) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                  child: Text('나', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent)),
+      child: Row(children: [
+        SizedBox(
+          width: 28,
+          child: Text('$rank',
+              style: TextStyle(fontWeight: FontWeight.w800, color: sub, fontSize: 15),
+              textAlign: TextAlign.center),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => context.push('${AppRoutes.userProfile}/${entry.userId}'),
+          child: TierAvatar(
+            username: entry.username,
+            avatarUrl: entry.avatarUrl,
+            score: entry.score,
+            radius: 19,
+            isDark: isDark,
+            borderWidth: 2.5,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Row(children: [
+            Text(entry.username,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            if (isMe) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
-            ]),
-          ),
-          Text('${entry.length}cm', style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 15)),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 지역 탭 ─────────────────────────────────────────────
-class _RegionTab extends StatelessWidget {
-  const _RegionTab({required this.entries, required this.isDark, required this.accent});
-  final List<RankingEntry> entries;
-  final bool isDark;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: entries.length,
-      itemBuilder: (_, i) {
-        final entry = entries[i];
-        final name = entry.location ?? '전국';
-        final top = entry.username;
-        final record = '${entry.length}cm';
-        final count = 1;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: AppCard(
-            padding: const EdgeInsets.all(16),
-            radius: 12,
-            borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-            child: Row(children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
-                shape: BoxShape.circle,
+                child: Text('나',
+                    style: TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.w800, color: accent)),
               ),
-              child: Center(child: Text('${i + 1}', style: TextStyle(fontWeight: FontWeight.w800, color: i < 3 ? accent : sub))),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              const SizedBox(height: 4),
-              Row(children: [
-                Icon(LucideIcons.user, size: 12, color: sub),
-                const SizedBox(width: 4),
-                Text('1위 $top ($record)', style: TextStyle(fontSize: 12, color: sub)),
-              ]),
-            ])),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(children: [
-                Icon(LucideIcons.users, size: 12, color: accent),
-                const SizedBox(width: 4),
-                Text('$count명 참여', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
-              ]),
-            ),
-            ]),
-          ),
-        );
-      },
+            ],
+          ]),
+        ),
+        Text('${entry.score}pt',
+            style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 15)),
+      ]),
     );
   }
 }
@@ -308,18 +374,17 @@ class _MonthlyTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 이달의 앵글러
         AppCard(
           padding: const EdgeInsets.all(24),
           radius: 20,
           borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
           child: Column(children: [
-            Text('4월의 앵글러', style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
+            Text('${DateTime.now().month}월의 앵글러',
+                style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -344,8 +409,7 @@ class _MonthlyTab extends StatelessWidget {
           ]),
         ),
         const SizedBox(height: 24),
-
-        Text('배지 보관함', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        const Text('배지 보관함', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 3,

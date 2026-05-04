@@ -40,6 +40,24 @@ final leaguesProvider = AutoDisposeFutureProvider<List<League>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LeaguesRef = AutoDisposeFutureProviderRef<List<League>>;
+String _$myJoinedLeaguesHash() => r'4b0f3c3280f1930217c70045880350cd4e2731ab';
+
+/// See also [myJoinedLeagues].
+@ProviderFor(myJoinedLeagues)
+final myJoinedLeaguesProvider =
+    AutoDisposeFutureProvider<List<League>>.internal(
+      myJoinedLeagues,
+      name: r'myJoinedLeaguesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$myJoinedLeaguesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef MyJoinedLeaguesRef = AutoDisposeFutureProviderRef<List<League>>;
 String _$isJoinedHash() => r'4b099d59414dbac4d5fa2aa8ebff80675c837f21';
 
 /// Copied from Dart SDK

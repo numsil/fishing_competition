@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
+import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
@@ -206,38 +207,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     ]),
                     const SizedBox(height: 16),
 
-                    // 앵글러 온도
-                    AppCard(
-                      padding: const EdgeInsets.all(14),
-                      radius: 14,
-                      borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                      child: Column(children: [
-                        Row(children: [
-                          Text('앵글러 온도',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: sub,
-                                  fontWeight: FontWeight.w600)),
-                          const Spacer(),
-                          Text('${profile.mannerTemperature}°',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: context.accentColor)),
-                        ]),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: profile.mannerTemperature / 100,
-                            backgroundColor: context.isDark
-                                ? AppColors.darkSurface2
-                                : AppColors.lightDivider,
-                            valueColor: AlwaysStoppedAnimation(context.accentColor),
-                            minHeight: 6,
-                          ),
-                        ),
-                      ]),
+                    ScoreCard(
+                      label: '리그 점수',
+                      icon: LucideIcons.trophy,
+                      score: profile.leagueScore,
+                      isDark: context.isDark,
+                      accent: context.accentColor,
+                    ),
+                    const SizedBox(height: 8),
+                    ScoreCard(
+                      label: '앵글러 점수',
+                      icon: LucideIcons.star,
+                      score: profile.anglerScore,
+                      isDark: context.isDark,
+                      accent: context.accentColor,
                     ),
                     const SizedBox(height: 10),
 

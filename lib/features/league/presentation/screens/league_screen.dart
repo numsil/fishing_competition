@@ -187,6 +187,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                             : '무료 참가',
                         status: stat,
                         rule: l.shortDescription ?? '',
+                        hostUsername: l.hostUsername,
                       );
                     },
                   ),
@@ -228,9 +229,10 @@ class _LeagueItem extends StatelessWidget {
     required this.prize,
     required this.status,
     required this.rule,
+    required this.hostUsername,
   });
 
-  final String id, title, location, date, prize, rule;
+  final String id, title, location, date, prize, rule, hostUsername;
   final int participants, max;
   final _Status status;
 
@@ -299,6 +301,12 @@ class _LeagueItem extends StatelessWidget {
                 Icon(LucideIcons.calendar, size: 12, color: sub),
                 const SizedBox(width: 4),
                 Text(date, style: TextStyle(fontSize: 12, color: sub)),
+                if (hostUsername.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Icon(LucideIcons.user, size: 12, color: sub),
+                  const SizedBox(width: 4),
+                  Text(hostUsername, style: TextStyle(fontSize: 12, color: sub)),
+                ],
               ],
             ),
             const SizedBox(height: 12),

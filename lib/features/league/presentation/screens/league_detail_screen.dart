@@ -211,8 +211,54 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                             fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 10),
-                  Text(league.title,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(league.title,
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                      ),
+                      if (league.hostUsername.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => context.push('${AppRoutes.userProfile}/${league.hostId}'),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '리그 개설자',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  UserAvatar(
+                                    username: league.hostUsername,
+                                    avatarUrl: league.hostAvatarUrl,
+                                    radius: 13,
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    league.hostUsername,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white70 : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Row(children: [
                     Icon(LucideIcons.mapPin, size: 14, color: accent),
@@ -353,6 +399,7 @@ class _RankingTab extends ConsumerWidget {
               entry: entries[i],
               leagueId: league.id,
               rule: league.rule,
+              catchLimit: league.catchLimit,
               isDark: isDark,
               accent: accent,
             ),
@@ -372,6 +419,7 @@ class _RankCard extends StatelessWidget {
     required this.entry,
     required this.leagueId,
     required this.rule,
+    required this.catchLimit,
     required this.isDark,
     required this.accent,
   });
@@ -379,6 +427,7 @@ class _RankCard extends StatelessWidget {
   final LeagueRankEntry entry;
   final String leagueId;
   final String rule;
+  final int catchLimit;
   final bool isDark;
   final Color accent;
 
@@ -390,25 +439,29 @@ class _RankCard extends StatelessWidget {
   }
 
   String get _mainValue {
-    switch (rule) {
-      case '마릿수':
-        return '${entry.totalCount}마리';
-      case '무게':
-        return entry.totalLength > 0 ? '${entry.totalLength.toStringAsFixed(0)}g' : '-';
-      case '합산 길이':
-        return entry.totalLength > 0 ? '${entry.totalLength.toStringAsFixed(1)}cm' : '-';
-      default: // 최대어
-        return entry.bestLength != null ? '${entry.bestLength}cm' : '-';
+    if (rule == '마릿수') return '${entry.totalCount}마리';
+    if (rule == '무게') {
+      return entry.totalLength > 0
+          ? '${entry.totalLength.toStringAsFixed(0)}g'
+          : '-';
     }
+    // 길이 계열: catch_limit=1이면 최대어 단독, 초과면 합산
+    if (catchLimit == 1) {
+      return entry.bestLength != null
+          ? '${entry.bestLength!.toStringAsFixed(1)}cm'
+          : '-';
+    }
+    return entry.totalLength > 0
+        ? '${entry.totalLength.toStringAsFixed(1)}cm'
+        : '-';
   }
 
   String get _mainLabel {
-    switch (rule) {
-      case '마릿수': return '마릿수';
-      case '무게': return '무게합산';
-      case '합산 길이': return '합산길이';
-      default: return '최대어';
-    }
+    if (rule == '마릿수') return '마릿수';
+    if (rule == '무게') return catchLimit == 1 ? '최대무게' : '무게합산';
+    if (catchLimit == 1) return '최대어';
+    if (catchLimit == 0) return '전체합산';
+    return '합산(${catchLimit}마리)';
   }
 
   @override
@@ -419,7 +472,7 @@ class _RankCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push(
         '/league/participant/$leagueId/${entry.userId}',
-        extra: LeagueParticipantArgs(entry: entry, rule: rule, rank: rank),
+        extra: LeagueParticipantArgs(entry: entry, rule: rule, catchLimit: catchLimit, rank: rank),
       ),
       child: Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -493,10 +546,15 @@ class _RankCard extends StatelessWidget {
             const SizedBox(height: 4),
             Wrap(spacing: 8, children: [
               _SubStat(icon: LucideIcons.fish, value: '${entry.totalCount}마리', sub: sub),
-              if (rule == '합산 길이' && entry.bestLength != null)
-                _SubStat(icon: LucideIcons.ruler, value: '최대 ${entry.bestLength}cm', sub: sub),
-              if (rule == '무게' && entry.bestLength != null)
-                _SubStat(icon: LucideIcons.scale, value: '최대 ${entry.bestLength}g', sub: sub),
+              // 합산 대회에서는 최대어 수치를 서브로 표시
+              if (catchLimit > 1 && entry.bestLength != null)
+                _SubStat(
+                  icon: rule == '무게' ? LucideIcons.scale : LucideIcons.ruler,
+                  value: rule == '무게'
+                      ? '최대 ${entry.bestLength!.toStringAsFixed(0)}g'
+                      : '최대 ${entry.bestLength!.toStringAsFixed(1)}cm',
+                  sub: sub,
+                ),
             ]),
           ]),
         ),

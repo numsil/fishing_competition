@@ -111,6 +111,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
       );
       ref.invalidate(leagueRankingProvider(widget.league.id));
       ref.invalidate(leagueDetailProvider(widget.league.id));
+      ref.invalidate(leagueUserPostsProvider((widget.league.id, user.id)));
       ref.invalidate(feedPostsProvider);
       ref.invalidate(myPostsProvider);
       if (mounted) {

@@ -342,13 +342,7 @@ class _InstaPost extends ConsumerStatefulWidget {
   ConsumerState<_InstaPost> createState() => _InstaPostState();
 }
 
-class _InstaPostState extends ConsumerState<_InstaPost>
-    with SingleTickerProviderStateMixin {
-  bool _liked = false;
-  bool _showHeart = false;
-  late AnimationController _heartCtrl;
-  late Animation<double> _heartAnim;
-
+class _InstaPostState extends ConsumerState<_InstaPost> {
   // 댓글 목록 (로컬 상태)
   late List<_Comment> _comments;
 
@@ -356,45 +350,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
   void initState() {
     super.initState();
     _comments = [];
-    _heartCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _heartAnim = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.4), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _heartCtrl, curve: Curves.easeOut));
-    _heartCtrl.addStatusListener((s) {
-      if (s == AnimationStatus.completed) {
-        setState(() => _showHeart = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _heartCtrl.dispose();
-    super.dispose();
-  }
-
-  void _doubleTapLike() {
-    setState(() => _showHeart = true);
-    _heartCtrl.forward(from: 0);
-    if (!_liked) _toggleLike();
-  }
-
-  Future<void> _toggleLike() async {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-    final wasLiked = _liked;
-    setState(() => _liked = !wasLiked);
-    try {
-      await ref.read(feedRepositoryProvider).toggleLike(widget.post.id, user.id);
-      ref.invalidate(feedPostsProvider);
-    } catch (_) {
-      if (mounted) setState(() => _liked = wasLiked);
-    }
   }
 
   /// 캡션에서 해시태그(#으로 시작하는 단어)를 제거한 텍스트 반환
@@ -453,7 +408,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
     final iconColor = isDark ? Colors.white : Colors.black;
     final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = isDark ? AppColors.darkBg : Colors.white;
-    final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
     final commentCount = p.commentsCount;
 
     return Column(
@@ -562,18 +516,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
           post: p,
           isDark: isDark,
           accent: accent,
-          onDoubleTap: _doubleTapLike,
-          overlay: (_showHeart && p.videoUrl == null)
-              ? AnimatedBuilder(
-                  animation: _heartAnim,
-                  builder: (_, __) => Center(
-                    child: Transform.scale(
-                      scale: _heartAnim.value,
-                      child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 80),
-                    ),
-                  ),
-                )
-              : null,
         ),
 
         // ── 액션 버튼 ──
@@ -582,18 +524,6 @@ class _InstaPostState extends ConsumerState<_InstaPost>
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
           child: Row(
             children: [
-              // 좋아요
-              IconButton(
-                onPressed: _toggleLike,
-                icon: Icon(
-                  _liked ? LucideIcons.heart : LucideIcons.heart,
-                  color: _liked ? AppColors.error : iconColor,
-                  size: 24,
-                ),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-              ),
-              const SizedBox(width: 4),
               // 댓글
               IconButton(
                 onPressed: _openComments,
@@ -602,27 +532,18 @@ class _InstaPostState extends ConsumerState<_InstaPost>
                 padding: EdgeInsets.zero,
               ),
               const SizedBox(width: 4),
-              // 링크 복사
+              // 공유
               IconButton(
                 onPressed: () {
                   final link = 'https://huk.app/p/${p.id}';
                   Clipboard.setData(ClipboardData(text: link));
                                     AppSnackBar.info(context, '링크가 복사되었습니다');
                 },
-                icon: Icon(LucideIcons.link2, color: iconColor, size: 24),
+                icon: Icon(LucideIcons.share2, color: iconColor, size: 24),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               ),
             ],
-          ),
-        ),
-
-        // ── 좋아요 수 ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: Text(
-            '좋아요 $likeCount개',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ),
 
@@ -832,11 +753,13 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
   final _scrollCtrl = ScrollController();
   late List<_Comment> _localComments;
   String? _replyTo;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _localComments = List.from(widget.comments);
+    _localComments = [];
+    Future.microtask(() => _loadComments());
   }
 
   @override
@@ -844,6 +767,44 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     _ctrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    try {
+      final data = await ref.read(feedRepositoryProvider).getComments(widget.post.id);
+      if (!mounted) return;
+      final currentUser = ref.read(currentUserProvider);
+      setState(() {
+        _localComments = data.map((d) => _commentFromDb(d, currentUser?.id ?? '')).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  _Comment _commentFromDb(Map<String, dynamic> data, String currentUserId) {
+    final usersData = data['users'] as Map?;
+    final username = usersData?['username'] as String? ?? '알 수 없음';
+    final avatarUrl = usersData?['avatar_url'] as String? ?? '';
+    final userId = data['user_id'] as String? ?? '';
+    final createdAt = DateTime.tryParse(data['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
+    final diff = DateTime.now().difference(createdAt);
+    final timeAgo = diff.inSeconds < 60
+        ? '방금'
+        : diff.inMinutes < 60
+            ? '${diff.inMinutes}분 전'
+            : diff.inHours < 24
+                ? '${diff.inHours}시간 전'
+                : '${diff.inDays}일 전';
+    return _Comment(
+      user: username,
+      text: data['content'] as String? ?? '',
+      timeAgo: timeAgo,
+      isMe: userId == currentUserId,
+      userId: userId,
+      avatarUrl: avatarUrl,
+    );
   }
 
   Future<void> _submit() async {
@@ -874,6 +835,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
           text,
         );
         ref.invalidate(feedPostsProvider);
+        await _loadComments();
       } catch (_) {
         // 로컬 UI는 유지, 서버 저장 실패 무시
       }
@@ -931,27 +893,29 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
 
               // 댓글 목록
               Expanded(
-                child: _localComments.isEmpty
-                    ? Center(
-                        child: Text(
-                          '첫 번째 댓글을 달아보세요',
-                          style: TextStyle(color: subColor, fontSize: 14),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _localComments.length,
-                        itemBuilder: (_, i) => _CommentTile(
-                          comment: _localComments[i],
-                          isDark: isDark,
-                          accent: accent,
-                          subColor: subColor,
-                          onReply: (user) {
-                            setState(() => _replyTo = user);
-                          },
-                        ),
-                      ),
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator(color: accent, strokeWidth: 2))
+                    : _localComments.isEmpty
+                        ? Center(
+                            child: Text(
+                              '첫 번째 댓글을 달아보세요',
+                              style: TextStyle(color: subColor, fontSize: 14),
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollCtrl,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: _localComments.length,
+                            itemBuilder: (_, i) => _CommentTile(
+                              comment: _localComments[i],
+                              isDark: isDark,
+                              accent: accent,
+                              subColor: subColor,
+                              onReply: (user) {
+                                setState(() => _replyTo = user);
+                              },
+                            ),
+                          ),
               ),
 
               // 답글 대상 표시
@@ -1080,13 +1044,16 @@ class _CommentTile extends StatefulWidget {
 }
 
 class _CommentTileState extends State<_CommentTile> {
-  bool _liked = false;
-
   @override
   Widget build(BuildContext context) {
     final c = widget.comment;
     final isDark = widget.isDark;
-    final avatarBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+
+    void goToProfile() {
+      if (c.userId.isNotEmpty) {
+        context.push('${AppRoutes.userProfile}/${c.userId}');
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1094,21 +1061,13 @@ class _CommentTileState extends State<_CommentTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 아바타
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              width: 32, height: 32,
-              color: avatarBg,
-              child: Center(
-                child: Text(
-                  c.user[0],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-              ),
+          GestureDetector(
+            onTap: goToProfile,
+            child: UserAvatar(
+              username: c.user,
+              avatarUrl: c.avatarUrl.isNotEmpty ? c.avatarUrl : null,
+              radius: 16,
+              isDark: isDark,
             ),
           ),
           const SizedBox(width: 10),
@@ -1119,9 +1078,16 @@ class _CommentTileState extends State<_CommentTile> {
                 Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(
-                        text: c.user,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: GestureDetector(
+                          onTap: goToProfile,
+                          child: Text(
+                            c.user,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                        ),
                       ),
                       const TextSpan(text: '  '),
                       TextSpan(
@@ -1152,16 +1118,6 @@ class _CommentTileState extends State<_CommentTile> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // 댓글 좋아요
-          GestureDetector(
-            onTap: () => setState(() => _liked = !_liked),
-            child: Icon(
-              _liked ? LucideIcons.heart : LucideIcons.heart,
-              size: 16,
-              color: _liked ? AppColors.error : widget.subColor,
-            ),
-          ),
         ],
       ),
     );
@@ -1175,7 +1131,11 @@ class _Comment {
     required this.text,
     required this.timeAgo,
     this.isMe = false,
+    this.userId = '',
+    this.avatarUrl = '',
   });
   final String user, text, timeAgo;
   final bool isMe;
+  final String userId;
+  final String avatarUrl;
 }

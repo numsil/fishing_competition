@@ -29,6 +29,7 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   catchCount: (json['catch_count'] as num?)?.toInt() ?? 1,
   isLunker: json['is_lunker'] as bool? ?? false,
   isPersonalRecord: json['is_personal_record'] as bool? ?? false,
+  score: (json['score'] as num?)?.toInt() ?? 0,
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 
@@ -53,5 +54,6 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'catch_count': instance.catchCount,
   'is_lunker': instance.isLunker,
   'is_personal_record': instance.isPersonalRecord,
+  'score': instance.score,
   'created_at': instance.createdAt.toIso8601String(),
 };

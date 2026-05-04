@@ -116,6 +116,7 @@ GoRouter appRouter(Ref ref) {
               userId: state.pathParameters['userId']!,
               entry: args.entry,
               rule: args.rule,
+              catchLimit: args.catchLimit,
               rank: args.rank,
             ),
           );

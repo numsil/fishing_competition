@@ -30,6 +30,8 @@ abstract class League with _$League {
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // 조인된 데이터
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int participantsCount,
+    @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String hostUsername,
+    @JsonKey(includeFromJson: false, includeToJson: false) String? hostAvatarUrl,
   }) = _League;
 
   factory League.fromJson(Map<String, dynamic> json) => _$LeagueFromJson(json);

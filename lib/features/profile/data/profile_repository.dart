@@ -16,6 +16,8 @@ class UserProfile {
   final int postCount;
   final int lunkerCount;
   final double? maxFishLength;
+  final int leagueScore;   // 리그 참가 누적 점수
+  final int anglerScore;   // 개인기록 누적 점수
 
   UserProfile({
     required this.id,
@@ -27,6 +29,8 @@ class UserProfile {
     this.postCount = 0,
     this.lunkerCount = 0,
     this.maxFishLength,
+    this.leagueScore = 0,
+    this.anglerScore = 0,
   });
 }
 
@@ -34,6 +38,50 @@ class ProfileRepository {
   final SupabaseClient _supabase;
 
   ProfileRepository(this._supabase);
+
+  Future<int> _fetchLeagueScore(String userId) async {
+    final seasonStart = '${DateTime.now().year}-01-01T00:00:00';
+    final seasonEnd   = '${DateTime.now().year + 1}-01-01T00:00:00';
+
+    final results = await Future.wait([
+      // 조과 점수
+      _supabase
+          .from('posts')
+          .select('score')
+          .eq('user_id', userId)
+          .not('league_id', 'is', null)
+          .gte('created_at', seasonStart)
+          .lt('created_at', seasonEnd)
+          .or('is_deleted.is.null,is_deleted.eq.false'),
+      // 순위 보너스 (올해 종료된 리그)
+      _supabase
+          .from('league_participants')
+          .select('rank_bonus')
+          .eq('user_id', userId)
+          .gte('rank_bonus_earned_at', seasonStart)
+          .lt('rank_bonus_earned_at', seasonEnd),
+    ]);
+
+    final catchScore = (results[0] as List)
+        .fold<int>(0, (s, r) => s + ((r['score'] as int?) ?? 0));
+    final rankBonus = (results[1] as List)
+        .fold<int>(0, (s, r) => s + ((r['rank_bonus'] as int?) ?? 0));
+    return catchScore + rankBonus;
+  }
+
+  Future<int> _fetchAnglerScore(String userId) async {
+    final seasonStart = '${DateTime.now().year}-01-01T00:00:00';
+    final seasonEnd   = '${DateTime.now().year + 1}-01-01T00:00:00';
+    final res = await _supabase
+        .from('posts')
+        .select('score')
+        .eq('user_id', userId)
+        .eq('is_personal_record', true)
+        .gte('created_at', seasonStart)
+        .lt('created_at', seasonEnd)
+        .or('is_deleted.is.null,is_deleted.eq.false');
+    return (res as List).fold<int>(0, (sum, row) => sum + ((row['score'] as int?) ?? 0));
+  }
 
   /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
   Future<UserProfile> buildMyProfileFromPosts(List<Post> posts) async {
@@ -45,8 +93,14 @@ class ProfileRepository {
         .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
         .eq('id', userId)
         .single();
+    final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
 
-    return _buildUserProfile(userRes: userRes, posts: posts);
+    return _buildUserProfile(
+      userRes: userRes,
+      posts: posts,
+      leagueScore: scores[0],
+      anglerScore: scores[1],
+    );
   }
 
   Future<String> uploadAvatar(File imageFile) async {
@@ -126,14 +180,23 @@ class ProfileRepository {
         .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
         .eq('id', userId)
         .single();
+    final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
 
-    return _buildUserProfile(userRes: userRes, posts: posts, emailFallback: '');
+    return _buildUserProfile(
+      userRes: userRes,
+      posts: posts,
+      emailFallback: '',
+      leagueScore: scores[0],
+      anglerScore: scores[1],
+    );
   }
 
   UserProfile _buildUserProfile({
     required Map<String, dynamic> userRes,
     required List<Post> posts,
     String emailFallback = '',
+    int leagueScore = 0,
+    int anglerScore = 0,
   }) {
     int lunkerCount = 0;
     double? maxLen;
@@ -154,6 +217,8 @@ class ProfileRepository {
       postCount: posts.length,
       lunkerCount: lunkerCount,
       maxFishLength: maxLen,
+      leagueScore: leagueScore,
+      anglerScore: anglerScore,
     );
   }
 

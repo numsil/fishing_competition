@@ -254,6 +254,8 @@ class _MySummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(mySeasonStatsProvider);
 
+    final profileAsync = ref.watch(myProfileProvider);
+
     String rankValue = '...';
     String fishValue = '...';
     statsAsync.whenData((stats) {
@@ -266,6 +268,10 @@ class _MySummaryCard extends ConsumerWidget {
       rankValue = '-';
       fishValue = '-';
     }
+    final leagueScoreValue = profileAsync.maybeWhen(
+      data: (p) => '${p.leagueScore}pt',
+      orElse: () => '-',
+    );
 
     return AppCard(
       padding: const EdgeInsets.all(16),
@@ -290,7 +296,7 @@ class _MySummaryCard extends ConsumerWidget {
               _Divider(divColor: divColor),
               _SummaryItem(value: fishValue, label: '최대어', accent: accent),
               _Divider(divColor: divColor),
-              _SummaryItem(value: '-', label: '누적 점수', accent: accent),
+              _SummaryItem(value: leagueScoreValue, label: '누적 점수', accent: accent),
             ],
           ),
         ],
@@ -576,7 +582,7 @@ class _PersonalRecordTab extends ConsumerWidget {
                         speciesCount: speciesCount,
                         maxLength: maxLen,
                         maxPost: maxPost,
-                        mannerTemperature: profileAsync.valueOrNull?.mannerTemperature,
+                        anglerScore: profileAsync.valueOrNull?.anglerScore ?? 0,
                       ),
                     ),
                   ),
@@ -744,7 +750,7 @@ class _CatchDashboard extends StatelessWidget {
     required this.speciesCount,
     required this.maxLength,
     required this.maxPost,
-    required this.mannerTemperature,
+    required this.anglerScore,
   });
 
   final bool isDark;
@@ -752,7 +758,7 @@ class _CatchDashboard extends StatelessWidget {
   final int postsCount, totalCatches, lunkerCount, speciesCount;
   final double? maxLength;
   final Post? maxPost;
-  final double? mannerTemperature;
+  final int anglerScore;
 
   @override
   Widget build(BuildContext context) {
@@ -784,7 +790,7 @@ class _CatchDashboard extends StatelessWidget {
                   _Divider(divColor: divColor),
                   _SummaryItem(value: '$lunkerCount', label: '런커', accent: AppColors.gold),
                   _Divider(divColor: divColor),
-                  _SummaryItem(value: '$speciesCount', label: '어종', accent: accent),
+                  _SummaryItem(value: '${anglerScore}pt', label: '앵글러 점수', accent: accent),
                 ],
               ),
             ],
@@ -841,39 +847,6 @@ class _CatchDashboard extends StatelessWidget {
             ],
           ),
         ),
-        if (mannerTemperature != null) ...[
-          const SizedBox(height: 10),
-          AppCard(
-            padding: const EdgeInsets.all(14),
-            radius: 14,
-            borderColor: divColor,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(LucideIcons.thermometer, size: 14, color: sub),
-                    const SizedBox(width: 6),
-                    Text('앵글러 온도',
-                        style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Text('${mannerTemperature!.toStringAsFixed(1)}°',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: accent)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (mannerTemperature! / 100).clamp(0.0, 1.0),
-                    backgroundColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                    valueColor: AlwaysStoppedAnimation(accent),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }

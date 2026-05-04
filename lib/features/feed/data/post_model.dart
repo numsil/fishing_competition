@@ -27,10 +27,10 @@ abstract class Post with _$Post {
     @JsonKey(name: 'catch_count') @Default(1) int catchCount,
     @JsonKey(name: 'is_lunker') @Default(false) bool isLunker,
     @JsonKey(name: 'is_personal_record') @Default(false) bool isPersonalRecord,
+    @Default(0) int score,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // Joined user data (can be populated after fetch)
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('Unknown') String username,
-    @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int likesCount,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int commentsCount,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String avatarUrl,
   }) = _Post;

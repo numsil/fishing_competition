@@ -20,10 +20,12 @@ class LeagueParticipantArgs {
   const LeagueParticipantArgs({
     required this.entry,
     required this.rule,
+    required this.catchLimit,
     required this.rank,
   });
   final LeagueRankEntry entry;
   final String rule;
+  final int catchLimit;
   final int rank;
 }
 
@@ -35,6 +37,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
     required this.userId,
     required this.entry,
     required this.rule,
+    required this.catchLimit,
     required this.rank,
   });
 
@@ -42,6 +45,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
   final String userId;
   final LeagueRankEntry entry;
   final String rule;
+  final int catchLimit;
   final int rank;
 
   Color _rankColor(bool isDark) {
@@ -52,30 +56,34 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
   }
 
   String get _mainValue {
-    switch (rule) {
-      case '마릿수':
-        return '${entry.totalCount}마리';
-      case '무게':
-        return entry.totalLength > 0
-            ? '${entry.totalLength.toStringAsFixed(0)}g'
-            : '-';
-      case '합산 길이':
-        return entry.totalLength > 0
-            ? '${entry.totalLength.toStringAsFixed(1)}cm'
-            : '-';
-      default: // 최대어
-        return entry.bestLength != null ? '${entry.bestLength}cm' : '-';
+    if (rule == '마릿수') return '${entry.totalCount}마리';
+    if (rule == '무게') {
+      return entry.totalLength > 0
+          ? '${entry.totalLength.toStringAsFixed(0)}g'
+          : '-';
     }
+    // 길이 계열: catch_limit=1이면 최대어, 초과면 합산
+    if (catchLimit == 1) {
+      return entry.bestLength != null
+          ? '${entry.bestLength!.toStringAsFixed(1)}cm'
+          : '-';
+    }
+    return entry.totalLength > 0
+        ? '${entry.totalLength.toStringAsFixed(1)}cm'
+        : '-';
   }
 
   String get _mainLabel {
-    switch (rule) {
-      case '마릿수': return '총 마릿수';
-      case '무게': return '무게 합산';
-      case '합산 길이': return '합산 길이';
-      default: return '최대어';
-    }
+    if (rule == '마릿수') return '총 마릿수';
+    if (rule == '무게') return catchLimit == 1 ? '최대 무게' : '무게 합산';
+    if (catchLimit == 1) return '최대어';
+    if (catchLimit == 0) return '전체 합산';
+    return '합산(${catchLimit}마리)';
   }
+
+  // 우측 참고 카드: 합산 대회에서 최대어 단독 수치, 마릿수 대회에서도 표시
+  bool get _showBestCard =>
+      entry.bestLength != null && (catchLimit > 1 || rule == '마릿수');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -181,13 +189,13 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                           accent: context.accentColor,
                           isDark: context.isDark,
                         ),
-                        if (entry.bestLength != null) ...[
+                        if (_showBestCard) ...[
                           const SizedBox(width: 8),
                           _StatCard(
                             label: rule == '무게' ? '최대 무게' : '최대어',
                             value: rule == '무게'
                                 ? '${entry.bestLength!.toStringAsFixed(0)}g'
-                                : '${entry.bestLength}cm',
+                                : '${entry.bestLength!.toStringAsFixed(1)}cm',
                             accent: context.accentColor,
                             isDark: context.isDark,
                           ),

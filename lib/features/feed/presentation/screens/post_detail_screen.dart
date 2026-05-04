@@ -24,55 +24,8 @@ class PostDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<PostDetailScreen> createState() => _PostDetailScreenState();
 }
 
-class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
-    with SingleTickerProviderStateMixin {
-  bool _liked = false;
-  bool _showHeart = false;
-  late AnimationController _heartCtrl;
-  late Animation<double> _heartAnim;
+class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final List<_Comment> _comments = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _heartCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _heartAnim = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.4), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _heartCtrl, curve: Curves.easeOut));
-    _heartCtrl.addStatusListener((s) {
-      if (s == AnimationStatus.completed) setState(() => _showHeart = false);
-    });
-  }
-
-  @override
-  void dispose() {
-    _heartCtrl.dispose();
-    super.dispose();
-  }
-
-  void _doubleTapLike() {
-    setState(() => _showHeart = true);
-    _heartCtrl.forward(from: 0);
-    if (!_liked) _toggleLike();
-  }
-
-  Future<void> _toggleLike() async {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-    final wasLiked = _liked;
-    setState(() => _liked = !wasLiked);
-    try {
-      await ref.read(feedRepositoryProvider).toggleLike(widget.post.id, user.id);
-      ref.invalidate(feedPostsProvider);
-    } catch (_) {
-      if (mounted) setState(() => _liked = wasLiked);
-    }
-  }
 
   String _stripHashtags(String caption) {
     return caption.split(RegExp(r'\s+')).where((w) => !w.startsWith('#')).join(' ').trim();
@@ -147,7 +100,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
     final iconColor = context.isDark ? Colors.white : Colors.black;
     final subColor = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = context.isDark ? AppColors.darkBg : Colors.white;
-    final likeCount = _liked ? p.likesCount + 1 : p.likesCount;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -230,18 +182,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               post: p,
               isDark: context.isDark,
               accent: context.accentColor,
-              onDoubleTap: _doubleTapLike,
-              overlay: (_showHeart && p.videoUrl == null)
-                  ? AnimatedBuilder(
-                      animation: _heartAnim,
-                      builder: (_, __) => Center(
-                        child: Transform.scale(
-                          scale: _heartAnim.value,
-                          child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 80),
-                        ),
-                      ),
-                    )
-                  : null,
             ),
 
             // 액션 버튼
@@ -249,14 +189,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
               color: bgColor,
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
               child: Row(children: [
-                IconButton(
-                  onPressed: _toggleLike,
-                  icon: Icon(LucideIcons.heart,
-                      color: _liked ? AppColors.error : iconColor, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                ),
-                const SizedBox(width: 4),
                 IconButton(
                   onPressed: _openComments,
                   icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),
@@ -270,18 +202,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen>
                     Clipboard.setData(ClipboardData(text: link));
                                         AppSnackBar.info(context, '링크가 복사되었습니다');
                   },
-                  icon: Icon(LucideIcons.link2, color: iconColor, size: 24),
+                  icon: Icon(LucideIcons.send, color: iconColor, size: 24),
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                 ),
               ]),
-            ),
-
-            // 좋아요 수
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Text('좋아요 $likeCount개',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             ),
 
             // 조과 정보 (길이, 어종)
@@ -522,11 +447,13 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
   final _ctrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   late List<_Comment> _localComments;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _localComments = List.from(widget.comments);
+    _localComments = [];
+    Future.microtask(() => _loadComments());
   }
 
   @override
@@ -534,6 +461,37 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     _ctrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    try {
+      final data = await ref.read(feedRepositoryProvider).getComments(widget.post.id);
+      if (!mounted) return;
+      final currentUser = ref.read(currentUserProvider);
+      setState(() {
+        _localComments = data.map((d) => _commentFromDb(d, currentUser?.id ?? '')).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  _Comment _commentFromDb(Map<String, dynamic> data, String currentUserId) {
+    final usersData = data['users'] as Map?;
+    final username = usersData?['username'] as String? ?? '알 수 없음';
+    final avatarUrl = usersData?['avatar_url'] as String? ?? '';
+    final userId = data['user_id'] as String? ?? '';
+    final createdAt = DateTime.tryParse(data['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
+    final diff = DateTime.now().difference(createdAt);
+    final timeAgo = diff.inSeconds < 60
+        ? '방금'
+        : diff.inMinutes < 60
+            ? '${diff.inMinutes}분 전'
+            : diff.inHours < 24
+                ? '${diff.inHours}시간 전'
+                : '${diff.inDays}일 전';
+    return _Comment(user: username, text: data['content'] as String? ?? '', timeAgo: timeAgo, userId: userId, avatarUrl: avatarUrl);
   }
 
   Future<void> _submit() async {
@@ -549,6 +507,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
       try {
         await ref.read(feedRepositoryProvider).addComment(widget.post.id, user.id, text);
         ref.invalidate(feedPostsProvider);
+        await _loadComments();
       } catch (_) {}
     }
   }
@@ -583,39 +542,52 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
             ),
             Divider(height: 1, color: divColor),
             Expanded(
-              child: _localComments.isEmpty
-                  ? Center(child: Text('첫 번째 댓글을 달아보세요',
-                      style: TextStyle(color: subColor, fontSize: 14)))
-                  : ListView.builder(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _localComments.length,
-                      itemBuilder: (_, i) {
-                        final c = _localComments[i];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                width: 32, height: 32,
-                                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
-                                child: Center(child: Text(c.user[0],
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : Colors.black))),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text.rich(TextSpan(children: [
-                              TextSpan(text: c.user,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                              const TextSpan(text: '  '),
-                              TextSpan(text: c.text, style: const TextStyle(fontSize: 13)),
-                            ]))),
-                          ]),
-                        );
-                      },
-                    ),
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator(color: accent, strokeWidth: 2))
+                  : _localComments.isEmpty
+                      ? Center(child: Text('첫 번째 댓글을 달아보세요',
+                          style: TextStyle(color: subColor, fontSize: 14)))
+                      : ListView.builder(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: _localComments.length,
+                          itemBuilder: (_, i) {
+                            final c = _localComments[i];
+                            void goToProfile() {
+                              if (c.userId.isNotEmpty) {
+                                context.push('${AppRoutes.userProfile}/${c.userId}');
+                              }
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                GestureDetector(
+                                  onTap: goToProfile,
+                                  child: UserAvatar(
+                                    username: c.user,
+                                    avatarUrl: c.avatarUrl.isNotEmpty ? c.avatarUrl : null,
+                                    radius: 16,
+                                    isDark: isDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text.rich(TextSpan(children: [
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.baseline,
+                                    baseline: TextBaseline.alphabetic,
+                                    child: GestureDetector(
+                                      onTap: goToProfile,
+                                      child: Text(c.user,
+                                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                    ),
+                                  ),
+                                  const TextSpan(text: '  '),
+                                  TextSpan(text: c.text, style: const TextStyle(fontSize: 13)),
+                                ]))),
+                              ]),
+                            );
+                          },
+                        ),
             ),
             Divider(height: 1, color: divColor),
             SafeArea(
@@ -671,6 +643,14 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
 }
 
 class _Comment {
-  const _Comment({required this.user, required this.text, required this.timeAgo});
+  const _Comment({
+    required this.user,
+    required this.text,
+    required this.timeAgo,
+    this.userId = '',
+    this.avatarUrl = '',
+  });
   final String user, text, timeAgo;
+  final String userId;
+  final String avatarUrl;
 }

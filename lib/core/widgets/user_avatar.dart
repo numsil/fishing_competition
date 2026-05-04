@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-/// 어디서든 재사용 가능한 유저 아바타 위젯.
-/// avatarUrl 이 있으면 네트워크 이미지, 없으면 이니셜 텍스트를 표시합니다.
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,
@@ -10,20 +8,26 @@ class UserAvatar extends StatelessWidget {
     this.avatarUrl,
     required this.radius,
     this.isDark = true,
+    this.borderColor,
+    this.borderWidth = 2.5,
   });
 
   final String username;
   final String? avatarUrl;
   final double radius;
   final bool isDark;
+  final Color? borderColor;
+  final double borderWidth;
 
   @override
   Widget build(BuildContext context) {
     final url = (avatarUrl?.isNotEmpty == true) ? avatarUrl! : null;
     final bg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0);
     final size = radius * 2;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius * 0.32),
+    final borderRadius = BorderRadius.circular(radius * 0.32);
+
+    Widget avatar = ClipRRect(
+      borderRadius: borderRadius,
       child: Container(
         width: size,
         height: size,
@@ -42,5 +46,17 @@ class UserAvatar extends StatelessWidget {
               ),
       ),
     );
+
+    if (borderColor != null) {
+      avatar = Container(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: Border.all(color: borderColor!, width: borderWidth),
+        ),
+        child: avatar,
+      );
+    }
+
+    return avatar;
   }
 }
