@@ -16,6 +16,8 @@ import '../../features/my_league/presentation/screens/my_league_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_detail_screen.dart';
 import '../../features/my_league/presentation/screens/personal_catch_screen.dart';
 import '../../features/my_league/presentation/screens/personal_record_detail_screen.dart';
+import '../../features/my_league/presentation/screens/album_bundle_share_screen.dart';
+import '../../features/feed/data/post_model.dart';
 import '../../features/feed/presentation/screens/post_detail_screen.dart';
 import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
@@ -81,6 +83,14 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) {
           final post = state.extra as dynamic;
           return MaterialPage(child: PersonalRecordDetailScreen(post: post));
+        },
+      ),
+      // 조과 앨범 묶음 피드 등록
+      GoRoute(
+        path: AppRoutes.albumBundleShare,
+        pageBuilder: (context, state) {
+          final posts = state.extra as List<Post>;
+          return MaterialPage(child: AlbumBundleShareScreen(posts: posts));
         },
       ),
       // DM 목록: ShellRoute 밖 → 하단 탭 없음
@@ -202,4 +212,5 @@ class AppRoutes {
   static const String userProfile = '/user';
   static const String dm = '/dm';
   static const String dmChat = '/dm/chat';
+  static const String albumBundleShare = '/album-bundle-share';
 }
