@@ -61,6 +61,7 @@ class _LeagueDetailBody extends ConsumerStatefulWidget {
 class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   TabController? _tab;
+  int _currentTabIndex = 0;
   bool _joining = false;
   bool _cancelling = false;
 
@@ -87,7 +88,11 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   void initState() {
     super.initState();
     if (_hasTabs) {
-      _tab = TabController(length: _tabLength, vsync: this);
+      _tab = TabController(length: _tabLength, vsync: this)
+        ..addListener(() {
+          if (_tab!.indexIsChanging) return;
+          setState(() => _currentTabIndex = _tab!.index);
+        });
     }
     WidgetsBinding.instance.addObserver(this);
   }
@@ -336,6 +341,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         cancelling: _cancelling,
         onJoin: _join,
         onCancelJoin: _cancelJoin,
+        showCatchButton: _currentTabIndex == 0,
       ),
     );
   }
@@ -971,6 +977,7 @@ class _BottomBar extends ConsumerWidget {
     required this.cancelling,
     required this.onJoin,
     required this.onCancelJoin,
+    this.showCatchButton = true,
   });
   final League league;
   final bool isDark;
@@ -979,6 +986,7 @@ class _BottomBar extends ConsumerWidget {
   final bool cancelling;
   final VoidCallback onJoin;
   final VoidCallback onCancelJoin;
+  final bool showCatchButton;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -986,8 +994,9 @@ class _BottomBar extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // ── 진행중: 참가자에게만 카메라 버튼 ─────────────
+    // ── 진행중: 참가자에게만 카메라 버튼 (순위 탭에서만) ─────
     if (league.status == 'in_progress') {
+      if (!showCatchButton) return const SizedBox.shrink();
       return ref.watch(isJoinedProvider(league.id)).when(
         data: (joined) {
           if (!joined) return const SizedBox.shrink();
