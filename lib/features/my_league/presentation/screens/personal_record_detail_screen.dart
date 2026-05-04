@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -262,7 +263,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                           children: [
                             Text(
                               post.location?.isNotEmpty == true
-                                  ? post.location!
+                                  ? dedupeAddress(post.location!)
                                   : (hasGps ? '촬영 위치' : '위치 정보 없음'),
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                             ),

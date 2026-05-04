@@ -77,9 +77,13 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
           final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
           if (placemarks.isNotEmpty) {
             final p = placemarks.first;
-            final parts = [p.administrativeArea, p.locality, p.subLocality, p.thoroughfare]
+            final rawParts = [p.administrativeArea, p.locality, p.subLocality, p.thoroughfare]
                 .where((s) => s != null && s.isNotEmpty)
                 .toList();
+            final parts = <String>[];
+            for (final part in rawParts) {
+              if (parts.isEmpty || parts.last != part) parts.add(part!);
+            }
             if (parts.isNotEmpty) _locationCtrl.text = parts.join(' ');
           }
         } catch (_) {}

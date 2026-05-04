@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -980,7 +981,7 @@ class _CatchDashboard extends StatelessWidget {
                     if (maxPost != null) ...[
                       const SizedBox(height: 2),
                       Text(
-                        '${DateFormat('yyyy.MM.dd').format(maxPost!.createdAt)}${maxPost!.location != null ? " · ${maxPost!.location}" : ""}',
+                        '${DateFormat('yyyy.MM.dd').format(maxPost!.createdAt)}${maxPost!.location != null ? " · ${dedupeAddress(maxPost!.location!)}" : ""}',
                         style: TextStyle(fontSize: 11, color: sub),
                       ),
                     ],

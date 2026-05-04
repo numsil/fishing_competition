@@ -6,8 +6,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -298,6 +300,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   // ── 지도 선택 팝업 ──
   Future<void> _openMapPicker() async {
     LatLng pinned = _selectedLatLng ?? const LatLng(36.8, 127.9);
+    bool loading = false;
     final mapCtrl = MapController();
 
     await showDialog(
@@ -400,15 +403,40 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     width: double.infinity,
                     height: 46,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: loading ? null : () async {
+                        setS(() => loading = true);
+                        String address;
+                        try {
+                          final placemarks = await placemarkFromCoordinates(
+                            pinned.latitude, pinned.longitude,
+                          );
+                          if (placemarks.isNotEmpty) {
+                            final p = placemarks.first;
+                            final rawParts = [p.administrativeArea, p.locality, p.subLocality, p.thoroughfare]
+                                .where((s) => s != null && s.isNotEmpty)
+                                .toList();
+                            final parts = <String>[];
+                            for (final part in rawParts) {
+                              if (parts.isEmpty || parts.last != part) parts.add(part!);
+                            }
+                            address = parts.isNotEmpty
+                                ? parts.join(' ')
+                                : '${pinned.latitude.toStringAsFixed(4)}, ${pinned.longitude.toStringAsFixed(4)}';
+                          } else {
+                            address = '${pinned.latitude.toStringAsFixed(4)}, ${pinned.longitude.toStringAsFixed(4)}';
+                          }
+                        } catch (_) {
+                          address = '${pinned.latitude.toStringAsFixed(4)}, ${pinned.longitude.toStringAsFixed(4)}';
+                        }
                         setState(() {
                           _selectedLatLng = pinned;
-                          _locationCtrl.text =
-                              '${pinned.latitude.toStringAsFixed(4)}, ${pinned.longitude.toStringAsFixed(4)}';
+                          _locationCtrl.text = dedupeAddress(address);
                         });
-                        Navigator.pop(ctx);
+                        if (ctx.mounted) Navigator.pop(ctx);
                       },
-                      child: const Text('이 위치로 선택'),
+                      child: loading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('이 위치로 선택'),
                     ),
                   ),
                 ),

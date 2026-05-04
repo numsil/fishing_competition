@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -463,7 +464,7 @@ class _CatchCard extends StatelessWidget {
                       if (post.location != null && post.location!.isNotEmpty)
                         _MeasureStat(
                           icon: LucideIcons.mapPin,
-                          value: post.location!,
+                          value: dedupeAddress(post.location!),
                           sub: sub,
                         ),
                     ],
