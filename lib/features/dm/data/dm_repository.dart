@@ -10,6 +10,7 @@ class DmConversation {
   final String? otherAvatarUrl;
   final String? lastMessage;
   final DateTime lastMessageAt;
+  final bool hasUnread;
 
   DmConversation({
     required this.id,
@@ -18,6 +19,7 @@ class DmConversation {
     this.otherAvatarUrl,
     this.lastMessage,
     required this.lastMessageAt,
+    required this.hasUnread,
   });
 }
 
@@ -65,6 +67,8 @@ class DmRepository {
         .from('conversations')
         .select(
           'id, user1_id, user2_id, last_message, last_message_at, '
+          'unread_count_user1, unread_count_user2, '
+          'user1_hidden_at, user2_hidden_at, '
           'user1:users!user1_id(id, username, avatar_url), '
           'user2:users!user2_id(id, username, avatar_url)',
         )
@@ -74,16 +78,35 @@ class DmRepository {
     final conversations = <DmConversation>[];
     for (final row in data as List) {
       final isUser1 = (row['user1_id'] as String) == myId;
-      final otherUserId = isUser1 ? row['user2_id'] as String : row['user1_id'] as String;
-      final otherUser = (isUser1 ? row['user2'] : row['user1']) as Map<String, dynamic>?;
+
+      // 숨김 처리된 대화방 필터링
+      final hiddenAtStr = isUser1
+          ? row['user1_hidden_at'] as String?
+          : row['user2_hidden_at'] as String?;
+      final lastMessageAt = DateTime.parse(row['last_message_at'] as String);
+      if (hiddenAtStr != null) {
+        final hiddenAt = DateTime.parse(hiddenAtStr);
+        if (!lastMessageAt.isAfter(hiddenAt)) continue;
+      }
+
+      final otherUserId =
+          isUser1 ? row['user2_id'] as String : row['user1_id'] as String;
+      final otherUser =
+          (isUser1 ? row['user2'] : row['user1']) as Map<String, dynamic>?;
       if (otherUser == null) continue;
+
+      final unreadCount = isUser1
+          ? row['unread_count_user1'] as int
+          : row['unread_count_user2'] as int;
+
       conversations.add(DmConversation(
         id: row['id'] as String,
         otherUserId: otherUserId,
         otherUsername: otherUser['username'] as String,
         otherAvatarUrl: otherUser['avatar_url'] as String?,
         lastMessage: row['last_message'] as String?,
-        lastMessageAt: DateTime.parse(row['last_message_at'] as String),
+        lastMessageAt: lastMessageAt,
+        hasUnread: unreadCount > 0,
       ));
     }
     return conversations;
