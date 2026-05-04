@@ -161,10 +161,11 @@ class DmRepository {
       'content': content,
     });
 
-    await _supabase.from('conversations').update({
-      'last_message': content,
-      'last_message_at': DateTime.now().toIso8601String(),
-    }).eq('id', conversationId);
+    await _supabase.rpc('on_dm_sent', params: {
+      'p_conv_id': conversationId,
+      'p_sender_id': myId,
+      'p_content': content,
+    });
   }
 
   Future<void> markAsRead(String conversationId) async {
@@ -177,6 +178,21 @@ class DmRepository {
         .eq('conversation_id', conversationId)
         .neq('sender_id', myId)
         .eq('is_read', false);
+
+    await _supabase.rpc('on_dm_read', params: {
+      'p_conv_id': conversationId,
+      'p_reader_id': myId,
+    });
+  }
+
+  Future<void> hideConversation(String conversationId) async {
+    final myId = _myId;
+    if (myId == null) return;
+
+    await _supabase.rpc('hide_conversation', params: {
+      'p_conv_id': conversationId,
+      'p_user_id': myId,
+    });
   }
 }
 
