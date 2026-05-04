@@ -173,14 +173,14 @@ class _VerificationDetailScreenState
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: OutlinedButton.icon(
                             onPressed:
                                 _loading ? null : () => _vote('approve'),
-                            icon: const Icon(LucideIcons.check, size: 18),
-                            label: const Text('승인'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: Colors.white,
+                            icon: Icon(LucideIcons.check, size: 18, color: accent),
+                            label: Text('승인', style: TextStyle(color: accent)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: accent,
+                              side: BorderSide(color: accent),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14),
                             ),
