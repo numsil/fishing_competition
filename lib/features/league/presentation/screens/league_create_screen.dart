@@ -805,6 +805,94 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: AppColors.error),
                     ),
                   ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _pickStartTime,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _startTime != null ? context.accentColor : divColor,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.clock, size: 14,
+                                  color: _startTime != null ? context.accentColor : sub),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _startTime != null
+                                      ? '${_startTime!.hour.toString().padLeft(2, '0')}:${_startTime!.minute.toString().padLeft(2, '0')}'
+                                      : '시작 시간',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _startTime != null
+                                        ? (context.isDark ? Colors.white : Colors.black)
+                                        : sub,
+                                    fontWeight: _startTime != null ? FontWeight.w600 : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              if (_startTime != null)
+                                GestureDetector(
+                                  onTap: () => setState(() => _startTime = null),
+                                  child: Icon(Icons.close_rounded, size: 14, color: sub),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _pickEndTime,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _endTime != null ? context.accentColor : divColor,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.clock, size: 14,
+                                  color: _endTime != null ? context.accentColor : sub),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _endTime != null
+                                      ? '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')}'
+                                      : '종료 시간',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _endTime != null
+                                        ? (context.isDark ? Colors.white : Colors.black)
+                                        : sub,
+                                    fontWeight: _endTime != null ? FontWeight.w600 : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              if (_endTime != null)
+                                GestureDetector(
+                                  onTap: () => setState(() => _endTime = null),
+                                  child: Icon(Icons.close_rounded, size: 14, color: sub),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 ],
               ),
             ),
