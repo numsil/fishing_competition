@@ -60,6 +60,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _imagePicker = ImagePicker();
 
   bool _submitting = false;
+  bool _showDateError = false;
+
+  // 필수 항목 스크롤 앵커
+  final _nameKey = GlobalKey();
+  final _dateKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  final _maxKey = GlobalKey();
 
   bool get _isEditMode => widget.league != null;
 
@@ -106,15 +113,42 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     super.dispose();
   }
 
+  // ── 첫 번째 미입력 필수 항목으로 스크롤 ──
+  Future<void> _scrollToFirstError({required bool dateValid}) async {
+    GlobalKey? firstKey;
+    if (_nameCtrl.text.trim().isEmpty) {
+      firstKey = _nameKey;
+    } else if (!dateValid) {
+      firstKey = _dateKey;
+    } else if (_locationCtrl.text.trim().isEmpty) {
+      firstKey = _locationKey;
+    } else {
+      final m = _maxCtrl.text.trim();
+      if (m.isEmpty || int.tryParse(m) == null || (int.tryParse(m) ?? 0) < 1) {
+        firstKey = _maxKey;
+      }
+    }
+    final ctx = firstKey?.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        alignment: 0.1,
+      );
+    }
+  }
+
   // ── 개설 / 수정 공통 제출 ──
   Future<void> _submit() async {
-    if (_formKey.currentState?.validate() != true) return;
-    if (_dateRange == null) {
-            AppSnackBar.warning(context, '일정을 선택해주세요.');
-      return;
-    }
-    if (_locationCtrl.text.trim().isEmpty) {
-            AppSnackBar.warning(context, '장소를 입력해주세요.');
+    setState(() => _showDateError = false);
+
+    final formValid = _formKey.currentState?.validate() ?? false;
+    final dateValid = _dateRange != null;
+    if (!dateValid) setState(() => _showDateError = true);
+
+    if (!formValid || !dateValid) {
+      await _scrollToFirstError(dateValid: dateValid);
       return;
     }
 
@@ -604,6 +638,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
             // ── 대회명 ──
             Padding(
+              key: _nameKey,
               padding: const EdgeInsets.only(bottom: 20),
               child: TextFormField(
                 controller: _nameCtrl,
@@ -642,11 +677,21 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             ),
 
             // ── 일정 ──
+            Column(
+              key: _dateKey,
+              mainAxisSize: MainAxisSize.min,
+              children: [
             _Section(
               title: '일정',
               accent: context.accentColor,
-              child: GestureDetector(
-                onTap: _pickDateRange,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                GestureDetector(
+                onTap: () {
+                  setState(() => _showDateError = false);
+                  _pickDateRange();
+                },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -654,7 +699,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _dateRange != null ? context.accentColor : divColor,
+                      color: _showDateError
+                          ? AppColors.error
+                          : (_dateRange != null ? context.accentColor : divColor),
                     ),
                   ),
                   child: Row(
@@ -683,9 +730,25 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ),
                 ),
               ),
+                if (_showDateError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 12),
+                    child: Text(
+                      '일정을 선택해주세요',
+                      style: TextStyle(fontSize: 12, color: AppColors.error),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+              ],
             ),
 
             // ── 장소 ──
+            Column(
+              key: _locationKey,
+              mainAxisSize: MainAxisSize.min,
+              children: [
             _Section(
               title: '장소',
               accent: context.accentColor,
@@ -701,6 +764,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         tooltip: '지도에서 선택',
                       ),
                     ),
+                    validator: (v) => v?.trim().isEmpty == true ? '장소를 입력해주세요' : null,
                   ),
                   if (_selectedLatLng != null) ...[
                     const SizedBox(height: 10),
@@ -741,6 +805,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ],
                 ],
               ),
+            ),
+              ],
             ),
 
             // ── 순위 결정 방식 ──
@@ -823,6 +889,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
             // ── 최대 참가자 + 참가비 ──
             Padding(
+              key: _maxKey,
               padding: const EdgeInsets.only(bottom: 20),
               child: Row(
                 children: [
