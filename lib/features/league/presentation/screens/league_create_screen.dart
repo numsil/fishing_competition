@@ -792,10 +792,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Expanded(
                       child: TextField(
                         controller: _startTimeCtrl,
-                        keyboardType: TextInputType.datetime,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [_TimeInputFormatter()],
+                        maxLength: 5,
                         decoration: InputDecoration(
-                          hintText: '시작 (09:00)',
+                          hintText: '09:00',
                           hintStyle: TextStyle(color: sub, fontSize: 13),
+                          counterText: '',
                           prefixIcon: Padding(
                             padding: const EdgeInsets.only(left: 12, right: 8),
                             child: Icon(LucideIcons.clock, size: 14, color: sub),
@@ -812,10 +815,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Expanded(
                       child: TextField(
                         controller: _endTimeCtrl,
-                        keyboardType: TextInputType.datetime,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [_TimeInputFormatter()],
+                        maxLength: 5,
                         decoration: InputDecoration(
-                          hintText: '종료 (18:00)',
+                          hintText: '18:00',
                           hintStyle: TextStyle(color: sub, fontSize: 13),
+                          counterText: '',
                           prefixIcon: Padding(
                             padding: const EdgeInsets.only(left: 12, right: 8),
                             child: Icon(LucideIcons.clock, size: 14, color: sub),
@@ -1388,4 +1394,20 @@ class _PrizeItem {
   _PrizeItem({required this.rank, required this.value});
   final String rank;
   String value;
+}
+
+// ── HH:mm 자동 포맷 입력 ──
+class _TimeInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+    if (digits.length <= 2) return newValue.copyWith(text: digits);
+    final formatted = '${digits.substring(0, 2)}:${digits.substring(2, digits.length.clamp(2, 4))}';
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
 }
