@@ -30,6 +30,7 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   isLunker: json['is_lunker'] as bool? ?? false,
   isPersonalRecord: json['is_personal_record'] as bool? ?? false,
   score: (json['score'] as num?)?.toInt() ?? 0,
+  reviewStatus: json['review_status'] as String? ?? 'approved',
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 
@@ -55,5 +56,6 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'is_lunker': instance.isLunker,
   'is_personal_record': instance.isPersonalRecord,
   'score': instance.score,
+  'review_status': instance.reviewStatus,
   'created_at': instance.createdAt.toIso8601String(),
 };
