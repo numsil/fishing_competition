@@ -15,6 +15,7 @@ import '../../data/post_model.dart';
 import '../widgets/post_image_carousel.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../utils/feed_search_utils.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.post});
@@ -29,11 +30,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   String _stripHashtags(String caption) {
     return caption.split(RegExp(r'\s+')).where((w) => !w.startsWith('#')).join(' ').trim();
-  }
-
-  List<String> _extractHashtags(String? caption) {
-    if (caption == null || caption.isEmpty) return [];
-    return caption.split(RegExp(r'\s+')).where((w) => w.startsWith('#') && w.length > 1).toList();
   }
 
   Future<void> _sharePostToFeed() async {
@@ -262,11 +258,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               ),
 
             // 해시태그
-            if (_extractHashtags(p.caption).isNotEmpty)
+            if (extractHashtags(p.caption).isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: Text(
-                  _extractHashtags(p.caption).join('  '),
+                  extractHashtags(p.caption).join('  '),
                   style: TextStyle(fontSize: 13,
                       color: context.isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
                 ),

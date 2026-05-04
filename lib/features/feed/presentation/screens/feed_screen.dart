@@ -74,42 +74,87 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onRefresh: () async => ref.invalidate(feedPostsProvider),
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor)),
-            SliverToBoxAdapter(
-              child: Divider(
-                height: 0.5,
-                thickness: 0.5,
-                color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+            if (!_isSearching) ...[
+              SliverToBoxAdapter(
+                child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor),
               ),
-            ),
-            ref.watch(feedPostsProvider).when(
+              SliverToBoxAdapter(
+                child: Divider(
+                  height: 0.5,
+                  thickness: 0.5,
+                  color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+                ),
+              ),
+            ],
+            ...ref.watch(feedPostsProvider).when(
               data: (posts) {
-                if (posts.isEmpty) {
-                  return const SliverFillRemaining(
-                    child: Center(
-                      child: Text('아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'),
+                final filtered = filterPosts(posts, _searchQuery);
+                return [
+                  if (_isSearching && _searchQuery.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _SearchResultBanner(
+                        count: filtered.length,
+                        isDark: context.isDark,
+                      ),
                     ),
-                  );
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => _InstaPost(
-                      post: posts[i],
-                      isDark: context.isDark,
-                      accent: context.accentColor,
+                  if (filtered.isEmpty)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Text(
+                          _searchQuery.isEmpty
+                              ? '아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'
+                              : '검색 결과가 없습니다.',
+                        ),
+                      ),
+                    )
+                  else
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) => _InstaPost(
+                          post: filtered[i],
+                          isDark: context.isDark,
+                          accent: context.accentColor,
+                        ),
+                        childCount: filtered.length,
+                      ),
                     ),
-                    childCount: posts.length,
-                  ),
-                );
+                ];
               },
-              loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, st) => const SliverFillRemaining(
-                child: Center(child: Text('피드를 불러오지 못했습니다.')),
-              ),
+              loading: () => [
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ],
+              error: (e, st) => [
+                const SliverFillRemaining(
+                  child: Center(child: Text('피드를 불러오지 못했습니다.')),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 검색 결과 배너 ─────────────────────────────────────
+class _SearchResultBanner extends StatelessWidget {
+  const _SearchResultBanner({required this.count, required this.isDark});
+  final int count;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+      child: Text(
+        '결과 $count개',
+        style: TextStyle(
+          fontSize: 12,
+          color: isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373),
         ),
       ),
     );
@@ -490,15 +535,6 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
         .trim();
   }
 
-  /// 캡션에서 해시태그 목록 추출 (예: ['#배스', '#조황'])
-  List<String> _extractHashtags(String? caption) {
-    if (caption == null || caption.isEmpty) return [];
-    return caption
-        .split(RegExp(r'\s+'))
-        .where((w) => w.startsWith('#') && w.length > 1)
-        .toList();
-  }
-
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -700,11 +736,11 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
           ),
 
         // ── 해시태그 행 ──
-        if (_extractHashtags(p.caption).isNotEmpty)
+        if (extractHashtags(p.caption).isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 3, 16, 0),
             child: Text(
-              _extractHashtags(p.caption).join('  '),
+              extractHashtags(p.caption).join('  '),
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B),
