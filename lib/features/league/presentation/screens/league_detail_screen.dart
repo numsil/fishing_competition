@@ -294,6 +294,19 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                           color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
                     ),
                   ]),
+                  if (league.startTime.hour != 0 || league.startTime.minute != 0 ||
+                      league.endTime.hour != 0 || league.endTime.minute != 0) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Icon(LucideIcons.clock, size: 14, color: accent),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${DateFormat('HH:mm').format(league.startTime)}  ~  ${DateFormat('HH:mm').format(league.endTime)}',
+                        style: TextStyle(fontSize: 13,
+                            color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
+                      ),
+                    ]),
+                  ],
                   const SizedBox(height: 8),
                 ],
               ),
