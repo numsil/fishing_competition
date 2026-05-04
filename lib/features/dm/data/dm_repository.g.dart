@@ -182,5 +182,22 @@ class _DmMessagesProviderElement
   String get conversationId => (origin as DmMessagesProvider).conversationId;
 }
 
+String _$hasUnreadDmsHash() => r'c40296e14b27bdf485fbc0e214693ac6653d26c6';
+
+/// See also [hasUnreadDms].
+@ProviderFor(hasUnreadDms)
+final hasUnreadDmsProvider = AutoDisposeStreamProvider<bool>.internal(
+  hasUnreadDms,
+  name: r'hasUnreadDmsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$hasUnreadDmsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HasUnreadDmsRef = AutoDisposeStreamProviderRef<bool>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

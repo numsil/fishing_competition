@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -209,4 +211,56 @@ Future<List<DmConversation>> dmConversations(DmConversationsRef ref) {
 @riverpod
 Stream<List<DmMessage>> dmMessages(DmMessagesRef ref, String conversationId) {
   return ref.watch(dmRepositoryProvider).streamMessages(conversationId);
+}
+
+@riverpod
+Stream<bool> hasUnreadDms(HasUnreadDmsRef ref) {
+  final myId = Supabase.instance.client.auth.currentUser?.id;
+  if (myId == null) return Stream.value(false);
+
+  final controller = StreamController<bool>.broadcast();
+
+  Future<void> check() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user1 = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user1_id', myId)
+          .gt('unread_count_user1', 0)
+          .limit(1);
+      if ((user1 as List).isNotEmpty) {
+        if (!controller.isClosed) controller.add(true);
+        return;
+      }
+      final user2 = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user2_id', myId)
+          .gt('unread_count_user2', 0)
+          .limit(1);
+      if (!controller.isClosed) controller.add((user2 as List).isNotEmpty);
+    } catch (_) {
+      if (!controller.isClosed) controller.add(false);
+    }
+  }
+
+  check();
+
+  final channel = Supabase.instance.client
+      .channel('unread_badge_$myId')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'conversations',
+        callback: (payload) => check(),
+      )
+      .subscribe();
+
+  ref.onDispose(() {
+    controller.close();
+    Supabase.instance.client.removeChannel(channel);
+  });
+
+  return controller.stream;
 }
