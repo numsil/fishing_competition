@@ -59,8 +59,8 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
           labelColor: context.accentColor,
           unselectedLabelColor: sub,
           tabs: const [
-            Tab(text: '참여 리그'),
             Tab(text: '개인 기록'),
+            Tab(text: '참여 리그'),
             Tab(text: '개설한 리그'),
           ],
         ),
@@ -68,15 +68,15 @@ class _MyLeagueScreenState extends ConsumerState<MyLeagueScreen>
       body: TabBarView(
         controller: _tab,
         children: [
-          // 각 탭이 myLeaguesProvider를 독립적으로 구독
-          _ActiveTabConsumer(
+          _PersonalRecordTab(
             isDark: context.isDark,
             accent: context.accentColor,
             sub: sub,
             cardBg: cardBg,
             divColor: divColor,
           ),
-          _PersonalRecordTab(
+          // 각 탭이 myLeaguesProvider를 독립적으로 구독
+          _ActiveTabConsumer(
             isDark: context.isDark,
             accent: context.accentColor,
             sub: sub,
@@ -119,7 +119,12 @@ class _ActiveTabConsumer extends ConsumerWidget {
         final participated = myLeaguesMap['participated'] ?? [];
         final activeLeagues = participated
             .where((l) => l.status != 'completed' && l.status != 'canceled')
-            .toList();
+            .toList()
+          ..sort((a, b) {
+            if (a.status == 'in_progress' && b.status != 'in_progress') return -1;
+            if (a.status != 'in_progress' && b.status == 'in_progress') return 1;
+            return 0;
+          });
         return _ActiveTab(
           leagues: activeLeagues,
           isDark: isDark,
