@@ -11,9 +11,11 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_catch_screen.dart';
+import '../widgets/catch_review_tab.dart';
 import 'league_participant_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
@@ -66,6 +68,12 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       widget.league.status == 'in_progress' ||
       widget.league.status == 'completed';
 
+  bool get _isHost =>
+      ref.read(currentUserProvider)?.id == widget.league.hostId;
+
+  int get _tabLength =>
+      _isHost && widget.league.status == 'in_progress' ? 3 : 2;
+
   void _refreshAll() {
     ref.invalidate(leagueDetailProvider(widget.league.id));
     ref.invalidate(isJoinedProvider(widget.league.id));
@@ -76,7 +84,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   void initState() {
     super.initState();
     if (_hasTabs) {
-      _tab = TabController(length: 2, vsync: this);
+      _tab = TabController(length: _tabLength, vsync: this);
     }
     WidgetsBinding.instance.addObserver(this);
   }
@@ -87,7 +95,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     // 상태가 바뀌면 탭 컨트롤러 재생성
     if (old.league.status != widget.league.status) {
       _tab?.dispose();
-      _tab = _hasTabs ? TabController(length: 2, vsync: this) : null;
+      _tab = _hasTabs ? TabController(length: _tabLength, vsync: this) : null;
     }
   }
 
@@ -292,6 +300,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                   controller: _tab,
                   tabs: [
                     Tab(text: league.status == 'completed' ? '최종 순위' : '실시간 순위'),
+                    if (_isHost && league.status == 'in_progress')
+                      const Tab(text: '심사'),
                     const Tab(text: '대회 정보'),
                   ],
                 ),
@@ -306,6 +316,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                 controller: _tab,
                 children: [
                   _RankingTab(league: league, isDark: isDark, accent: accent),
+                  if (_isHost && league.status == 'in_progress')
+                    CatchReviewTab(leagueId: league.id),
                   _InfoTab(league: league, isDark: isDark, accent: accent),
                 ],
               )
