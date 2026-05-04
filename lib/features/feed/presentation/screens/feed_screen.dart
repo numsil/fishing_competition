@@ -169,13 +169,14 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   prefixIcon: Icon(LucideIcons.search, size: 18, color: accent),
                   suffixIcon: searchQuery.isNotEmpty
-                      ? GestureDetector(
-                          onTap: onSearchClear,
-                          child: Icon(
+                      ? IconButton(
+                          onPressed: onSearchClear,
+                          icon: Icon(
                             LucideIcons.x,
                             size: 16,
                             color: isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA),
                           ),
+                          visualDensity: VisualDensity.compact,
                         )
                       : null,
                   filled: true,
