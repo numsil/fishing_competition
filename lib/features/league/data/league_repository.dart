@@ -223,7 +223,8 @@ class LeagueRepository {
         .from('posts')
         .select('user_id, length, weight, score, fish_type, is_lunker')
         .eq('league_id', leagueId)
-        .eq('is_deleted', false);
+        .eq('is_deleted', false)
+        .eq('review_status', 'approved');
 
     // 4. 유저별 데이터 구성
     final Map<String, String> userNames = {};
@@ -314,6 +315,40 @@ class LeagueRepository {
     });
 
     return entries;
+  }
+
+  // ── 심사 탭용: 리그 전체 조과 최신순 ──────────────────────
+  Future<List<Post>> getLeagueCatchesForReview(String leagueId) async {
+    final data = await _supabase
+        .from('posts')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
+        .eq('league_id', leagueId)
+        .eq('is_deleted', false)
+        .order('created_at', ascending: false);
+
+    return data.map<Post>((d) {
+      final user = d['users'] as Map?;
+      return Post.fromJson(d).copyWith(
+        username: user?['username'] as String? ?? '알 수 없음',
+        avatarUrl: user?['avatar_url'] as String? ?? '',
+      );
+    }).toList();
+  }
+
+  // ── 조과 보류 ──────────────────────────────────────────────
+  Future<void> holdPost(String postId) async {
+    await _supabase
+        .from('posts')
+        .update({'review_status': 'held'})
+        .eq('id', postId);
+  }
+
+  // ── 보류 해지 ──────────────────────────────────────────────
+  Future<void> unholdPost(String postId) async {
+    await _supabase
+        .from('posts')
+        .update({'review_status': 'approved'})
+        .eq('id', postId);
   }
 
   // ── 특정 참가자의 조과 목록 ──────────────────────────────────
@@ -538,4 +573,9 @@ final leagueDetailProvider = FutureProvider.family<League, String>(
     Timer(const Duration(minutes: 5), link.close);
     return ref.watch(leagueRepositoryProvider).getLeague(id);
   },
+);
+
+// 심사 탭용: 리그 전체 조과
+final leagueCatchesForReviewProvider = FutureProvider.family<List<Post>, String>(
+  (ref, leagueId) => ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId),
 );
