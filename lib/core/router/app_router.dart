@@ -89,7 +89,7 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.albumBundleShare,
         pageBuilder: (context, state) {
-          final posts = state.extra as List<Post>;
+          final posts = (state.extra as List).cast<Post>();
           return MaterialPage(child: AlbumBundleShareScreen(posts: posts));
         },
       ),

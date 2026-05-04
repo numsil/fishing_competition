@@ -6,7 +6,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
-import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../league/data/league_repository.dart';
@@ -60,9 +59,6 @@ class _AlbumBundleShareScreenState
 
   Future<void> _share() async {
     if (_sharing) return;
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-
     setState(() => _sharing = true);
     try {
       await ref.read(feedRepositoryProvider).shareMultiplePostsToFeed(
