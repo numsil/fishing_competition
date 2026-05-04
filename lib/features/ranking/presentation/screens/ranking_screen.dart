@@ -10,6 +10,8 @@ import '../../data/ranking_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../verification/data/verification_repository.dart';
+import '../../../verification/presentation/screens/verification_tab.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -25,7 +27,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this);
+    _tab = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -39,11 +41,46 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('랭킹', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-        bottom: TabBar(
-          controller: _tab,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 13),
-          tabs: const [Tab(text: '리그'), Tab(text: '개인'), Tab(text: '이달의')],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Consumer(
+            builder: (context, ref, _) {
+              final pendingCount = ref
+                  .watch(myPendingVerificationsProvider)
+                  .whenOrNull(data: (list) => list.length) ?? 0;
+              return TabBar(
+                controller: _tab,
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w400, fontSize: 13),
+                tabs: [
+                  const Tab(text: '리그'),
+                  const Tab(text: '개인'),
+                  const Tab(text: '이달의'),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('인증'),
+                        if (pendingCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
       body: TabBarView(
@@ -52,6 +89,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
           _LeagueScoreTab(isDark: context.isDark, accent: context.accentColor),
           _PersonalScoreTab(isDark: context.isDark, accent: context.accentColor),
           _MonthlyTab(isDark: context.isDark, accent: context.accentColor),
+          const VerificationTab(),
         ],
       ),
     );
