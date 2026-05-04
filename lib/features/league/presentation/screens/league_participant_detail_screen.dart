@@ -374,25 +374,50 @@ class _CatchCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── 사진 ───────────────────────────────────
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(13)),
-              child: AspectRatio(
-                aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Container(
-                    color: isDark
-                        ? AppColors.darkSurface2
-                        : AppColors.lightDivider,
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported_outlined,
-                          color: Colors.grey),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(13)),
+                  child: AspectRatio(
+                    aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
+                    child: CachedNetworkImage(
+                      imageUrl: post.imageUrl,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        color: isDark
+                            ? AppColors.darkSurface2
+                            : AppColors.lightDivider,
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported_outlined,
+                              color: Colors.grey),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (isMyPost && post.reviewStatus == 'held')
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '보류',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             // ── 조과 정보 ──────────────────────────────
             Padding(
