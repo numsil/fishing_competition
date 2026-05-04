@@ -18,16 +18,32 @@ class CatchReviewTab extends ConsumerWidget {
     return postsAsync.when(
       data: (posts) {
         if (posts.isEmpty) {
-          return Center(
-            child: Text(
-              '등록된 조과가 없습니다',
-              style: TextStyle(
-                color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub,
-              ),
+          return RefreshIndicator(
+            onRefresh: () async =>
+                ref.invalidate(leagueCatchesForReviewProvider(leagueId)),
+            child: ListView(
+              children: [
+                SizedBox(
+                  height: 300,
+                  child: Center(
+                    child: Text(
+                      '등록된 조과가 없습니다',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppColors.darkTextSub
+                            : AppColors.lightTextSub,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }
-        return ListView.builder(
+        return RefreshIndicator(
+          onRefresh: () async =>
+              ref.invalidate(leagueCatchesForReviewProvider(leagueId)),
+          child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           itemCount: posts.length,
           itemBuilder: (context, index) {
@@ -59,6 +75,7 @@ class CatchReviewTab extends ConsumerWidget {
               },
             );
           },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

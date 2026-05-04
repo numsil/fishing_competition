@@ -78,6 +78,9 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     ref.invalidate(leagueDetailProvider(widget.league.id));
     ref.invalidate(isJoinedProvider(widget.league.id));
     ref.invalidate(leagueRankingProvider(widget.league.id));
+    if (_isHost && widget.league.status == 'in_progress') {
+      ref.invalidate(leagueCatchesForReviewProvider(widget.league.id));
+    }
   }
 
   @override
