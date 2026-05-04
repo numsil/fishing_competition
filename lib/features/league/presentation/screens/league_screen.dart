@@ -322,9 +322,7 @@ class _LeagueItem extends StatelessWidget {
                   Icon(LucideIcons.clock, size: 12, color: sub),
                   const SizedBox(width: 4),
                   Text(
-                    '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
-                    ' ~ '
-                    '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+                    '${DateFormat('HH:mm').format(startTime)} ~ ${DateFormat('HH:mm').format(endTime)}',
                     style: TextStyle(fontSize: 12, color: sub),
                   ),
                 ],
