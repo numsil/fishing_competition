@@ -482,7 +482,14 @@ class _ActiveLeagueCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Icon(LucideIcons.calendar, size: 12, color: sub),
                 const SizedBox(width: 4),
-                Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
+                Flexible(
+                  child: Text(
+                    '$startStr ~ $endStr',
+                    style: TextStyle(fontSize: 12, color: sub),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 if (league.startTime.hour != 0 || league.startTime.minute != 0 ||
                     league.endTime.hour != 0 || league.endTime.minute != 0) ...[
                   const SizedBox(width: 12),
@@ -1330,11 +1337,18 @@ class _MyLeagueCard extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Icon(Icons.calendar_today_outlined, size: 12, color: sub),
                   const SizedBox(width: 3),
-                  Text('$startStr ~ $endStr', style: TextStyle(fontSize: 12, color: sub)),
+                  Flexible(
+                    child: Text(
+                      '$startStr ~ $endStr',
+                      style: TextStyle(fontSize: 12, color: sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   if (league.startTime.hour != 0 || league.startTime.minute != 0 ||
                       league.endTime.hour != 0 || league.endTime.minute != 0) ...[
                     const SizedBox(width: 10),
-                    Icon(Icons.access_time_rounded, size: 12, color: sub),
+                    Icon(LucideIcons.clock, size: 12, color: sub),
                     const SizedBox(width: 3),
                     Text(
                       '${DateFormat('HH:mm').format(league.startTime)} ~ ${DateFormat('HH:mm').format(league.endTime)}',

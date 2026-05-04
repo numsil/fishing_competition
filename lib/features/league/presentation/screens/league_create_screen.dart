@@ -315,7 +315,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   Future<void> _pickStartTime() async {
     final result = await showTimePicker(
       context: context,
-      initialTime: _startTime ?? TimeOfDay.now(),
+      initialTime: _startTime ?? const TimeOfDay(hour: 6, minute: 0),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -327,7 +327,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   Future<void> _pickEndTime() async {
     final result = await showTimePicker(
       context: context,
-      initialTime: _endTime ?? TimeOfDay.now(),
+      initialTime: _endTime ?? const TimeOfDay(hour: 18, minute: 0),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
