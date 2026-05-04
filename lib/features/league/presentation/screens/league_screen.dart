@@ -188,6 +188,8 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                         status: stat,
                         rule: l.shortDescription ?? '',
                         hostUsername: l.hostUsername,
+                        startTime: l.startTime,
+                        endTime: l.endTime,
                       );
                     },
                   ),
@@ -230,11 +232,14 @@ class _LeagueItem extends StatelessWidget {
     required this.status,
     required this.rule,
     required this.hostUsername,
+    required this.startTime,
+    required this.endTime,
   });
 
   final String id, title, location, date, prize, rule, hostUsername;
   final int participants, max;
   final _Status status;
+  final DateTime startTime, endTime;
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +314,22 @@ class _LeagueItem extends StatelessWidget {
                 ],
               ],
             ),
+            if (startTime.hour != 0 || startTime.minute != 0 ||
+                endTime.hour != 0 || endTime.minute != 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(LucideIcons.clock, size: 12, color: sub),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
+                    ' ~ '
+                    '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+                    style: TextStyle(fontSize: 12, color: sub),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             // 하단: 참가 바 + 상금 + 규칙
             Row(
