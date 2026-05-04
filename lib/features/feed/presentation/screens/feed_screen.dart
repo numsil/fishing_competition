@@ -698,6 +698,27 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
                       const Text('런커', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.gold)),
                     ]),
                   ),
+                if (p.reviewStatus == 'approved')
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(LucideIcons.badgeCheck, size: 11, color: Colors.green[700]),
+                      const SizedBox(width: 3),
+                      Text('인증',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.green[700])),
+                    ]),
+                  ),
               ],
             ),
           ),
