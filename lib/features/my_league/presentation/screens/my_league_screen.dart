@@ -545,12 +545,12 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
   final List<Post> _orderedSelected = [];
 
   void _toggleSelect(Post post) {
+    final already = _orderedSelected.any((p) => p.id == post.id);
+    if (!already && _orderedSelected.length >= 5) return;
     setState(() {
-      final already = _orderedSelected.any((p) => p.id == post.id);
       if (already) {
         _orderedSelected.removeWhere((p) => p.id == post.id);
       } else {
-        if (_orderedSelected.length >= 5) return;
         _orderedSelected.add(post);
       }
     });
@@ -573,6 +573,12 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(myProfileProvider);
     final postsAsync = ref.watch(myPersonalRecordsProvider);
+
+    ref.listen(myPersonalRecordsProvider, (_, next) {
+      if (next.hasValue && _selectMode) {
+        _exitSelectMode();
+      }
+    });
 
     return Stack(
       children: [
@@ -632,10 +638,11 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                           if (posts.isNotEmpty)
                             GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  _selectMode = !_selectMode;
-                                  if (!_selectMode) _orderedSelected.clear();
-                                });
+                                if (_selectMode) {
+                                  _exitSelectMode();
+                                } else {
+                                  setState(() => _selectMode = true);
+                                }
                               },
                               child: Text(
                                 _selectMode ? '취소' : '선택',
@@ -771,15 +778,14 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                     onPressed: _orderedSelected.isEmpty
                         ? null
                         : () async {
-                            final ctx = context;
-                            final result = await ctx.push<bool>(
+                            final result = await context.push<bool>(
                               AppRoutes.albumBundleShare,
                               extra: List<Post>.from(_orderedSelected),
                             );
                             if (result == true && mounted) {
                               _exitSelectMode();
                               // ignore: use_build_context_synchronously
-                              AppSnackBar.success(ctx, '피드에 공유되었습니다 🎣');
+                              AppSnackBar.success(context, '피드에 공유되었습니다 🎣');
                             }
                           },
                     style: ElevatedButton.styleFrom(
@@ -858,6 +864,8 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accent,
                             foregroundColor: isDark ? Colors.black : Colors.white,
+                            elevation: 6,
+                            shadowColor: accent.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
                           ),
