@@ -118,15 +118,96 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
 // ── AppBar ───────────────────────────────────────────────
 class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _FeedAppBar({required this.isDark, required this.accent});
-  final bool isDark;
+  const _FeedAppBar({
+    required this.isDark,
+    required this.accent,
+    required this.isSearching,
+    required this.searchQuery,
+    required this.searchCtrl,
+    required this.onSearchToggle,
+    required this.onSearchChanged,
+    required this.onSearchCancel,
+    required this.onSearchClear,
+  });
+
+  final bool isDark, isSearching;
+  final String searchQuery;
   final Color accent;
+  final TextEditingController searchCtrl;
+  final VoidCallback onSearchToggle, onSearchCancel, onSearchClear;
+  final ValueChanged<String> onSearchChanged;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context) {
+    if (isSearching) {
+      return AppBar(
+        toolbarHeight: 44,
+        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 12,
+        title: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: searchCtrl,
+                autofocus: true,
+                onChanged: onSearchChanged,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                decoration: InputDecoration(
+                  hintText: '유저명 또는 #태그 검색...',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
+                  ),
+                  prefixIcon: Icon(LucideIcons.search, size: 18, color: accent),
+                  suffixIcon: searchQuery.isNotEmpty
+                      ? GestureDetector(
+                          onTap: onSearchClear,
+                          child: Icon(
+                            LucideIcons.x,
+                            size: 16,
+                            color: isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA),
+                          ),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  isDense: true,
+                ),
+                textInputAction: TextInputAction.search,
+              ),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: onSearchCancel,
+              child: Text(
+                '취소',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: accent,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+      );
+    }
+
     return AppBar(
       toolbarHeight: 44,
       backgroundColor: isDark ? AppColors.darkBg : Colors.white,
@@ -136,23 +217,16 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
         'assets/images/nakstar.svg',
         height: 26,
         fit: BoxFit.contain,
-        colorFilter: const ColorFilter.mode(
-          Colors.white,
-          BlendMode.srcIn,
-        ),
+        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
       ),
       actions: [
-        // 피드 올리기
         GestureDetector(
           onTap: () => context.push(AppRoutes.upload),
           child: Container(
             width: 32,
             height: 32,
             margin: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: accent,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
             child: Icon(
               LucideIcons.plus,
               color: isDark ? Colors.black : Colors.white,
@@ -164,6 +238,12 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () {},
           icon: Icon(LucideIcons.heart,
               color: isDark ? Colors.white : Colors.black, size: 24),
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: onSearchToggle,
+          icon: Icon(LucideIcons.search,
+              color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
