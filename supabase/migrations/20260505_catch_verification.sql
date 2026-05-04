@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS verification_votes (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   verification_id     UUID NOT NULL REFERENCES catch_verifications(id) ON DELETE CASCADE,
   voter_id            UUID NOT NULL REFERENCES users(id),
-  vote                TEXT,
+  vote                TEXT CHECK (vote IS NULL OR vote IN ('approve', 'reject')),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   voted_at            TIMESTAMPTZ,
   UNIQUE(verification_id, voter_id)
