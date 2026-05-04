@@ -574,6 +574,7 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
     final subColor = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = isDark ? AppColors.darkBg : Colors.white;
     final commentCount = p.commentsCount;
+    final hashTags = extractHashtags(p.caption);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,11 +737,11 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
           ),
 
         // ── 해시태그 행 ──
-        if (extractHashtags(p.caption).isNotEmpty)
+        if (hashTags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 3, 16, 0),
             child: Text(
-              extractHashtags(p.caption).join('  '),
+              hashTags.join('  '),
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B),

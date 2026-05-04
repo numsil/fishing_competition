@@ -96,6 +96,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final iconColor = context.isDark ? Colors.white : Colors.black;
     final subColor = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final bgColor = context.isDark ? AppColors.darkBg : Colors.white;
+    final hashTags = extractHashtags(p.caption);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -258,11 +259,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               ),
 
             // 해시태그
-            if (extractHashtags(p.caption).isNotEmpty)
+            if (hashTags.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: Text(
-                  extractHashtags(p.caption).join('  '),
+                  hashTags.join('  '),
                   style: TextStyle(fontSize: 13,
                       color: context.isDark ? const Color(0xFF4A9ECC) : const Color(0xFF00376B)),
                 ),
