@@ -183,13 +183,13 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ValueChanged<String> onSearchChanged;
 
   @override
-  Size get preferredSize => const Size.fromHeight(44);
+  Size get preferredSize => Size.fromHeight(isSearching ? 56 : 44);
 
   @override
   Widget build(BuildContext context) {
     if (isSearching) {
       return AppBar(
-        toolbarHeight: 44,
+        toolbarHeight: 56,
         backgroundColor: isDark ? AppColors.darkBg : Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
