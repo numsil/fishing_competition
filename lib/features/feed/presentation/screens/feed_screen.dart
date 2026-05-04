@@ -13,55 +13,103 @@ import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../utils/feed_search_utils.dart';
 
-class FeedScreen extends ConsumerWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
 
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  bool _isSearching = false;
+  String _searchQuery = '';
+  late final TextEditingController _searchCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearchToggle() => setState(() => _isSearching = true);
+
+  void _onSearchCancel() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+    });
+    _searchCtrl.clear();
+  }
+
+  void _onSearchChanged(String value) => setState(() => _searchQuery = value);
+
+  void _onSearchClear() {
+    _searchCtrl.clear();
+    setState(() => _searchQuery = '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _FeedAppBar(isDark: context.isDark, accent: context.accentColor),
+      appBar: _FeedAppBar(
+        isDark: context.isDark,
+        accent: context.accentColor,
+        isSearching: _isSearching,
+        searchQuery: _searchQuery,
+        searchCtrl: _searchCtrl,
+        onSearchToggle: _onSearchToggle,
+        onSearchChanged: _onSearchChanged,
+        onSearchCancel: _onSearchCancel,
+        onSearchClear: _onSearchClear,
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(feedPostsProvider),
         child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor)),
-          SliverToBoxAdapter(
-            child: Divider(
-              height: 0.5,
-              thickness: 0.5,
-              color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+          slivers: [
+            SliverToBoxAdapter(child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor)),
+            SliverToBoxAdapter(
+              child: Divider(
+                height: 0.5,
+                thickness: 0.5,
+                color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+              ),
             ),
-          ),
-          ref.watch(feedPostsProvider).when(
-            data: (posts) {
-              if (posts.isEmpty) {
-                return const SliverFillRemaining(
-                  child: Center(
-                    child: Text('아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'),
+            ref.watch(feedPostsProvider).when(
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return const SliverFillRemaining(
+                    child: Center(
+                      child: Text('아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'),
+                    ),
+                  );
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) => _InstaPost(
+                      post: posts[i],
+                      isDark: context.isDark,
+                      accent: context.accentColor,
+                    ),
+                    childCount: posts.length,
                   ),
                 );
-              }
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _InstaPost(
-                    post: posts[i],
-                    isDark: context.isDark,
-                    accent: context.accentColor,
-                  ),
-                  childCount: posts.length,
-                ),
-              );
-            },
-            loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
+              },
+              loading: () => const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, st) => const SliverFillRemaining(
+                child: Center(child: Text('피드를 불러오지 못했습니다.')),
+              ),
             ),
-            error: (e, st) => SliverFillRemaining(
-              child: Center(child: Text('피드를 불러오지 못했습니다.')),
-            ),
-          ),
-        ],
+          ],
         ),
       ),
     );
