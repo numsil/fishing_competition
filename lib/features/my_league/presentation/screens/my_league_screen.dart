@@ -471,7 +471,14 @@ class _ActiveLeagueCard extends StatelessWidget {
               children: [
                 Icon(LucideIcons.mapPin, size: 13, color: sub),
                 const SizedBox(width: 4),
-                Text(league.location, style: TextStyle(fontSize: 12, color: sub)),
+                Flexible(
+                  child: Text(
+                    league.location,
+                    style: TextStyle(fontSize: 12, color: sub),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Icon(LucideIcons.calendar, size: 12, color: sub),
                 const SizedBox(width: 4),
@@ -1312,7 +1319,14 @@ class _MyLeagueCard extends ConsumerWidget {
                 children: [
                   Icon(Icons.location_on_outlined, size: 13, color: sub),
                   const SizedBox(width: 3),
-                  Text(league.location, style: TextStyle(fontSize: 12, color: sub)),
+                  Flexible(
+                    child: Text(
+                      league.location,
+                      style: TextStyle(fontSize: 12, color: sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Icon(Icons.calendar_today_outlined, size: 12, color: sub),
                   const SizedBox(width: 3),
