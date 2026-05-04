@@ -141,17 +141,6 @@ class _VerificationDetailScreenState
                       value: req.location!,
                       accent: accent,
                     ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(LucideIcons.users, size: 14, color: sub),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${req.approveCount + req.rejectCount}명 응답 · 승인 ${req.approveCount} / 거부 ${req.rejectCount}',
-                        style: TextStyle(fontSize: 12, color: sub),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 28),
                   if (alreadyVoted)
                     Center(
