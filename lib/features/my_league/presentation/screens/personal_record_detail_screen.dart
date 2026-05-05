@@ -168,7 +168,6 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
   @override
   Widget build(BuildContext context) {
     final bg = context.isDark ? AppColors.darkBg : Colors.white;
-    final cardBg = context.isDark ? AppColors.darkSurface : const Color(0xFFF7F7F8);
     final sub = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final iconColor = context.isDark ? Colors.white : Colors.black;
     final hasGps = post.lat != null && post.lng != null;

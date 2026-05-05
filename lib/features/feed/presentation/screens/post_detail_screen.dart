@@ -76,7 +76,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   void _editPost() {
-    context.push(AppRoutes.upload, extra: widget.post);
+    context.push(AppRoutes.upload, extra: widget.post).then((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   void _openComments() {
