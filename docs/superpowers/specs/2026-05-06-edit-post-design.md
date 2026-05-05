@@ -40,7 +40,7 @@ Future<void> updatePost({
   double? weight,
 })
 ```
-- 이미지 변경 시: 새 이미지 업로드 → `image_url`, `image_urls` 업체
+- 이미지 변경 시: 새 이미지 업로드 → `image_url`, `image_urls` 업데이트
 - `is_lunker`, `score` 재계산 (length 기준)
 - `review_status` 변경 없음 (피드는 항상 approved)
 
@@ -55,14 +55,38 @@ Future<void> updatePost({
 - 메모 (caption)만
 
 ### 진입점
-`PostDetailScreen` 더보기 메뉴 → "메모 수정"
-- 조건: 본인 게시물(`isOwner`) + 리그 게시물(`leagueId != null`)
+`LeagueParticipantDetailScreen`의 `_CatchCard` 사진 우측 상단 `...` 아이콘 버튼
+- 조건: 본인 조과(`isMyPost`)에만 표시
+- 탭 시 바텀시트로 액션 선택:
+  - **수정하기** → 메모 수정 바텀시트
+  - **피드에 공유**
+  - **사진 저장**
+  - **삭제**
+- 기존 카드 하단 버튼 행(피드에 공유 | 사진 저장 | 삭제) 제거
 
 ### UI
-바텀시트 (새 화면 없음):
+```
+┌─────────────────────────┐
+│ [사진]              [⋯] │  ← 본인 조과에만 표시
+│                         │
+│ 배스  42.5cm  인증      │
+│ 2026.05.06 14:32        │
+│ 조과 메모...            │
+└─────────────────────────┘
+```
+
+`...` 탭 시 액션 바텀시트:
+```
+수정하기
+피드에 공유
+사진 저장
+삭제
+```
+
+수정하기 탭 시 메모 수정 바텀시트:
 ```
 ┌─────────────────────────────┐
-│  메모 수정          [저장]  │
+│  수정하기          [저장]   │
 │─────────────────────────────│
 │  메모                       │
 │  [ 조과 상황...           ] │
@@ -97,7 +121,7 @@ UPDATE posts SET caption = ?, location = ? WHERE id = ?
 - 메모 (caption)
 
 ### 진입점
-`PersonalRecordDetailScreen` 더보기 메뉴 → "메모/장소 수정"
+`PersonalRecordDetailScreen` 앱바 `...` 메뉴 → "수정하기"
 
 ### UI
 바텀시트 (새 화면 없음):
