@@ -154,7 +154,9 @@ class VerificationRepository {
 
   // 어드민 직접 승인/거부 (투표 시스템 우회)
   Future<void> adminResolveVerification(
-      String verificationId, String postId, String status) async {
+      String verificationId, String postId, String vote) async {
+    // vote: 'approve' | 'reject' → status: 'approved' | 'rejected'
+    final status = vote == 'approve' ? 'approved' : 'rejected';
     await _supabase
         .from('catch_verifications')
         .update({
