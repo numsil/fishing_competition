@@ -62,6 +62,17 @@ class FeedRepository {
     await _supabase.from('posts').delete().eq('id', postId);
   }
 
+  Future<void> updatePostMeta({
+    required String postId,
+    String? caption,
+    String? location,
+  }) async {
+    await _supabase.from('posts').update({
+      'caption': caption?.trim().isEmpty == true ? null : caption?.trim(),
+      'location': location?.trim().isEmpty == true ? null : location?.trim(),
+    }).eq('id', postId);
+  }
+
   /// 조과 앨범에서 선택한 여러 Post를 하나의 피드 포스트로 공유.
   /// 이미지는 재업로드 없이 기존 URL을 그대로 참조한다.
   Future<void> shareMultiplePostsToFeed({
