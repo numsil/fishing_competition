@@ -15,6 +15,7 @@ import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import '../../../verification/data/verification_repository.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -120,25 +121,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               IconButton(
                 icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
                 onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w800)),
-                      content: const Text('정말 로그아웃 하시겠어요?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('취소'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                          child: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
+                  final confirm = await showConfirmDialog(
+                    context,
+                    title: '로그아웃',
+                    content: '정말 로그아웃 하시겠어요?',
+                    confirmText: '로그아웃',
+                    confirmColor: AppColors.error,
+                    icon: Icons.logout_rounded,
                   );
-                  if (confirm != true) return;
+                  if (!confirm) return;
                   await ref.read(authRepositoryProvider).signOut();
                   if (context.mounted) context.go(AppRoutes.login);
                 },

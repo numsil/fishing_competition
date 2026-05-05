@@ -46,7 +46,8 @@ class MainScreen extends StatelessWidget {
           title: '앱 종료',
           content: '앱을 종료하시겠습니까?',
           confirmText: '종료',
-          confirmColor: AppColors.navy,
+          confirmColor: AppColors.error,
+          icon: Icons.power_settings_new_rounded,
         );
         if (shouldExit) SystemNavigator.pop();
       },
