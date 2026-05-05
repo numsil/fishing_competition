@@ -94,7 +94,9 @@ class _UploadScreenState extends State<UploadScreen> {
             videoFile: _isVideo ? _selectedVideo : null,
             isVideo: _isVideo,
             thumbnailBytes: _thumbnailBytes,
-            onBack: () => setState(() => _step = 0),
+            onBack: widget.editPost != null
+                ? () => Navigator.of(context).pop()
+                : () => setState(() => _step = 0),
             editPost: widget.editPost,
           );
   }
