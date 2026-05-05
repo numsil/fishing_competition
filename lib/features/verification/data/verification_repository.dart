@@ -135,21 +135,25 @@ class VerificationRepository {
     }
     if (newStatus == null) return;
 
-    // 5. 결과 확정
-    final verif = await _supabase
+    // 5. post_id 먼저 조회 (UPDATE+select().single() 조합은 RLS 0행 시 크래시)
+    final verifRow = await _supabase
+        .from('catch_verifications')
+        .select('post_id')
+        .eq('id', verificationId)
+        .single();
+
+    await _supabase
         .from('catch_verifications')
         .update({
           'status': newStatus,
           'resolved_at': DateTime.now().toIso8601String(),
         })
-        .eq('id', verificationId)
-        .select('post_id')
-        .single();
+        .eq('id', verificationId);
 
     await _supabase
         .from('posts')
         .update({'review_status': newStatus})
-        .eq('id', verif['post_id']);
+        .eq('id', verifRow['post_id']);
   }
 
   // 어드민 직접 승인/거부 (투표 시스템 우회)
