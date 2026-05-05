@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_svg.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
+import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
@@ -17,7 +19,8 @@ import '../../../../core/extensions/theme_extensions.dart';
 const int _kMaxImages = 5;
 
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key});
+  const UploadScreen({super.key, this.editPost});
+  final Post? editPost;
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -30,6 +33,12 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isVideo = false;
   Uint8List? _thumbnailBytes;
   bool _generatingThumb = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editPost != null) _step = 1; // edit 모드: 미디어 선택 스킵
+  }
 
   Future<void> _onMediaSelected(List<XFile> files, bool isVideo) async {
     if (isVideo) {
@@ -86,6 +95,7 @@ class _UploadScreenState extends State<UploadScreen> {
             isVideo: _isVideo,
             thumbnailBytes: _thumbnailBytes,
             onBack: () => setState(() => _step = 0),
+            editPost: widget.editPost,
           );
   }
 }
@@ -386,6 +396,7 @@ class _CaptionStep extends ConsumerStatefulWidget {
     this.videoFile,
     this.thumbnailBytes,
     required this.onBack,
+    this.editPost,
   });
   final bool isDark;
   final List<XFile> imageFiles;   // 사진 모드
@@ -393,6 +404,7 @@ class _CaptionStep extends ConsumerStatefulWidget {
   final bool isVideo;
   final Uint8List? thumbnailBytes;
   final VoidCallback onBack;
+  final Post? editPost;
 
   @override
   ConsumerState<_CaptionStep> createState() => _CaptionStepState();
@@ -411,11 +423,26 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
   // 사진 선택 목록 (삭제 가능)
   late List<XFile> _images;
+  bool _imageReplaced = false; // edit 모드에서 이미지를 교체했는지
 
   @override
   void initState() {
     super.initState();
     _images = List.from(widget.imageFiles);
+
+    final post = widget.editPost;
+    if (post != null) {
+      // caption과 hashtag 분리
+      final raw = post.caption ?? '';
+      final parts = raw.split('\n\n');
+      final tags = parts.where((p) => p.trim().startsWith('#')).join('\n\n');
+      final text = parts.where((p) => !p.trim().startsWith('#')).join('\n\n');
+      _captionCtrl.text = text;
+      _tagCtrl.text = tags;
+      _locationCtrl.text = post.location ?? '';
+      _lengthCtrl.text = post.length != null ? '${post.length}' : '';
+      _weightCtrl.text = post.weight != null ? '${post.weight}' : '';
+    }
   }
 
   @override
@@ -435,7 +462,46 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     setState(() => _images.removeAt(index));
   }
 
+  Future<void> _saveEdit() async {
+    final post = widget.editPost!;
+    setState(() { _sharing = true; });
+    try {
+      final rawCaption = _captionCtrl.text.trim();
+      final rawTags = _tagCtrl.text.trim();
+      final combinedCaption = [
+        if (rawCaption.isNotEmpty) rawCaption,
+        if (rawTags.isNotEmpty) rawTags,
+      ].join('\n\n');
+
+      await ref.read(feedRepositoryProvider).updatePost(
+        postId: post.id,
+        newImageFiles: _imageReplaced && _images.isNotEmpty
+            ? _images.map((f) => File(f.path)).toList()
+            : null,
+        caption: combinedCaption.isEmpty ? null : combinedCaption,
+        location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+        length: double.tryParse(_lengthCtrl.text.trim()),
+        weight: double.tryParse(_weightCtrl.text.trim()),
+      );
+
+      ref.invalidate(feedPostsProvider);
+      ref.invalidate(myPostsProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sharing = false);
+        AppSnackBar.error(context, '수정 실패: $e');
+      }
+    }
+  }
+
   Future<void> _share() async {
+    // edit 모드
+    if (widget.editPost != null) {
+      await _saveEdit();
+      return;
+    }
+
     final user = ref.read(currentUserProvider);
     if (user == null) {
       AppSnackBar.warning(context, '로그인이 필요합니다.');
@@ -525,6 +591,12 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
   // 첫 번째 이미지 (또는 동영상 썸네일) 미리보기
   Widget _buildFirstThumb() {
+    // edit 모드: 새 이미지 선택 전까지는 기존 URL 표시
+    if (widget.editPost != null && _images.isEmpty && !widget.isVideo) {
+      final url = widget.editPost!.imageUrls?.firstOrNull
+          ?? widget.editPost!.imageUrl;
+      return CachedNetworkImage(imageUrl: url, fit: BoxFit.cover);
+    }
     if (widget.isVideo && widget.thumbnailBytes != null) {
       return Stack(
         fit: StackFit.expand,
@@ -538,6 +610,21 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       return Image.file(File(_images.first.path), fit: BoxFit.cover);
     }
     return const SizedBox.shrink();
+  }
+
+  Future<void> _replaceImages() async {
+    final picked = await ImagePicker().pickMultiImage(
+      imageQuality: 80,
+      maxWidth: 1080,
+      maxHeight: 1080,
+      limit: _kMaxImages,
+    );
+    if (picked.isNotEmpty && mounted) {
+      setState(() {
+        _images = picked.take(_kMaxImages).toList();
+        _imageReplaced = true;
+      });
+    }
   }
 
   @override
@@ -561,7 +648,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
           icon: Icon(LucideIcons.chevronLeft, color: textColor, size: 24),
         ),
         title: Text(
-          '새 게시물',
+          widget.editPost != null ? '게시물 수정' : '새 게시물',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
         ),
         centerTitle: true,
@@ -576,7 +663,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: accent),
                     )
                   : Text(
-                      '공유',
+                      widget.editPost != null ? '저장' : '공유',
                       style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
             ),
@@ -738,6 +825,20 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             child: Text(
                               '+${_images.length - 1}',
                               style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      // edit 모드: 사진 변경 오버레이
+                      if (widget.editPost != null)
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: _replaceImages,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
                             ),
                           ),
                         ),
