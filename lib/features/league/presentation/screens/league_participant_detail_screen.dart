@@ -79,7 +79,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
     if (rule == '무게') return catchLimit == 1 ? '최대 무게' : '무게 합산';
     if (catchLimit == 1) return '최대어';
     if (catchLimit == 0) return '전체 합산';
-    return '합산(${catchLimit}마리)';
+    return '합산($catchLimit마리)';
   }
 
   // 우측 참고 카드: 합산 대회에서 최대어 단독 수치, 마릿수 대회에서도 표시
@@ -293,7 +293,6 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                                       ),
                                       builder: (_) => _CatchMemoEditSheet(
                                         post: post,
-                                        leagueId: leagueId,
                                         isDark: isDark,
                                         accent: accent,
                                         onSaved: () {
@@ -622,13 +621,11 @@ class _ActionItem extends StatelessWidget {
 class _CatchMemoEditSheet extends ConsumerStatefulWidget {
   const _CatchMemoEditSheet({
     required this.post,
-    required this.leagueId,
     required this.isDark,
     required this.accent,
     required this.onSaved,
   });
   final Post post;
-  final String leagueId;
   final bool isDark;
   final Color accent;
   final VoidCallback onSaved;
