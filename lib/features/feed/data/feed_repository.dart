@@ -209,15 +209,18 @@ class FeedRepository {
       'catch_count': catchCount,
       'is_lunker': length != null && length >= 50.0,
       'score': calculateFishScore(length),
-      'review_status': 'pending',
+      // 개인기록만 인증 대상 — 피드/리그 일반 게시물은 바로 approved
+      'review_status': isPersonalRecord ? 'pending' : 'approved',
     }).select('id').single();
 
-    // 인증 요청 생성
-    final verificationRepo = VerificationRepository(_supabase);
-    await verificationRepo.createVerificationRequest(
-      inserted['id'] as String,
-      userId,
-    );
+    // 개인기록만 인증 요청 생성
+    if (isPersonalRecord) {
+      final verificationRepo = VerificationRepository(_supabase);
+      await verificationRepo.createVerificationRequest(
+        inserted['id'] as String,
+        userId,
+      );
+    }
   }
 }
 
