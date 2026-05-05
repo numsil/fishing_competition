@@ -28,7 +28,7 @@ abstract class Post with _$Post {
     @JsonKey(name: 'is_lunker') @Default(false) bool isLunker,
     @JsonKey(name: 'is_personal_record') @Default(false) bool isPersonalRecord,
     @Default(0) int score,
-    @JsonKey(name: 'review_status') @Default('approved') String reviewStatus,
+    @JsonKey(name: 'review_status') @Default('pending') String reviewStatus,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // Joined user data (can be populated after fetch)
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('Unknown') String username,

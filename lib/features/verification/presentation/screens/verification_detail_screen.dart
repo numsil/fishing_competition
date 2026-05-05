@@ -31,9 +31,16 @@ class _VerificationDetailScreenState
         AppSnackBar.error(context, '로그인이 필요합니다');
         return;
       }
-      await ref
-          .read(verificationRepositoryProvider)
-          .submitVote(widget.request.id, uid, vote);
+      final isAdmin = await ref.read(isAdminUserProvider.future);
+      if (isAdmin) {
+        await ref
+            .read(verificationRepositoryProvider)
+            .adminResolveVerification(widget.request.id, widget.request.postId, vote);
+      } else {
+        await ref
+            .read(verificationRepositoryProvider)
+            .submitVote(widget.request.id, uid, vote);
+      }
       ref.invalidate(myPendingVerificationsProvider);
       ref.invalidate(myVerificationHistoryProvider);
       if (mounted) Navigator.of(context).pop(true);

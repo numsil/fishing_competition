@@ -181,6 +181,22 @@ class VerificationRepository {
         .eq('id', verif['post_id']);
   }
 
+  // 어드민 직접 승인/거부 (투표 시스템 우회)
+  Future<void> adminResolveVerification(
+      String verificationId, String postId, String status) async {
+    await _supabase
+        .from('catch_verifications')
+        .update({
+          'status': status,
+          'resolved_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', verificationId);
+    await _supabase
+        .from('posts')
+        .update({'review_status': status})
+        .eq('id', postId);
+  }
+
   // 내가 완료한 투표 포함 전체 목록
   Future<List<VerificationRequest>> getMyVerificationHistory(String userId) async {
     final rows = await _supabase

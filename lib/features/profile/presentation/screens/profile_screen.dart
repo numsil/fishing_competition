@@ -283,29 +283,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   const SizedBox(height: 10),
 
                   // 통계 4칸
-                  Builder(builder: (context) {
-                    final participationCount = ref.watch(myLeaguesProvider).maybeWhen(
-                      data: (map) {
-                        final participated = map['participated'] ?? [];
-                        final hosted = map['hosted'] ?? [];
-                        final allIds = {
-                          ...participated.map((l) => l.id),
-                          ...hosted.map((l) => l.id),
-                        };
-                        return allIds.length;
-                      },
-                      orElse: () => 0,
-                    );
-                    return Row(children: [
-                      StatBox(icon: LucideIcons.waves, value: '$participationCount', label: '참가', isDark: context.isDark, accent: context.accentColor),
-                      const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.medal, value: '-', label: '우승', isDark: context.isDark, accent: context.accentColor),
-                      const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: context.isDark, accent: context.accentColor),
-                      const SizedBox(width: 8),
-                      StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: context.isDark, accent: context.accentColor),
-                    ]);
-                  }),
+                  Row(children: [
+                    StatBox(icon: LucideIcons.waves, value: '${profile.participationCount}', label: '리그참가', isDark: context.isDark, accent: context.accentColor),
+                    const SizedBox(width: 8),
+                    StatBox(icon: LucideIcons.medal, value: '${profile.winCount}', label: '우승', isDark: context.isDark, accent: context.accentColor),
+                    const SizedBox(width: 8),
+                    StatBox(icon: LucideIcons.fish, value: '${profile.lunkerCount}', label: '런커', isDark: context.isDark, accent: context.accentColor),
+                    const SizedBox(width: 8),
+                    StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: context.isDark, accent: context.accentColor),
+                  ]),
                   const SizedBox(height: 6),
 
                   // 탭

@@ -267,6 +267,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     // 통계 4칸
                     Row(children: [
                       StatBox(
+                          icon: LucideIcons.waves,
+                          value: '${profile.participationCount}',
+                          label: '리그참가',
+                          isDark: context.isDark,
+                          accent: context.accentColor),
+                      const SizedBox(width: 8),
+                      StatBox(
+                          icon: LucideIcons.medal,
+                          value: '${profile.winCount}',
+                          label: '우승',
+                          isDark: context.isDark,
+                          accent: context.accentColor),
+                      const SizedBox(width: 8),
+                      StatBox(
                           icon: LucideIcons.fish,
                           value: '${profile.lunkerCount}',
                           label: '런커',
@@ -274,23 +288,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           accent: context.accentColor),
                       const SizedBox(width: 8),
                       StatBox(
-                          icon: LucideIcons.medal,
-                          value: '-',
-                          label: '우승',
-                          isDark: context.isDark,
-                          accent: context.accentColor),
-                      const SizedBox(width: 8),
-                      StatBox(
                           icon: LucideIcons.barChart2,
                           value: '-',
                           label: '점수',
-                          isDark: context.isDark,
-                          accent: context.accentColor),
-                      const SizedBox(width: 8),
-                      StatBox(
-                          icon: LucideIcons.waves,
-                          value: '-',
-                          label: '참가',
                           isDark: context.isDark,
                           accent: context.accentColor),
                     ]),

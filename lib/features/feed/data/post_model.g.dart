@@ -30,7 +30,7 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   isLunker: json['is_lunker'] as bool? ?? false,
   isPersonalRecord: json['is_personal_record'] as bool? ?? false,
   score: (json['score'] as num?)?.toInt() ?? 0,
-  reviewStatus: json['review_status'] as String? ?? 'approved',
+  reviewStatus: json['review_status'] as String? ?? 'pending',
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 

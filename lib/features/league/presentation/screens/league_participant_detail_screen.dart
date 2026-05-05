@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -13,6 +12,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/utils/image_downloader.dart';
 
@@ -258,7 +258,6 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                       post: posts[index],
                       isDark: context.isDark,
                       accent: context.accentColor,
-                      onTap: () => context.push('/post', extra: posts[index]),
                       isMyPost: isMyPost,
                       onShareToFeed: isMyPost ? () async {
                         try {
@@ -284,6 +283,25 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                             AppSnackBar.error(context, '저장 실패: $e');
                           }
                         }
+                      } : null,
+                      onDelete: isMyPost ? () async {
+                        await showDeleteConfirmSheet(
+                          context,
+                          title: '조과 삭제',
+                          content: '이 조과를 삭제하시겠습니까?\n삭제된 조과는 복구할 수 없습니다.',
+                          onConfirmed: () async {
+                            try {
+                              await ref.read(feedRepositoryProvider).deletePost(posts[index].id);
+                              ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
+                              ref.invalidate(leagueRankingProvider(leagueId));
+                              ref.invalidate(feedPostsProvider);
+                            } catch (e) {
+                              if (context.mounted) {
+                                AppSnackBar.error(context, '삭제 실패: $e');
+                              }
+                            }
+                          },
+                        );
                       } : null,
                     ),
                     childCount: posts.length,
@@ -344,22 +362,21 @@ class _CatchCard extends StatelessWidget {
     required this.post,
     required this.isDark,
     required this.accent,
-    required this.onTap,
     this.isMyPost = false,
     this.onShareToFeed,
     this.onDownload,
+    this.onDelete,
   });
   final Post post;
   final bool isDark;
   final Color accent;
-  final VoidCallback onTap;
   final bool isMyPost;
   final VoidCallback? onShareToFeed;
   final VoidCallback? onDownload;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
@@ -369,7 +386,6 @@ class _CatchCard extends StatelessWidget {
         padding: EdgeInsets.zero,
         radius: 14,
         borderColor: divColor,
-        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -454,6 +470,27 @@ class _CatchCard extends StatelessWidget {
                                     color: Colors.black)),
                           ),
                         ],
+                        if (post.reviewStatus == 'approved') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(LucideIcons.badgeCheck, size: 10, color: Colors.green[700]),
+                              const SizedBox(width: 3),
+                              Text('인증',
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.green[700])),
+                            ]),
+                          ),
+                        ],
                       ]),
                       Text(
                         DateFormat('MM.dd HH:mm')
@@ -498,12 +535,10 @@ class _CatchCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       post.caption!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 13, color: sub, height: 1.4),
                     ),
                   ],
-                  if (isMyPost && (onShareToFeed != null || onDownload != null)) ...[
+                  if (isMyPost && (onShareToFeed != null || onDownload != null || onDelete != null)) ...[
                     const SizedBox(height: 10),
                     Divider(height: 1, color: divColor),
                     const SizedBox(height: 8),
@@ -518,14 +553,8 @@ class _CatchCard extends StatelessWidget {
                                 children: [
                                   Icon(LucideIcons.share2, size: 13, color: accent),
                                   const SizedBox(width: 5),
-                                  Text(
-                                    '피드에 공유',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: accent,
-                                    ),
-                                  ),
+                                  Text('피드에 공유',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
                                 ],
                               ),
                             ),
@@ -542,14 +571,26 @@ class _CatchCard extends StatelessWidget {
                                 children: [
                                   Icon(LucideIcons.download, size: 13, color: accent),
                                   const SizedBox(width: 5),
-                                  Text(
-                                    '사진 저장',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: accent,
-                                    ),
-                                  ),
+                                  Text('사진 저장',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (onDelete != null) ...[
+                          if (onShareToFeed != null || onDownload != null)
+                            Container(width: 1, height: 16, color: divColor),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: onDelete,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(LucideIcons.trash2, size: 13, color: AppColors.error),
+                                  const SizedBox(width: 5),
+                                  Text('삭제',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
                                 ],
                               ),
                             ),
