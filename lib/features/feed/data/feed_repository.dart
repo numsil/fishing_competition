@@ -73,6 +73,44 @@ class FeedRepository {
     }).eq('id', postId);
   }
 
+  Future<void> updatePost({
+    required String postId,
+    List<File>? newImageFiles,  // null이면 기존 이미지 유지
+    String? caption,
+    String? location,
+    double? length,
+    double? weight,
+  }) async {
+    final updates = <String, dynamic>{
+      'caption': caption?.trim().isEmpty == true ? null : caption?.trim(),
+      'location': location?.trim().isEmpty == true ? null : location?.trim(),
+      'length': length,
+      'weight': weight,
+      'is_lunker': length != null && length >= 50.0,
+      'score': calculateFishScore(length),
+    };
+
+    if (newImageFiles != null && newImageFiles.isNotEmpty) {
+      final userId = _supabase.auth.currentUser?.id ?? '';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final urls = <String>[];
+      for (int i = 0; i < newImageFiles.length; i++) {
+        final compressed = await compressForUpload(newImageFiles[i]);
+        final storagePath = 'posts/${userId}_${ts}_$i.jpg';
+        await _supabase.storage.from('post_images').upload(
+          storagePath,
+          compressed,
+          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+        );
+        urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+      }
+      updates['image_url'] = urls.first;
+      updates['image_urls'] = urls;
+    }
+
+    await _supabase.from('posts').update(updates).eq('id', postId);
+  }
+
   /// 조과 앨범에서 선택한 여러 Post를 하나의 피드 포스트로 공유.
   /// 이미지는 재업로드 없이 기존 URL을 그대로 참조한다.
   Future<void> shareMultiplePostsToFeed({
