@@ -75,6 +75,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
   }
 
+  void _editPost() {
+    context.push(AppRoutes.upload, extra: widget.post);
+  }
+
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -132,6 +136,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   onShareToFeed: () {
                     Navigator.pop(context);
                     _sharePostToFeed();
+                  },
+                  onEdit: () {
+                    Navigator.pop(context);
+                    _editPost();
                   },
                 ),
               );
@@ -353,6 +361,7 @@ class _MoreMenu extends StatelessWidget {
     required this.isOwner,
     required this.onDelete,
     required this.onShareToFeed,
+    this.onEdit,
   });
   final bool isDark;
   final String postId;
@@ -360,6 +369,7 @@ class _MoreMenu extends StatelessWidget {
   final bool isOwner;
   final VoidCallback onDelete;
   final VoidCallback onShareToFeed;
+  final VoidCallback? onEdit;
 
   bool get _canShareToFeed =>
       isOwner && (post.leagueId != null || post.isPersonalRecord);
@@ -389,6 +399,15 @@ class _MoreMenu extends StatelessWidget {
               label: '내 피드에 공유하기',
               color: accent,
               onTap: onShareToFeed,
+            ),
+            Divider(height: 1, color: divColor),
+          ],
+          if (isOwner && post.leagueId == null && !post.isPersonalRecord) ...[
+            _MenuItem(
+              icon: LucideIcons.pencil,
+              label: '수정하기',
+              color: textColor,
+              onTap: onEdit ?? () {},
             ),
             Divider(height: 1, color: divColor),
           ],

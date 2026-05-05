@@ -61,10 +61,13 @@ GoRouter appRouter(Ref ref) {
       // 업로드: ShellRoute 밖 → 하단 탭 없는 풀스크린
       GoRoute(
         path: AppRoutes.upload,
-        pageBuilder: (context, state) => const MaterialPage(
-          fullscreenDialog: true,
-          child: UploadScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final editPost = state.extra is Post ? state.extra as Post : null;
+          return MaterialPage(
+            fullscreenDialog: true,
+            child: UploadScreen(editPost: editPost),
+          );
+        },
       ),
       // 개인 기록 조과 촬영: 풀스크린
       GoRoute(
