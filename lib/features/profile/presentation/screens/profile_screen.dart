@@ -130,8 +130,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     icon: Icons.logout_rounded,
                   );
                   if (!confirm) return;
-                  await ref.read(authRepositoryProvider).signOut();
+                  // navigate 먼저: signOut() 호출 시 authState 변화로
+                  // myProfile이 재빌드되어 에러 화면이 보이는 문제 방지
                   if (context.mounted) context.go(AppRoutes.login);
+                  await ref.read(authRepositoryProvider).signOut();
                 },
               ),
             ],
