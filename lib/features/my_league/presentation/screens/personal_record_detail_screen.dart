@@ -71,6 +71,16 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
             ),
             const SizedBox(height: 16),
             _MenuItem(
+              icon: LucideIcons.pencil,
+              label: '수정하기',
+              color: accent,
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _openEditSheet();
+              },
+            ),
+            Divider(height: 1, color: divColor),
+            _MenuItem(
               icon: LucideIcons.send,
               label: '내 피드에 공유하기',
               color: accent,
@@ -102,6 +112,26 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openEditSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _PersonalRecordEditSheet(
+        post: post,
+        isDark: context.isDark,
+        accent: context.accentColor,
+        onSaved: () {
+          ref.invalidate(myPersonalRecordsProvider);
+          ref.invalidate(myProfileProvider);
+        },
       ),
     );
   }
@@ -383,6 +413,125 @@ class _MenuItem extends StatelessWidget {
           const SizedBox(width: 16),
           Text(label, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w500)),
         ]),
+      ),
+    );
+  }
+}
+
+class _PersonalRecordEditSheet extends ConsumerStatefulWidget {
+  const _PersonalRecordEditSheet({
+    required this.post,
+    required this.isDark,
+    required this.accent,
+    required this.onSaved,
+  });
+  final Post post;
+  final bool isDark;
+  final Color accent;
+  final VoidCallback onSaved;
+
+  @override
+  ConsumerState<_PersonalRecordEditSheet> createState() => _PersonalRecordEditSheetState();
+}
+
+class _PersonalRecordEditSheetState extends ConsumerState<_PersonalRecordEditSheet> {
+  late final TextEditingController _locationCtrl;
+  late final TextEditingController _captionCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationCtrl = TextEditingController(text: widget.post.location ?? '');
+    _captionCtrl = TextEditingController(text: widget.post.caption ?? '');
+  }
+
+  @override
+  void dispose() {
+    _locationCtrl.dispose();
+    _captionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(feedRepositoryProvider).updatePostMeta(
+        postId: widget.post.id,
+        caption: _captionCtrl.text,
+        location: _locationCtrl.text,
+      );
+      widget.onSaved();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '수정 실패: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final accent = widget.accent;
+    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text('수정하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black)),
+              const Spacer(),
+              _saving
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                  : TextButton(
+                      onPressed: _save,
+                      child: Text('저장', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
+                    ),
+            ]),
+            Divider(height: 24, color: divColor),
+            Text('장소', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _locationCtrl,
+              autofocus: true,
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: '예) 충주호, 소양강 등',
+                hintStyle: TextStyle(color: sub, fontSize: 13),
+                prefixIcon: Icon(LucideIcons.mapPin, size: 16, color: sub),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('메모', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _captionCtrl,
+              maxLines: 4,
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: '조과 상황, 사용한 루어 등을 자유롭게 입력하세요',
+                hintStyle: TextStyle(color: sub, fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
