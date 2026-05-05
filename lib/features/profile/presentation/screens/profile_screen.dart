@@ -120,6 +120,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               IconButton(
                 icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
                 onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w800)),
+                      content: const Text('정말 로그아웃 하시겠어요?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('취소'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                          child: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm != true) return;
                   await ref.read(authRepositoryProvider).signOut();
                   if (context.mounted) context.go(AppRoutes.login);
                 },
