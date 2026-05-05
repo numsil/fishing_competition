@@ -25,43 +25,17 @@ class VerificationRepository {
         .single();
     final verifId = verif['id'] as String;
 
-    // 2. 인증자 권한 유저 최대 5명 (is_verifier=true, 본인 제외)
+    // 2. 권한 부여된 verifier 전원 배정 (테스트 기간: 랜덤 유저 배정 없음)
     final verifierCandidates = await _supabase
         .from('users')
         .select('id')
         .eq('is_verifier', true)
-        .neq('id', submitterId)
-        .limit(20);
+        .neq('id', submitterId);
 
-    final verifiers = List<Map<String, dynamic>>.from(verifierCandidates);
-    verifiers.shuffle();
-    final selectedVerifiers = verifiers.take(5).toList();
-
-    // 3. 나머지 자리를 랜덤 유저로 채우기 (인증자 + 본인 제외)
-    final verifierIds = selectedVerifiers.map((v) => v['id'] as String).toList();
-    final needed = 10 - selectedVerifiers.length;
-
-    final List<Map<String, dynamic>> selectedRandom;
-    if (needed > 0) {
-      final excludeIds = [...verifierIds, submitterId];
-      final excludeFilter = '(${excludeIds.map((id) => '"$id"').join(',')})';
-      final randomCandidates = await _supabase
-          .from('users')
-          .select('id')
-          .not('id', 'in', excludeFilter)
-          .limit(200);
-
-      final randomPool = List<Map<String, dynamic>>.from(randomCandidates);
-      randomPool.shuffle();
-      selectedRandom = randomPool.take(needed).toList();
-    } else {
-      selectedRandom = [];
-    }
-
-    final selected = [...selectedVerifiers, ...selectedRandom];
+    final selected = List<Map<String, dynamic>>.from(verifierCandidates);
     if (selected.isEmpty) return;
 
-    // 4. verification_votes 생성
+    // 3. verification_votes 생성
     final votes = selected.map((u) => {
       'verification_id': verifId,
       'voter_id': u['id'],
@@ -152,15 +126,12 @@ class VerificationRepository {
         .update({'approve_count': approveCount, 'reject_count': rejectCount})
         .eq('id', verificationId);
 
-    // 4. 판정 (최소 3명 응답 필요)
-    final responded = approveCount + rejectCount;
-    if (responded < 3) return;
-
+    // 4. 판정 (테스트 기간: 거절 1명이면 즉시 거절, 승인 2명이면 승인)
     String? newStatus;
-    if (approveCount / responded >= 0.7) {
-      newStatus = 'approved';
-    } else if (rejectCount / responded >= 0.6) {
+    if (rejectCount >= 1) {
       newStatus = 'rejected';
+    } else if (approveCount >= 2) {
+      newStatus = 'approved';
     }
     if (newStatus == null) return;
 
