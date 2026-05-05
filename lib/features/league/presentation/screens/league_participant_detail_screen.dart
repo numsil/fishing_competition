@@ -254,56 +254,127 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _CatchCard(
-                      post: posts[index],
-                      isDark: context.isDark,
-                      accent: context.accentColor,
-                      isMyPost: isMyPost,
-                      onShareToFeed: isMyPost ? () async {
-                        try {
-                          await ref.read(feedRepositoryProvider).sharePostToFeed(posts[index]);
-                          ref.invalidate(feedPostsProvider);
-                          if (context.mounted) {
-                            AppSnackBar.success(context, '내 피드에 공유되었습니다.');
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '공유 실패: $e');
-                          }
-                        }
-                      } : null,
-                      onDownload: isMyPost ? () async {
-                        try {
-                          await downloadImageToGallery(posts[index].imageUrl);
-                          if (context.mounted) {
-                            AppSnackBar.success(context, '갤러리에 저장되었습니다');
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '저장 실패: $e');
-                          }
-                        }
-                      } : null,
-                      onDelete: isMyPost ? () async {
-                        await showDeleteConfirmSheet(
-                          context,
-                          title: '조과 삭제',
-                          content: '이 조과를 삭제하시겠습니까?\n삭제된 조과는 복구할 수 없습니다.',
-                          onConfirmed: () async {
-                            try {
-                              await ref.read(feedRepositoryProvider).deletePost(posts[index].id);
-                              ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
-                              ref.invalidate(leagueRankingProvider(leagueId));
-                              ref.invalidate(feedPostsProvider);
-                            } catch (e) {
-                              if (context.mounted) {
-                                AppSnackBar.error(context, '삭제 실패: $e');
-                              }
-                            }
-                          },
+                    (context, index) {
+                      final post = posts[index];
+
+                      void showActions() {
+                        final isDark = context.isDark;
+                        final accent = context.accentColor;
+                        final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (sheetCtx) => SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 8),
+                                Container(width: 36, height: 4,
+                                    decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
+                                        borderRadius: BorderRadius.circular(2))),
+                                const SizedBox(height: 16),
+                                _ActionItem(
+                                  icon: LucideIcons.pencil,
+                                  label: '수정하기',
+                                  color: isDark ? Colors.white : Colors.black,
+                                  onTap: () {
+                                    Navigator.pop(sheetCtx);
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                      ),
+                                      builder: (_) => _CatchMemoEditSheet(
+                                        post: post,
+                                        leagueId: leagueId,
+                                        isDark: isDark,
+                                        accent: accent,
+                                        onSaved: () {
+                                          ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
+                                          ref.invalidate(leagueRankingProvider(leagueId));
+                                          ref.invalidate(feedPostsProvider);
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Divider(height: 1, color: divColor),
+                                _ActionItem(
+                                  icon: LucideIcons.share2,
+                                  label: '피드에 공유',
+                                  color: accent,
+                                  onTap: () async {
+                                    Navigator.pop(sheetCtx);
+                                    try {
+                                      await ref.read(feedRepositoryProvider).sharePostToFeed(post);
+                                      ref.invalidate(feedPostsProvider);
+                                      if (context.mounted) AppSnackBar.success(context, '내 피드에 공유되었습니다.');
+                                    } catch (e) {
+                                      if (context.mounted) AppSnackBar.error(context, '공유 실패: $e');
+                                    }
+                                  },
+                                ),
+                                Divider(height: 1, color: divColor),
+                                _ActionItem(
+                                  icon: LucideIcons.download,
+                                  label: '사진 저장',
+                                  color: accent,
+                                  onTap: () async {
+                                    Navigator.pop(sheetCtx);
+                                    try {
+                                      await downloadImageToGallery(post.imageUrl);
+                                      if (context.mounted) AppSnackBar.success(context, '갤러리에 저장되었습니다');
+                                    } catch (e) {
+                                      if (context.mounted) AppSnackBar.error(context, '저장 실패: $e');
+                                    }
+                                  },
+                                ),
+                                Divider(height: 1, color: divColor),
+                                _ActionItem(
+                                  icon: LucideIcons.trash2,
+                                  label: '삭제',
+                                  color: AppColors.error,
+                                  onTap: () async {
+                                    Navigator.pop(sheetCtx);
+                                    await showDeleteConfirmSheet(
+                                      context,
+                                      title: '조과 삭제',
+                                      content: '이 조과를 삭제하시겠습니까?\n삭제된 조과는 복구할 수 없습니다.',
+                                      onConfirmed: () async {
+                                        try {
+                                          await ref.read(feedRepositoryProvider).deletePost(post.id);
+                                          ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
+                                          ref.invalidate(leagueRankingProvider(leagueId));
+                                          ref.invalidate(feedPostsProvider);
+                                        } catch (e) {
+                                          if (context.mounted) AppSnackBar.error(context, '삭제 실패: $e');
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
                         );
-                      } : null,
-                    ),
+                      }
+
+                      return _CatchCard(
+                        post: post,
+                        isDark: context.isDark,
+                        accent: context.accentColor,
+                        isMyPost: isMyPost,
+                        onMoreTap: isMyPost ? showActions : null,
+                      );
+                    },
                     childCount: posts.length,
                   ),
                 ),
@@ -363,17 +434,13 @@ class _CatchCard extends StatelessWidget {
     required this.isDark,
     required this.accent,
     this.isMyPost = false,
-    this.onShareToFeed,
-    this.onDownload,
-    this.onDelete,
+    this.onMoreTap,
   });
   final Post post;
   final bool isDark;
   final Color accent;
   final bool isMyPost;
-  final VoidCallback? onShareToFeed;
-  final VoidCallback? onDownload;
-  final VoidCallback? onDelete;
+  final VoidCallback? onMoreTap;
 
   @override
   Widget build(BuildContext context) {
@@ -393,20 +460,16 @@ class _CatchCard extends StatelessWidget {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(13)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
                   child: AspectRatio(
                     aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
                     child: CachedNetworkImage(
                       imageUrl: post.imageUrl,
                       fit: BoxFit.cover,
                       errorWidget: (_, __, ___) => Container(
-                        color: isDark
-                            ? AppColors.darkSurface2
-                            : AppColors.lightDivider,
+                        color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
                         child: const Center(
-                          child: Icon(Icons.image_not_supported_outlined,
-                              color: Colors.grey),
+                          child: Icon(Icons.image_not_supported_outlined, color: Colors.grey),
                         ),
                       ),
                     ),
@@ -414,22 +477,30 @@ class _CatchCard extends StatelessWidget {
                 ),
                 if (isMyPost && post.reviewStatus == 'held')
                   Positioned(
-                    top: 10,
-                    left: 10,
+                    top: 10, left: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.error.withValues(alpha: 0.88),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        '보류',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                      child: const Text('보류',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                // ── ... 메뉴 버튼 ──
+                if (isMyPost)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: GestureDetector(
+                      onTap: onMoreTap,
+                      child: Container(
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
                       ),
                     ),
                   ),
@@ -447,34 +518,21 @@ class _CatchCard extends StatelessWidget {
                       Row(children: [
                         Icon(LucideIcons.fish, size: 13, color: accent),
                         const SizedBox(width: 5),
-                        Text(
-                          post.fishType,
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: accent),
-                        ),
+                        Text(post.fishType,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
                         if (post.isLunker) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: AppColors.gold,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),
                             child: const Text('런커',
-                                style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.black)),
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
                           ),
                         ],
                         if (post.reviewStatus == 'approved') ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 1),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
@@ -484,120 +542,29 @@ class _CatchCard extends StatelessWidget {
                               Icon(LucideIcons.badgeCheck, size: 10, color: Colors.green[700]),
                               const SizedBox(width: 3),
                               Text('인증',
-                                  style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.green[700])),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.green[700])),
                             ]),
                           ),
                         ],
                       ]),
-                      Text(
-                        DateFormat('MM.dd HH:mm')
-                            .format(post.createdAt.toLocal()),
-                        style: TextStyle(fontSize: 12, color: sub),
-                      ),
+                      Text(DateFormat('MM.dd HH:mm').format(post.createdAt.toLocal()),
+                          style: TextStyle(fontSize: 12, color: sub)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // ── 측정 수치 ─────────────────────────
-                  Wrap(
-                    spacing: 14,
-                    runSpacing: 4,
-                    children: [
-                      if (post.length != null)
-                        _MeasureStat(
-                          icon: LucideIcons.ruler,
-                          value: '${post.length!.toStringAsFixed(1)}cm',
-                          sub: sub,
-                        ),
-                      if (post.weight != null)
-                        _MeasureStat(
-                          icon: LucideIcons.scale,
-                          value: '${post.weight!.toStringAsFixed(0)}g',
-                          sub: sub,
-                        ),
-                      if (post.lureType != null && post.lureType!.isNotEmpty)
-                        _MeasureStat(
-                          icon: LucideIcons.zap,
-                          value: post.lureType!,
-                          sub: sub,
-                        ),
-                      if (post.location != null && post.location!.isNotEmpty)
-                        _MeasureStat(
-                          icon: LucideIcons.mapPin,
-                          value: dedupeAddress(post.location!),
-                          sub: sub,
-                        ),
-                    ],
-                  ),
+                  Wrap(spacing: 14, runSpacing: 4, children: [
+                    if (post.length != null)
+                      _MeasureStat(icon: LucideIcons.ruler, value: '${post.length!.toStringAsFixed(1)}cm', sub: sub),
+                    if (post.weight != null)
+                      _MeasureStat(icon: LucideIcons.scale, value: '${post.weight!.toStringAsFixed(0)}g', sub: sub),
+                    if (post.lureType != null && post.lureType!.isNotEmpty)
+                      _MeasureStat(icon: LucideIcons.zap, value: post.lureType!, sub: sub),
+                    if (post.location != null && post.location!.isNotEmpty)
+                      _MeasureStat(icon: LucideIcons.mapPin, value: dedupeAddress(post.location!), sub: sub),
+                  ]),
                   if (post.caption != null && post.caption!.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      post.caption!,
-                      style: TextStyle(fontSize: 13, color: sub, height: 1.4),
-                    ),
-                  ],
-                  if (isMyPost && (onShareToFeed != null || onDownload != null || onDelete != null)) ...[
-                    const SizedBox(height: 10),
-                    Divider(height: 1, color: divColor),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        if (onShareToFeed != null) ...[
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: onShareToFeed,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(LucideIcons.share2, size: 13, color: accent),
-                                  const SizedBox(width: 5),
-                                  Text('피드에 공유',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (onShareToFeed != null && onDownload != null)
-                          Container(width: 1, height: 16, color: divColor),
-                        if (onDownload != null) ...[
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: onDownload,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(LucideIcons.download, size: 13, color: accent),
-                                  const SizedBox(width: 5),
-                                  Text('사진 저장',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (onDelete != null) ...[
-                          if (onShareToFeed != null || onDownload != null)
-                            Container(width: 1, height: 16, color: divColor),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: onDelete,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(LucideIcons.trash2, size: 13, color: AppColors.error),
-                                  const SizedBox(width: 5),
-                                  Text('삭제',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    Text(post.caption!, style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
                   ],
                 ],
               ),
@@ -624,5 +591,131 @@ class _MeasureStat extends StatelessWidget {
       const SizedBox(width: 4),
       Text(value, style: TextStyle(fontSize: 12, color: sub)),
     ]);
+  }
+}
+
+// ── 액션 아이템 ───────────────────────────────────────────
+class _ActionItem extends StatelessWidget {
+  const _ActionItem({required this.icon, required this.label, required this.color, required this.onTap});
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        child: Row(children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 16),
+          Text(label, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w500)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── 메모 수정 바텀시트 ────────────────────────────────────
+class _CatchMemoEditSheet extends ConsumerStatefulWidget {
+  const _CatchMemoEditSheet({
+    required this.post,
+    required this.leagueId,
+    required this.isDark,
+    required this.accent,
+    required this.onSaved,
+  });
+  final Post post;
+  final String leagueId;
+  final bool isDark;
+  final Color accent;
+  final VoidCallback onSaved;
+
+  @override
+  ConsumerState<_CatchMemoEditSheet> createState() => _CatchMemoEditSheetState();
+}
+
+class _CatchMemoEditSheetState extends ConsumerState<_CatchMemoEditSheet> {
+  late final TextEditingController _captionCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _captionCtrl = TextEditingController(text: widget.post.caption ?? '');
+  }
+
+  @override
+  void dispose() {
+    _captionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(feedRepositoryProvider).updatePostMeta(
+        postId: widget.post.id,
+        caption: _captionCtrl.text,
+      );
+      widget.onSaved();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '수정 실패: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final accent = widget.accent;
+    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text('수정하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black)),
+              const Spacer(),
+              _saving
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                  : TextButton(
+                      onPressed: _save,
+                      child: Text('저장', style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
+                    ),
+            ]),
+            Divider(height: 24, color: divColor),
+            Text('메모', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: sub)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _captionCtrl,
+              maxLines: 4,
+              autofocus: true,
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: '조과 상황, 사용한 루어 등을 자유롭게 입력하세요',
+                hintStyle: TextStyle(color: sub, fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
