@@ -12,7 +12,9 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
+import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
+import '../../../verification/data/verification_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -115,7 +117,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
             actions: [
               IconButton(icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black), onPressed: () {}),
-              IconButton(icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20), onPressed: () => context.go(AppRoutes.login)),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+                onPressed: () async {
+                  await ref.read(authRepositoryProvider).signOut();
+                  ref.invalidate(myProfileProvider);
+                  ref.invalidate(myPostsProvider);
+                  ref.invalidate(myPersonalRecordsProvider);
+                  ref.invalidate(myLeaguesProvider);
+                  ref.invalidate(isAdminUserProvider);
+                  ref.invalidate(myPendingVerificationsProvider);
+                  ref.invalidate(myVerificationHistoryProvider);
+                  if (context.mounted) context.go(AppRoutes.login);
+                },
+              ),
             ],
           ),
           body: RefreshIndicator(
