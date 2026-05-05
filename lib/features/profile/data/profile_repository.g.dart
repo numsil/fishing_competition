@@ -24,7 +24,7 @@ final profileRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProfileRepositoryRef = AutoDisposeProviderRef<ProfileRepository>;
-String _$myProfileHash() => r'ab14caf3e07470e7eeeb3da7f2117bdc5dfba342';
+String _$myProfileHash() => r'e5e10fc08ceb6111a3a5d09cbffdc1d74656c8ac';
 
 /// See also [myProfile].
 @ProviderFor(myProfile)

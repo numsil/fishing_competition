@@ -121,16 +121,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
                 onPressed: () async {
                   await ref.read(authRepositoryProvider).signOut();
-                  // 화면 이동 먼저: 이동 전 invalidate하면 프로필 화면이
-                  // currentUser=null 상태로 재빌드되어 에러가 keepAlive에 캐시됨
                   if (context.mounted) context.go(AppRoutes.login);
-                  ref.invalidate(myProfileProvider);
-                  ref.invalidate(myPostsProvider);
-                  ref.invalidate(myPersonalRecordsProvider);
-                  ref.invalidate(myLeaguesProvider);
-                  ref.invalidate(isAdminUserProvider);
-                  ref.invalidate(myPendingVerificationsProvider);
-                  ref.invalidate(myVerificationHistoryProvider);
                 },
               ),
             ],

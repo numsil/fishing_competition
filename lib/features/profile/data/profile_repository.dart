@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../feed/data/post_model.dart';
 
 part 'profile_repository.g.dart';
@@ -357,9 +358,8 @@ ProfileRepository profileRepository(ProfileRepositoryRef ref) {
 
 @riverpod
 Future<UserProfile> myProfile(MyProfileRef ref) async {
-  final link = ref.keepAlive();
-  Timer(const Duration(minutes: 3), link.close);
-  // myPosts는 이미 Riverpod이 캐싱 — posts DB 호출 1회로 통계+목록 모두 처리
+  // authState 변화(로그아웃/로그인) 시 자동 재빌드
+  ref.watch(authStateProvider);
   final posts = await ref.watch(myPostsProvider.future);
   return ref.watch(profileRepositoryProvider).buildMyProfileFromPosts(posts);
 }
