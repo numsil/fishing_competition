@@ -1,0 +1,145 @@
+name: Build & Deploy APK
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. 브랜치별 환경 변수 설정 ────────────────────────────
+      - name: Set environment variables
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "APP_ENV=production" >> $GITHUB_ENV
+            echo "BUILD_MODE=release" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "staging" ]; then
+            echo "APP_ENV=staging" >> $GITHUB_ENV
+            echo "BUILD_MODE=release" >> $GITHUB_ENV
+          else
+            echo "APP_ENV=development" >> $GITHUB_ENV
+            echo "BUILD_MODE=debug" >> $GITHUB_ENV
+          fi
+
+      # ── 2. 코드 체크아웃 ──────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── 3. Java 설정 (Android 빌드 필수) ─────────────────────
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ── 4. Flutter 설정 ───────────────────────────────────────
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: stable
+          cache: true
+
+      # ── 5. .env 파일 생성 (secrets → 앱 번들) ─────────────────
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          APP_ENV=${{ env.APP_ENV }}
+          EOF
+
+      # ── 6. 패키지 설치 ────────────────────────────────────────
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # ── 7. APK 빌드 ───────────────────────────────────────────
+      - name: Build APK
+        run: |
+          if [ "${{ env.BUILD_MODE }}" = "release" ]; then
+            flutter build apk --release
+          else
+            flutter build apk --debug
+          fi
+
+      # ── 8. 버전 정보 추출 ─────────────────────────────────────
+      - name: Extract version from pubspec.yaml
+        run: |
+          FULL_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          VERSION=$(echo "$FULL_VERSION" | cut -d'+' -f1)
+          BUILD_NUMBER=$(echo "$FULL_VERSION" | cut -d'+' -f2)
+          FILENAME="${{ env.APP_ENV }}_${VERSION}_${BUILD_NUMBER}.apk"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-${{ env.BUILD_MODE }}.apk" >> $GITHUB_ENV
+
+      # ── 9. Supabase Storage 업로드 ────────────────────────────
+      - name: Upload APK to Supabase Storage
+        run: |
+          # 기존 파일 교체 (x-upsert: true)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/${{ env.FILENAME }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            -H "x-upsert: true" \
+            --data-binary @"${{ env.APK_PATH }}")
+
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "Upload failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+          APK_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/${{ env.FILENAME }}"
+          echo "APK_URL=$APK_URL" >> $GITHUB_ENV
+          echo "✅ APK uploaded: $APK_URL"
+
+      # ── 10. app_versions 테이블 업데이트 (upsert) ─────────────
+      - name: Update app_versions in Supabase
+        run: |
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
+
+          cat > /tmp/payload.json << EOF
+          {
+            "env": "${{ env.APP_ENV }}",
+            "version": "${{ env.VERSION }}",
+            "build_number": ${{ env.BUILD_NUMBER }},
+            "apk_url": "${{ env.APK_URL }}",
+            "release_notes": "$COMMIT_MSG",
+            "force_update": false,
+            "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/app_versions" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            --data @/tmp/payload.json)
+
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "DB update failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "✅ app_versions updated (env: ${{ env.APP_ENV }}, build: ${{ env.BUILD_NUMBER }})"
+
+      # ── 11. 결과 요약 ─────────────────────────────────────────
+      - name: Summary
+        run: |
+          echo "## 🚀 빌드 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 환경 | ${{ env.APP_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 버전 | ${{ env.VERSION }}+${{ env.BUILD_NUMBER }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 브랜치 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| APK | ${{ env.APK_URL }} |" >> $GITHUB_STEP_SUMMARY
