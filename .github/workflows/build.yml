@@ -95,7 +95,7 @@ jobs:
             --notes "${{ github.event.head_commit.message }}" \
             --latest=false
 
-          APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${{ env.FILENAME }}"
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/app-release.apk"
           echo "APK_URL=$APK_URL" >> $GITHUB_ENV
           echo "✅ APK uploaded to GitHub Release: $APK_URL"
         env:
