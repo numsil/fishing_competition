@@ -181,7 +181,10 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   if (!widget.info.forceUpdate && !_downloading) ...[
                     Expanded(
                       child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () async {
+                          await widget.service.skipVersion(widget.info.buildNumber);
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
                         style: TextButton.styleFrom(
                           foregroundColor: sub,
                           padding: const EdgeInsets.symmetric(vertical: 12),
