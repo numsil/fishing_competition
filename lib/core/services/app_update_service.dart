@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppVersionInfo {
@@ -69,6 +71,14 @@ class AppUpdateService {
     String apkUrl, {
     void Function(double progress)? onProgress,
   }) async {
+    if (Platform.isAndroid) {
+      final status = await Permission.requestInstallPackages.status;
+      if (!status.isGranted) {
+        await openAppSettings();
+        throw Exception('install_permission_denied');
+      }
+    }
+
     final dir = await getTemporaryDirectory();
     final savePath = '${dir.path}/nakstar_update.apk';
 
@@ -80,6 +90,9 @@ class AppUpdateService {
       },
     );
 
-    await OpenFile.open(savePath);
+    final result = await OpenFile.open(savePath);
+    if (result.type != ResultType.done) {
+      throw Exception('설치 실패: ${result.message}');
+    }
   }
 }

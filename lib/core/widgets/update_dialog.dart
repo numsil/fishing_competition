@@ -53,11 +53,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         );
         // 설치 시작 후 기존 앱 종료 → 설치 완료 후 새 버전으로 재시작됨
         SystemNavigator.pop();
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
           setState(() {
             _downloading = false;
-            _error = '다운로드 실패. 네트워크를 확인 후 다시 시도해 주세요.';
+            _error = e.toString().contains('install_permission_denied')
+                ? '설정에서 "출처를 알 수 없는 앱 설치"를 허용한 후 다시 시도해 주세요.'
+                : '다운로드 실패. 네트워크를 확인 후 다시 시도해 주세요.';
           });
         }
       }
