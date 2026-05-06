@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
@@ -313,6 +314,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: context.isDark, accent: context.accentColor),
                   ]),
                   const SizedBox(height: 6),
+
+                  // 버전
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (_, snap) {
+                      if (!snap.hasData) return const SizedBox();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'v${snap.data!.version}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: sub),
+                        ),
+                      );
+                    },
+                  ),
 
                   // 탭
                   TabBar(

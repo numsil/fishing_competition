@@ -2,8 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../router/app_router.dart';
+import '../../services/app_update_service.dart';
+import '../../widgets/update_dialog.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,9 +24,15 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _textFade;
   late Animation<double> _glow;
 
+  late final Future<AppVersionInfo?> _updateFuture;
+
   @override
   void initState() {
     super.initState();
+
+    // 스플래시 애니메이션과 동시에 업데이트 체크 시작
+    final updateService = AppUpdateService(Supabase.instance.client);
+    _updateFuture = updateService.checkForUpdate();
 
     _introCtrl = AnimationController(
       vsync: this,
@@ -51,8 +60,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     _introCtrl.forward();
 
-    Future.delayed(const Duration(milliseconds: 2400), () {
+    Future.delayed(const Duration(milliseconds: 2400), () async {
       if (!mounted) return;
+
+      final updateInfo = await _updateFuture;
+      if (!mounted) return;
+
+      if (updateInfo != null) {
+        final updateService = AppUpdateService(Supabase.instance.client);
+        await showUpdateDialog(context, updateInfo, updateService);
+        if (!mounted) return;
+      }
+
       final user = Supabase.instance.client.auth.currentUser;
       context.go(user != null ? AppRoutes.feed : AppRoutes.login);
     });
@@ -73,6 +92,29 @@ class _SplashScreenState extends State<SplashScreen>
         children: [
           // ── 물결 배경 ──────────────────────────────────
           const Positioned.fill(child: _WaterBackground()),
+
+          // ── 버전 표시 ──────────────────────────────────
+          Positioned(
+            bottom: 32,
+            left: 0,
+            right: 0,
+            child: FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder: (_, snap) {
+                if (!snap.hasData) return const SizedBox();
+                return Text(
+                  'v${snap.data!.version}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 0.5,
+                  ),
+                );
+              },
+            ),
+          ),
 
           // ── 로고 + 텍스트 ──────────────────────────────
           Center(
