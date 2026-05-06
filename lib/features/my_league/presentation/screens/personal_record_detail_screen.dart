@@ -29,7 +29,14 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
   bool _sharing = false;
   bool _downloading = false;
 
-  Post get post => widget.post;
+  late Post _post;
+  Post get post => _post;
+
+  @override
+  void initState() {
+    super.initState();
+    _post = widget.post;
+  }
 
   Future<void> _delete() async {
     await showDeleteConfirmSheet(
@@ -125,10 +132,11 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _PersonalRecordEditSheet(
-        post: post,
+        post: _post,
         isDark: context.isDark,
         accent: context.accentColor,
-        onSaved: () {
+        onSaved: (updated) {
+          if (mounted) setState(() => _post = updated);
           ref.invalidate(myPersonalRecordsProvider);
           ref.invalidate(myProfileProvider);
         },
@@ -281,7 +289,71 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green[700])),
                       ]),
                     ),
+                  ] else if (post.reviewStatus == 'rejected') ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(LucideIcons.shieldOff, size: 11, color: AppColors.error),
+                        const SizedBox(width: 3),
+                        Text('거부',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.error)),
+                      ]),
+                    ),
+                  ] else if (post.reviewStatus == 'pending') ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(LucideIcons.clock, size: 11, color: Colors.orange[700]),
+                        const SizedBox(width: 3),
+                        Text('인증 중',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.orange[700])),
+                      ]),
+                    ),
                   ],
+                ]),
+              ),
+            ),
+
+          // ── 거부 안내 배너 ────────────────────────
+          if (post.reviewStatus == 'rejected')
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(LucideIcons.alertTriangle, size: 18, color: AppColors.error),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('인증이 거부되었습니다',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.error)),
+                        const SizedBox(height: 4),
+                        Text(
+                          '점수에 반영되지 않습니다. 사진이 명확하지 않거나 측정값이 부정확할 수 있습니다. 삭제 후 다시 등록해주세요.',
+                          style: TextStyle(fontSize: 12, color: AppColors.error.withValues(alpha: 0.85), height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
                 ]),
               ),
             ),
@@ -427,7 +499,7 @@ class _PersonalRecordEditSheet extends ConsumerStatefulWidget {
   final Post post;
   final bool isDark;
   final Color accent;
-  final VoidCallback onSaved;
+  final void Function(Post updated) onSaved;
 
   @override
   ConsumerState<_PersonalRecordEditSheet> createState() => _PersonalRecordEditSheetState();
@@ -455,12 +527,19 @@ class _PersonalRecordEditSheetState extends ConsumerState<_PersonalRecordEditShe
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
+      final newCaption = _captionCtrl.text.trim();
+      final newLocation = _locationCtrl.text.trim();
       await ref.read(feedRepositoryProvider).updatePostMeta(
         postId: widget.post.id,
-        caption: _captionCtrl.text,
-        location: _locationCtrl.text,
+        caption: newCaption,
+        location: newLocation,
       );
-      widget.onSaved();
+      // 로컬 화면 즉시 갱신을 위해 업데이트된 Post 반환
+      final updated = widget.post.copyWith(
+        caption: newCaption.isEmpty ? null : newCaption,
+        location: newLocation.isEmpty ? null : newLocation,
+      );
+      widget.onSaved(updated);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) AppSnackBar.error(context, '수정 실패: $e');

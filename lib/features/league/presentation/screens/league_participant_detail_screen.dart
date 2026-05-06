@@ -486,6 +486,19 @@ class _CatchCard extends StatelessWidget {
                       child: const Text('보류',
                           style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
                     ),
+                  )
+                else if (isMyPost && post.reviewStatus == 'rejected')
+                  Positioned(
+                    top: 10, left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('거부',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                    ),
                   ),
                 // ── ... 메뉴 버튼 ──
                 if (isMyPost)
@@ -542,6 +555,22 @@ class _CatchCard extends StatelessWidget {
                               const SizedBox(width: 3),
                               Text('인증',
                                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.green[700])),
+                            ]),
+                          ),
+                        ] else if (post.reviewStatus == 'rejected') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(LucideIcons.shieldOff, size: 10, color: AppColors.error),
+                              const SizedBox(width: 3),
+                              Text('거부',
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.error)),
                             ]),
                           ),
                         ],

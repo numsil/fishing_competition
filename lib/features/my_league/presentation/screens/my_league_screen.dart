@@ -810,7 +810,7 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                                           ),
                                         ),
                                       ),
-                                    // 인증 뱃지
+                                    // 인증 / 거부 / 인증중 뱃지
                                     if (post.reviewStatus == 'approved')
                                       Positioned(
                                         bottom: 4, left: 4,
@@ -821,6 +821,32 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Icon(LucideIcons.badgeCheck, size: 12, color: Colors.white),
+                                        ),
+                                      )
+                                    else if (post.reviewStatus == 'rejected')
+                                      Positioned(
+                                        bottom: 4, left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.error.withValues(alpha: 0.9),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text('거부',
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                                        ),
+                                      )
+                                    else if (post.reviewStatus == 'pending')
+                                      Positioned(
+                                        bottom: 4, left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withValues(alpha: 0.9),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text('인증중',
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
                                         ),
                                       ),
                                   ],
