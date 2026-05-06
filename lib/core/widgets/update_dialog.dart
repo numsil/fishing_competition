@@ -123,6 +123,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 4),
+              // 임시 디버그: 빌드 번호 확인용
+              Text(
+                '현재 build: ${widget.info.currentBuildNumber} → 신규 build: ${widget.info.buildNumber}',
+                style: TextStyle(fontSize: 11, color: sub),
+              ),
               if (widget.info.releaseNotes != null) ...[
                 const SizedBox(height: 10),
                 Container(

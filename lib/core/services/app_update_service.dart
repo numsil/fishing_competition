@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AppVersionInfo {
   final String version;
   final int buildNumber;
+  final int currentBuildNumber;
   final String? apkUrl;
   final String? iosUrl;
   final String? releaseNotes;
@@ -16,6 +17,7 @@ class AppVersionInfo {
   const AppVersionInfo({
     required this.version,
     required this.buildNumber,
+    required this.currentBuildNumber,
     this.apkUrl,
     this.iosUrl,
     this.releaseNotes,
@@ -52,6 +54,7 @@ class AppUpdateService {
       return AppVersionInfo(
         version: row['version'] as String? ?? '',
         buildNumber: remoteBuild,
+        currentBuildNumber: currentBuild,
         apkUrl: row['apk_url'] as String?,
         iosUrl: row['ios_url'] as String?,
         releaseNotes: row['release_notes'] as String?,
