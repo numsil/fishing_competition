@@ -80,6 +80,7 @@ jobs:
 
       # ── 9. Supabase Storage 업로드 ────────────────────────────
       - name: Upload APK to Supabase Storage
+        if: env.APP_ENV != 'development'
         run: |
           # 기존 파일 교체 (x-upsert: true)
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -101,6 +102,7 @@ jobs:
 
       # ── 10. app_versions 테이블 업데이트 (upsert) ─────────────
       - name: Update app_versions in Supabase
+        if: env.APP_ENV != 'development'
         run: |
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
 
