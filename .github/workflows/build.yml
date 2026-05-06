@@ -11,6 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       # ── 1. 브랜치별 환경 변수 설정 ────────────────────────────
@@ -78,27 +80,27 @@ jobs:
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
           echo "APK_PATH=build/app/outputs/flutter-apk/app-${{ env.BUILD_MODE }}.apk" >> $GITHUB_ENV
 
-      # ── 9. Supabase Storage 업로드 ────────────────────────────
-      - name: Upload APK to Supabase Storage
+      # ── 9. GitHub Release 업로드 (develop 제외) ───────────────
+      - name: Upload APK to GitHub Release
         if: env.APP_ENV != 'development'
         run: |
-          # 기존 파일 교체 (x-upsert: true)
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST \
-            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/${{ env.FILENAME }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            -H "x-upsert: true" \
-            --data-binary @"${{ env.APK_PATH }}")
+          TAG="${{ env.APP_ENV }}-${{ env.VERSION }}-${{ env.BUILD_NUMBER }}"
 
-          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
-            echo "Upload failed with HTTP $HTTP_STATUS"
-            exit 1
-          fi
+          # 기존 릴리즈 삭제 후 재생성 (같은 태그)
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          git push origin --delete "$TAG" 2>/dev/null || true
 
-          APK_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/${{ env.FILENAME }}"
+          gh release create "$TAG" \
+            "${{ env.APK_PATH }}#${{ env.FILENAME }}" \
+            --title "[${{ env.APP_ENV }}] v${{ env.VERSION }}+${{ env.BUILD_NUMBER }}" \
+            --notes "${{ github.event.head_commit.message }}" \
+            --latest=false
+
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${{ env.FILENAME }}"
           echo "APK_URL=$APK_URL" >> $GITHUB_ENV
-          echo "✅ APK uploaded: $APK_URL"
+          echo "✅ APK uploaded to GitHub Release: $APK_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 10. app_versions 테이블 업데이트 (upsert) ─────────────
       - name: Update app_versions in Supabase
