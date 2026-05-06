@@ -5,6 +5,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../feed/data/feed_repository.dart';
+import '../../../profile/data/profile_repository.dart';
+import '../../../ranking/data/ranking_repository.dart';
 import '../../data/verification_model.dart';
 import '../../data/verification_repository.dart';
 
@@ -43,6 +46,12 @@ class _VerificationDetailScreenState
       }
       ref.invalidate(myPendingVerificationsProvider);
       ref.invalidate(myVerificationHistoryProvider);
+      // 인증 결과가 posts.review_status에 반영되므로 관련 캐시도 무효화
+      ref.invalidate(myPersonalRecordsProvider);
+      ref.invalidate(myProfileProvider);
+      ref.invalidate(personalScoreRankingProvider);
+      ref.invalidate(leagueScoreRankingProvider);
+      ref.invalidate(feedPostsProvider);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) AppSnackBar.error(context, '처리 실패: $e');
