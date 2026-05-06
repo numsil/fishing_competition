@@ -214,20 +214,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Text(profile.username, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                          const SizedBox(width: 6),
-                          if (profile.isLunkerClub) const _LunkerBadge(),
-                        ]),
-                        const SizedBox(height: 2),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      Text(profile.username, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      const SizedBox(width: 6),
+                      if (profile.isLunkerClub) const _LunkerBadge(),
+                      const Spacer(),
+                      FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform(),
+                        builder: (_, snap) {
+                          if (!snap.hasData) return const SizedBox();
+                          return Text('v${snap.data!.version}', style: TextStyle(fontSize: 11, color: sub));
+                        },
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 2),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text('@${profile.userKey}', style: TextStyle(fontSize: 12, color: sub)),
@@ -314,22 +316,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     StatBox(icon: LucideIcons.barChart2, value: '-', label: '점수', isDark: context.isDark, accent: context.accentColor),
                   ]),
                   const SizedBox(height: 6),
-
-                  // 버전
-                  FutureBuilder<PackageInfo>(
-                    future: PackageInfo.fromPlatform(),
-                    builder: (_, snap) {
-                      if (!snap.hasData) return const SizedBox();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          'v${snap.data!.version}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, color: sub),
-                        ),
-                      );
-                    },
-                  ),
 
                   // 탭
                   TabBar(
