@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
                   'v${snap.data!.version}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.25),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 12,
                     fontWeight: FontWeight.w300,
                     letterSpacing: 0.5,
