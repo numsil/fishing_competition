@@ -3,7 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppVersionInfo {
@@ -32,13 +31,6 @@ class AppUpdateService {
   // develop → development, staging → staging, main → production
   String get _env => dotenv.env['APP_ENV'] ?? 'production';
 
-  static const _skippedBuildKey = 'skipped_build_number';
-
-  Future<void> skipVersion(int buildNumber) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_skippedBuildKey, buildNumber);
-  }
-
   Future<AppVersionInfo?> checkForUpdate() async {
     try {
       final info = await PackageInfo.fromPlatform();
@@ -57,21 +49,13 @@ class AppUpdateService {
       final remoteBuild = (row['build_number'] as num?)?.toInt() ?? 0;
       if (remoteBuild <= currentBuild) return null;
 
-      // 강제 업데이트가 아니면 "나중에" 눌렀던 버전은 다시 안 보여줌
-      final isForce = row['force_update'] as bool? ?? false;
-      if (!isForce) {
-        final prefs = await SharedPreferences.getInstance();
-        final skipped = prefs.getInt(_skippedBuildKey) ?? 0;
-        if (remoteBuild <= skipped) return null;
-      }
-
       return AppVersionInfo(
         version: row['version'] as String? ?? '',
         buildNumber: remoteBuild,
         apkUrl: row['apk_url'] as String?,
         iosUrl: row['ios_url'] as String?,
         releaseNotes: row['release_notes'] as String?,
-        forceUpdate: isForce,
+        forceUpdate: row['force_update'] as bool? ?? false,
       );
     } catch (_) {
       return null;

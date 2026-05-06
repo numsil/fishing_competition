@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
 import '../theme/app_colors.dart';
@@ -50,7 +51,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             if (mounted) setState(() => _progress = p);
           },
         );
-        if (mounted) Navigator.of(context).pop();
+        // 설치 시작 후 기존 앱 종료 → 설치 완료 후 새 버전으로 재시작됨
+        SystemNavigator.pop();
       } catch (_) {
         if (mounted) {
           setState(() {
@@ -181,10 +183,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   if (!widget.info.forceUpdate && !_downloading) ...[
                     Expanded(
                       child: TextButton(
-                        onPressed: () async {
-                          await widget.service.skipVersion(widget.info.buildNumber);
-                          if (context.mounted) Navigator.of(context).pop();
-                        },
+                        onPressed: () => Navigator.of(context).pop(),
                         style: TextButton.styleFrom(
                           foregroundColor: sub,
                           padding: const EdgeInsets.symmetric(vertical: 12),
