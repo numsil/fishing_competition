@@ -45,6 +45,15 @@ class VerificationRepository {
 
   // 내가 투표해야 할 인증 요청 목록 (미응답만)
   Future<List<VerificationRequest>> getPendingForMe(String userId) async {
+    // 현재 verifier 권한이 없으면 빈 리스트 반환
+    // (권한 박탈 후 잔여 vote 행이 보이지 않도록)
+    final me = await _supabase
+        .from('users')
+        .select('is_verifier')
+        .eq('id', userId)
+        .maybeSingle();
+    if (me == null || me['is_verifier'] != true) return [];
+
     final rows = await _supabase
         .from('verification_votes')
         .select(
