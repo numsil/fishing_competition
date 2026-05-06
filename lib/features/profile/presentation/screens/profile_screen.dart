@@ -230,13 +230,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('@${profile.username}', style: TextStyle(fontSize: 12, color: sub)),
+                    child: Text('@${profile.userKey}', style: TextStyle(fontSize: 12, color: sub)),
                   ),
                   const SizedBox(height: 14),
                   // 버튼
                   Row(children: [
                     Expanded(child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () => context.push(AppRoutes.profileEdit, extra: profile),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 36),
                         padding: EdgeInsets.zero,

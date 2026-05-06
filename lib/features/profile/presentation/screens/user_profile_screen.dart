@@ -151,7 +151,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       if (profile.isLunkerClub) const _LunkerBadge(),
                     ]),
                     const SizedBox(height: 2),
-                    Text('@${profile.username}',
+                    Text('@${profile.userKey}',
                         style: TextStyle(fontSize: 12, color: sub)),
                     const SizedBox(height: 14),
 

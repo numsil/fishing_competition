@@ -11,6 +11,7 @@ class UserProfile {
   final String id;
   final String email;
   final String username;
+  final String userKey;
   final String? avatarUrl;
   final double mannerTemperature;
   final bool isLunkerClub;
@@ -26,6 +27,7 @@ class UserProfile {
     required this.id,
     required this.email,
     required this.username,
+    required this.userKey,
     this.avatarUrl,
     required this.mannerTemperature,
     required this.isLunkerClub,
@@ -191,7 +193,7 @@ class ProfileRepository {
 
     final userRes = await _supabase
         .from('users')
-        .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
+        .select('id, email, username, user_key, avatar_url, manner_temperature, is_lunker_club')
         .eq('id', userId)
         .single();
     final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
@@ -205,6 +207,29 @@ class ProfileRepository {
       participationCount: stats['participationCount'] ?? 0,
       winCount: stats['winCount'] ?? 0,
     );
+  }
+
+  Future<bool> isUserKeyAvailable(String userKey) async {
+    final userId = _supabase.auth.currentUser?.id;
+    final existing = await _supabase
+        .from('users')
+        .select('id')
+        .eq('user_key', userKey)
+        .neq('id', userId ?? '')
+        .maybeSingle();
+    return existing == null;
+  }
+
+  Future<void> updateProfile({String? username, String? userKey}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not logged in');
+
+    final updates = <String, dynamic>{};
+    if (username != null) updates['username'] = username;
+    if (userKey != null) updates['user_key'] = userKey;
+    if (updates.isEmpty) return;
+
+    await _supabase.from('users').update(updates).eq('id', userId);
   }
 
   Future<String> uploadAvatar(File imageFile) async {
@@ -281,7 +306,7 @@ class ProfileRepository {
   Future<UserProfile> buildUserProfileFromPosts(String userId, List<Post> posts) async {
     final userRes = await _supabase
         .from('users')
-        .select('id, email, username, avatar_url, manner_temperature, is_lunker_club')
+        .select('id, email, username, user_key, avatar_url, manner_temperature, is_lunker_club')
         .eq('id', userId)
         .single();
     final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
@@ -320,6 +345,7 @@ class ProfileRepository {
       id: userRes['id'],
       email: userRes['email'] ?? emailFallback,
       username: userRes['username'],
+      userKey: userRes['user_key'] ?? userRes['username'],
       avatarUrl: userRes['avatar_url'],
       mannerTemperature: (userRes['manner_temperature'] as num).toDouble(),
       isLunkerClub: userRes['is_lunker_club'] ?? false,

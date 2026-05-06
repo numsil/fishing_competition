@@ -24,6 +24,8 @@ import '../../features/ranking/presentation/screens/ranking_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/league/presentation/screens/league_participant_detail_screen.dart';
 import '../../features/profile/presentation/screens/user_profile_screen.dart';
+import '../../features/profile/presentation/screens/profile_edit_screen.dart';
+import '../../features/profile/data/profile_repository.dart';
 import '../../features/dm/data/dm_repository.dart';
 import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
@@ -107,6 +109,14 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) {
           final conv = state.extra as DmConversation;
           return MaterialPage(child: DmChatScreen(conversation: conv));
+        },
+      ),
+      // 프로필 수정: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.profileEdit,
+        pageBuilder: (context, state) {
+          final profile = state.extra as UserProfile;
+          return MaterialPage(child: ProfileEditScreen(profile: profile));
         },
       ),
       // 다른 유저 프로필: ShellRoute 밖 → 하단 탭 없음
@@ -211,6 +221,7 @@ class AppRoutes {
   static const String personalRecordDetail = '/personal-record';
   static const String ranking = '/ranking';
   static const String profile = '/profile';
+  static const String profileEdit = '/profile/edit';
   static const String postDetail = '/post';
   static const String userProfile = '/user';
   static const String dm = '/dm';

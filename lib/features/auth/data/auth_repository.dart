@@ -12,7 +12,34 @@ class AuthRepository {
   User? get currentUser => _supabase.auth.currentUser;
 
   Future<AuthResponse> signInWithEmail(String email, String password) async {
-    return await _supabase.auth.signInWithPassword(email: email, password: password);
+    final response = await _supabase.auth.signInWithPassword(email: email, password: password);
+    if (response.user != null) {
+      final row = await _supabase
+          .from('users')
+          .select('status')
+          .eq('id', response.user!.id)
+          .maybeSingle();
+      if (row?['status'] == 'banned') {
+        await _supabase.auth.signOut();
+        throw Exception('banned');
+      }
+    }
+    return response;
+  }
+
+  Future<String> _generateUniqueUserKey(String username) async {
+    String candidate = username;
+    int suffix = 2;
+    while (true) {
+      final existing = await _supabase
+          .from('users')
+          .select('id')
+          .eq('user_key', candidate)
+          .maybeSingle();
+      if (existing == null) return candidate;
+      candidate = '$username$suffix';
+      suffix++;
+    }
   }
 
   Future<AuthResponse> signUpWithEmail(String email, String password, String username) async {
@@ -22,10 +49,12 @@ class AuthRepository {
       data: {'username': username},
     );
     if (response.user != null) {
+      final userKey = await _generateUniqueUserKey(username);
       await _supabase.from('users').insert({
         'id': response.user!.id,
         'email': email,
         'username': username,
+        'user_key': userKey,
       });
     }
     return response;

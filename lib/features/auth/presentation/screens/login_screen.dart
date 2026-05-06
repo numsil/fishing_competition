@@ -44,7 +44,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.error(context, '로그인 실패: 이메일과 비밀번호를 확인해주세요.');
+        final msg = e.toString().contains('banned')
+            ? '이용이 정지된 계정입니다. 문의: support@nakstar.app'
+            : '로그인 실패: 이메일과 비밀번호를 확인해주세요.';
+        AppSnackBar.error(context, msg);
       }
     } finally {
       if (mounted) {

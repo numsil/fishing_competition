@@ -73,7 +73,21 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       final user = Supabase.instance.client.auth.currentUser;
-      context.go(user != null ? AppRoutes.feed : AppRoutes.login);
+      if (user != null) {
+        final row = await Supabase.instance.client
+            .from('users')
+            .select('status')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (row?['status'] == 'banned') {
+          await Supabase.instance.client.auth.signOut();
+          if (mounted) context.go(AppRoutes.login);
+          return;
+        }
+        if (mounted) context.go(AppRoutes.feed);
+      } else {
+        context.go(AppRoutes.login);
+      }
     });
   }
 
