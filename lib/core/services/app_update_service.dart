@@ -72,9 +72,8 @@ class AppUpdateService {
     void Function(double progress)? onProgress,
   }) async {
     if (Platform.isAndroid) {
-      final status = await Permission.requestInstallPackages.status;
+      final status = await Permission.requestInstallPackages.request();
       if (!status.isGranted) {
-        await openAppSettings();
         throw Exception('install_permission_denied');
       }
     }

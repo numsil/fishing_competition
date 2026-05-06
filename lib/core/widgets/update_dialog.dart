@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
 import '../theme/app_colors.dart';
 import '../extensions/theme_extensions.dart';
+import 'app_svg.dart';
 
 Future<void> showUpdateDialog(
   BuildContext context,
@@ -59,7 +60,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             _downloading = false;
             _error = e.toString().contains('install_permission_denied')
                 ? '설정에서 "출처를 알 수 없는 앱 설치"를 허용한 후 다시 시도해 주세요.'
-                : '다운로드 실패. 네트워크를 확인 후 다시 시도해 주세요.';
+                : '다운로드 실패: $e';
           });
         }
       }
@@ -95,16 +96,16 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Icon(
-                  Icons.system_update_rounded,
+                padding: const EdgeInsets.all(12),
+                child: AppSvg(
+                  'assets/images/nak_logo.svg',
                   color: accent,
-                  size: 26,
                 ),
               ),
               const SizedBox(height: 16),
@@ -131,27 +132,6 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 '현재 build: ${widget.info.currentBuildNumber} → 신규 build: ${widget.info.buildNumber}',
                 style: TextStyle(fontSize: 11, color: sub),
               ),
-              if (widget.info.releaseNotes != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurface2
-                        : AppColors.lightBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    widget.info.releaseNotes!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: sub,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
               if (_downloading) ...[
                 const SizedBox(height: 16),
                 ClipRRect(
