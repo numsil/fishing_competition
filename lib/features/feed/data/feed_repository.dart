@@ -258,8 +258,7 @@ class FeedRepository {
       'catch_count': catchCount,
       'is_lunker': length != null && length >= 50.0,
       'score': calculateFishScore(length),
-      // 개인기록만 인증 대상 — 피드/리그 일반 게시물은 바로 approved
-      'review_status': isPersonalRecord ? 'pending' : 'approved',
+      // review_status는 DB 트리거(enforce_initial_review_status)가 강제 설정
     }).select('id').single();
 
     // 개인기록만 인증 요청 생성
