@@ -192,7 +192,9 @@ class ProfileRepository {
   Future<Post?> _fetchMaxFishPost(String userId) async {
     final res = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at')
+        .select(
+          'id, user_id, image_url, fish_type, length, location, created_at',
+        )
         .eq('user_id', userId)
         .eq('review_status', 'approved')
         .or('is_deleted.is.null,is_deleted.eq.false')

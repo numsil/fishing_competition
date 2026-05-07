@@ -123,7 +123,13 @@ class LeagueRepository {
   Future<League> getLeague(String id) async {
     final data = await _supabase
         .from('leagues')
-        .select('*, league_participants(id), users!host_id(username, avatar_url)')
+        .select(
+          'id, host_id, title, description, short_description, location, '
+          'lat, lng, start_time, end_time, entry_fee, max_participants, '
+          'status, fish_types, rule, catch_limit, prize_info, is_public, '
+          'allow_gallery, intro_image_urls, created_at, '
+          'league_participants(id), users!host_id(username, avatar_url)',
+        )
         .eq('id', id)
         .single();
     final pCount = (data['league_participants'] as List?)?.length ?? 0;
@@ -355,7 +361,12 @@ class LeagueRepository {
   Future<List<Post>> getUserLeaguePosts(String leagueId, String userId) async {
     final data = await _supabase
         .from('posts')
-        .select('*, users(username, avatar_url)')
+        .select(
+          'id, user_id, league_id, image_url, image_urls, aspect_ratio, '
+          'video_url, caption, fish_type, length, weight, lure_type, '
+          'catch_count, score, is_lunker, is_personal_record, review_status, '
+          'location, created_at, users(username, avatar_url)',
+        )
         .eq('league_id', leagueId)
         .eq('user_id', userId)
         .eq('is_deleted', false)
