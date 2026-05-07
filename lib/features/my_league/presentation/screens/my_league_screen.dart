@@ -292,16 +292,16 @@ class _MySummaryCard extends ConsumerWidget {
 
     final profileAsync = ref.watch(myProfileProvider);
 
-    String rankValue = '...';
+    String totalFishValue = '...';
     String fishValue = '...';
     statsAsync.whenData((stats) {
-      rankValue = stats.bestRank != null ? '${stats.bestRank}위' : '-';
+      totalFishValue = stats.totalFishCount != null ? '${stats.totalFishCount}마리' : '-';
       fishValue = stats.maxFishLength != null
           ? '${stats.maxFishLength!.toStringAsFixed(1)}cm'
           : '-';
     });
     if (statsAsync.hasError) {
-      rankValue = '-';
+      totalFishValue = '-';
       fishValue = '-';
     }
     final leagueScoreValue = profileAsync.maybeWhen(
@@ -328,7 +328,7 @@ class _MySummaryCard extends ConsumerWidget {
             children: [
               _SummaryItem(value: '$activeCount', label: '참여중', accent: accent),
               _Divider(divColor: divColor),
-              _SummaryItem(value: rankValue, label: '최고 순위', accent: AppColors.gold),
+              _SummaryItem(value: totalFishValue, label: '총 마리수', accent: accent),
               _Divider(divColor: divColor),
               _SummaryItem(value: fishValue, label: '최대어', accent: accent),
               _Divider(divColor: divColor),

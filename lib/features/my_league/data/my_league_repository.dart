@@ -9,8 +9,9 @@ part 'my_league_repository.g.dart';
 class SeasonStats {
   final int? bestRank;
   final double? maxFishLength;
+  final int? totalFishCount;
 
-  const SeasonStats({this.bestRank, this.maxFishLength});
+  const SeasonStats({this.bestRank, this.maxFishLength, this.totalFishCount});
 }
 
 class MyLeagueRepository {
@@ -64,6 +65,7 @@ class MyLeagueRepository {
     return SeasonStats(
       bestRank: (row['best_rank'] as num?)?.toInt(),
       maxFishLength: (row['max_fish_length'] as num?)?.toDouble(),
+      totalFishCount: (row['total_fish_count'] as num?)?.toInt(),
     );
   }
 
