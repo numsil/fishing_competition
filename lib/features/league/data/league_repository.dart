@@ -487,37 +487,41 @@ Future<List<LeagueRankEntry>> leagueRanking(LeagueRankingRef ref, String leagueI
 }
 
 // 특정 참가자의 조과 목록
-final leagueUserPostsProvider = FutureProvider.family<List<Post>, (String, String)>(
-  (ref, params) {
-    final link = ref.keepAlive();
-    Timer(const Duration(minutes: 3), link.close);
-    final (leagueId, userId) = params;
-    return ref.watch(leagueRepositoryProvider).getUserLeaguePosts(leagueId, userId);
-  },
-);
+@riverpod
+Future<List<Post>> leagueUserPosts(
+  LeagueUserPostsRef ref,
+  String leagueId,
+  String userId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getUserLeaguePosts(leagueId, userId);
+}
 
-// 코드 생성 없이 수동 정의
-final leaguePendingProvider = FutureProvider.family<List<LeaguePendingEntry>, String>(
-  (ref, leagueId) {
-    final link = ref.keepAlive();
-    Timer(const Duration(minutes: 3), link.close);
-    return ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId);
-  },
-);
+@riverpod
+Future<List<LeaguePendingEntry>> leaguePending(
+  LeaguePendingRef ref,
+  String leagueId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId);
+}
 
-final leagueDetailProvider = FutureProvider.family<League, String>(
-  (ref, id) {
-    final link = ref.keepAlive();
-    Timer(const Duration(minutes: 5), link.close);
-    return ref.watch(leagueRepositoryProvider).getLeague(id);
-  },
-);
+@riverpod
+Future<League> leagueDetail(LeagueDetailRef ref, String id) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
+  return ref.watch(leagueRepositoryProvider).getLeague(id);
+}
 
 // 심사 탭용: 리그 전체 조과
-final leagueCatchesForReviewProvider = FutureProvider.family<List<Post>, String>(
-  (ref, leagueId) {
-    final link = ref.keepAlive();
-    Timer(const Duration(minutes: 3), link.close);
-    return ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId);
-  },
-);
+@riverpod
+Future<List<Post>> leagueCatchesForReview(
+  LeagueCatchesForReviewRef ref,
+  String leagueId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId);
+}
