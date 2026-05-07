@@ -61,6 +61,16 @@ UI → Provider → Repository → Supabase
 - 공통 UI는 core/widgets 사용
 - 중복 UI 구현 금지
 
+## Git Rules
+
+- 기본 push는 항상 `develop` 브랜치
+- `main` push는 친구들 배포 시에만 (명시적으로 요청할 때만)
+- main 배포 순서: `git checkout main → git merge develop → git push origin main → git checkout develop`
+- **push는 사용자가 명시적으로 요청할 때만 실행** (코드 수정 후 자동 push 금지)
+- **main 배포 시 항상 `pubspec.yaml` 빌드 번호 +1** (예: `1.0.0+6` → `1.0.0+7`). 빌드 번호 안 올리면 GitHub Actions가 같은 태그로 빌드 실패하고 업데이트 팝업이 안 뜸
+
+---
+
 ## Docs Reference
 
 - 디자인 시스템: docs/DESIGN_SYSTEM.md

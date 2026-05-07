@@ -125,44 +125,41 @@ ref.watch(someProvider).when(
 
 # Supabase Query Rules
 
-## ❌ 금지 규칙
+## 금지 규칙
 
 - 반복문 안에서 Supabase 쿼리 호출 금지 (N+1 방지)
 - select('*') 사용 금지
 - 동일 조건으로 여러 번 조회 금지
 
-## ✅ 필수 규칙
+## 필수 규칙
 
 - 필요한 컬럼만 명시적으로 select
 - 관계 데이터는 join(users!inner)으로 한 번에 조회
 - 동일 데이터는 한 번만 조회 후 재사용
 
-## ✅ 캐싱 규칙
+## 캐싱 규칙
 
 - 리스트 데이터: 5분 캐싱 (keepAlive + TTL)
 - 프로필 데이터: 3분 캐싱
 - 유저 데이터: 가능한 유지
 
-## 🧠 쿼리 구조
+## 쿼리 구조
 
 UI → Provider → Repository → Supabase
 
 UI나 Provider에서 직접 쿼리 금지
 
-## 💡 예시
+## 예시
 
-### ❌ 잘못된 코드
+### 잘못된 코드
 ```dart
 for (final item in list) {
   await supabase.from('users').select('*');
 }
 
+#  추가로 넣으면 좋은 것
 
----
-
-# 🔥 추가로 넣으면 좋은 것
-
-## 1️⃣ 리팩토링 규칙
+## 리팩토링 규칙
 
 ```md
 ## Refactoring Rules
