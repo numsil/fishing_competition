@@ -10,6 +10,7 @@ import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
@@ -77,7 +78,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               ),
             ),
             const SizedBox(height: 16),
-            _MenuItem(
+            AppMenuItem(
               icon: LucideIcons.pencil,
               label: '수정하기',
               color: accent,
@@ -87,7 +88,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               },
             ),
             Divider(height: 1, color: divColor),
-            _MenuItem(
+            AppMenuItem(
               icon: LucideIcons.send,
               label: '내 피드에 공유하기',
               color: accent,
@@ -97,7 +98,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               },
             ),
             Divider(height: 1, color: divColor),
-            _MenuItem(
+            AppMenuItem(
               icon: LucideIcons.download,
               label: '사진 저장',
               color: accent,
@@ -107,7 +108,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
               },
             ),
             Divider(height: 1, color: divColor),
-            _MenuItem(
+            AppMenuItem(
               icon: LucideIcons.trash2,
               label: '기록 삭제',
               color: AppColors.error,
@@ -463,29 +464,6 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
     final l = dt.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
     return '${l.year}.${two(l.month)}.${two(l.day)} ${two(l.hour)}:${two(l.minute)}';
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({required this.icon, required this.label, required this.color, required this.onTap});
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        child: Row(children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(width: 16),
-          Text(label, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w500)),
-        ]),
-      ),
-    );
   }
 }
 
