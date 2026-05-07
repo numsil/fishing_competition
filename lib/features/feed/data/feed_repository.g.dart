@@ -23,22 +23,21 @@ final feedRepositoryProvider = AutoDisposeProvider<FeedRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef FeedRepositoryRef = AutoDisposeProviderRef<FeedRepository>;
-String _$feedPostsHash() => r'd58ec7310c89c996c832bd0ca41dc1f88d24d394';
+String _$feedPostsHash() => r'd37e62598f2acae600c09a792b7eb68ceb2dbf78';
 
-/// See also [feedPosts].
-@ProviderFor(feedPosts)
-final feedPostsProvider = AutoDisposeFutureProvider<List<Post>>.internal(
-  feedPosts,
-  name: r'feedPostsProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$feedPostsHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+/// See also [FeedPosts].
+@ProviderFor(FeedPosts)
+final feedPostsProvider =
+    AutoDisposeAsyncNotifierProvider<FeedPosts, List<Post>>.internal(
+      FeedPosts.new,
+      name: r'feedPostsProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$feedPostsHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef FeedPostsRef = AutoDisposeFutureProviderRef<List<Post>>;
+typedef _$FeedPosts = AutoDisposeAsyncNotifier<List<Post>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

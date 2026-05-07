@@ -28,17 +28,31 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   bool _isSearching = false;
   String _searchQuery = '';
   late final TextEditingController _searchCtrl;
+  late final ScrollController _scrollCtrl;
 
   @override
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController();
+    _scrollCtrl = ScrollController()..addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollCtrl
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isSearching) return;
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      ref.read(feedPostsProvider.notifier).loadMore();
+    }
   }
 
   void _onSearchToggle() => setState(() => _isSearching = true);
@@ -75,6 +89,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(feedPostsProvider),
         child: CustomScrollView(
+          controller: _scrollCtrl,
           slivers: [
             if (!_isSearching) ...[
               SliverToBoxAdapter(
@@ -91,6 +106,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
+                final showLoadMore = !_isSearching &&
+                    _searchQuery.isEmpty &&
+                    ref.read(feedPostsProvider.notifier).hasMore &&
+                    posts.isNotEmpty;
                 return [
                   if (_isSearching && _searchQuery.isNotEmpty)
                     SliverToBoxAdapter(
@@ -118,6 +137,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                           accent: context.accentColor,
                         ),
                         childCount: filtered.length,
+                      ),
+                    ),
+                  if (showLoadMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator()),
                       ),
                     ),
                 ];
