@@ -77,9 +77,10 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       _isHost && widget.league.status == 'in_progress' ? 3 : 2;
 
   void _refreshAll() {
+    // leagueRanking은 무거운 RPC + 5분 keepAlive로 자동 갱신 + 사용자 액션 시
+    // 이미 invalidate됨. resume마다 재페치하지 않음.
     ref.invalidate(leagueDetailProvider(widget.league.id));
     ref.invalidate(isJoinedProvider(widget.league.id));
-    ref.invalidate(leagueRankingProvider(widget.league.id));
     if (_isHost && widget.league.status == 'in_progress') {
       ref.invalidate(leagueCatchesForReviewProvider(widget.league.id));
     }
