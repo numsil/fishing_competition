@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
-import '../../../core/utils/score_calculator.dart';
 import 'league_model.dart';
 
 part 'league_repository.g.dart';
@@ -220,122 +219,26 @@ class LeagueRepository {
 
   // ── 순위표 조회 (리그 룰 + catch_limit 기반) ──────────
   Future<List<LeagueRankEntry>> getLeagueRanking(String leagueId) async {
-    // 1. 리그 룰 + catch_limit 조회 (컬럼 미존재 시 기본값 사용)
-    String rule = '최대어';
-    int catchLimit = 1;
-    try {
-      final leagueData = await _supabase
-          .from('leagues')
-          .select('rule, catch_limit')
-          .eq('id', leagueId)
-          .single();
-      rule = leagueData['rule'] as String? ?? '최대어';
-      catchLimit = (leagueData['catch_limit'] as num?)?.toInt() ?? 1;
-    } catch (_) {}
+    final res = await _supabase.rpc(
+      'get_league_ranking',
+      params: {'p_league_id': leagueId},
+    ) as List;
 
-    // 2. 참가자 목록 + 유저 정보
-    final participants = await _supabase
-        .from('league_participants')
-        .select('user_id, users(username, avatar_url)')
-        .eq('league_id', leagueId);
-
-    // 3. 해당 리그 게시물
-    final posts = await _supabase
-        .from('posts')
-        .select('user_id, length, weight, score, fish_type, is_lunker')
-        .eq('league_id', leagueId)
-        .eq('is_deleted', false)
-        .eq('review_status', 'approved');
-
-    // 4. 유저별 데이터 구성
-    final Map<String, String> userNames = {};
-    final Map<String, String?> userAvatars = {};
-    final Map<String, List<double>> userMeasures = {};
-    final Map<String, List<int>> userScores = {};
-    final Map<String, String> userFishType = {};
-    final Map<String, bool> userLunker = {};
-
-    for (final p in participants) {
-      final uid = p['user_id'] as String;
-      userNames[uid] = (p['users'] as Map?)?['username'] as String? ?? '알 수 없음';
-      userAvatars[uid] = (p['users'] as Map?)?['avatar_url'] as String?;
-      userMeasures[uid] = [];
-      userScores[uid] = [];
-      userFishType[uid] = '배스';
-      userLunker[uid] = false;
-    }
-
-    for (final post in posts) {
-      final uid = post['user_id'] as String;
-      if (!userMeasures.containsKey(uid)) continue;
-      if (post['fish_type'] != null) userFishType[uid] = post['fish_type'] as String;
-      if (post['is_lunker'] == true) userLunker[uid] = true;
-
-      // DB에 저장된 score 사용, 없으면 length로 재계산 (기존 데이터 호환)
-      final rawScore = post['score'] as int?;
-      final length = post['length'] != null ? (post['length'] as num).toDouble() : null;
-      final weight = post['weight'] != null ? (post['weight'] as num).toDouble() : null;
-      final score = rawScore ?? calculateFishScore(length);
-      userScores[uid]!.add(score);
-
-      final double? measure = rule == '무게' ? weight : length;
-      if (measure != null) userMeasures[uid]!.add(measure);
-    }
-
-    // 5. 유저별 집계
-    final entries = userNames.keys.map((uid) {
-      final scores = List<int>.from(userScores[uid] ?? [])
-        ..sort((a, b) => b.compareTo(a));
-      final measures = List<double>.from(userMeasures[uid] ?? [])
-        ..sort((a, b) => b.compareTo(a));
-
-      final int totalScore;
-      final int bestScore;
-      final double? bestLength;
-      final int count = scores.length;
-
-      if (rule == '마릿수') {
-        totalScore = count * 10; // 마릿수 룰: 1마리당 10점
-        bestScore = scores.isNotEmpty ? scores.first : 0;
-        bestLength = measures.isNotEmpty ? measures.first : null;
-      } else {
-        // 상위 catchLimit개 score 합산
-        final topN = catchLimit > 0 && scores.length > catchLimit
-            ? scores.take(catchLimit).toList()
-            : scores;
-        totalScore = topN.fold(0, (s, v) => s + v);
-        bestScore = scores.isNotEmpty ? scores.first : 0;
-        bestLength = measures.isNotEmpty ? measures.first : null;
-      }
-
-      // totalLength는 UI 표시용 합산 길이 (기존 호환)
-      final topMeasures = catchLimit > 0 && measures.length > catchLimit
-          ? measures.take(catchLimit).toList()
-          : measures;
-      final totalLength = topMeasures.fold(0.0, (s, v) => s + v);
-
+    return res.map((row) {
+      final m = row as Map<String, dynamic>;
       return LeagueRankEntry(
-        userId: uid,
-        username: userNames[uid]!,
-        avatarUrl: userAvatars[uid],
-        bestLength: bestLength,
-        totalLength: totalLength,
-        totalCount: count,
-        totalScore: totalScore,
-        bestScore: bestScore,
-        fishType: userFishType[uid] ?? '배스',
-        isLunker: userLunker[uid] ?? false,
+        userId: m['user_id'] as String,
+        username: m['username'] as String? ?? '알 수 없음',
+        avatarUrl: m['avatar_url'] as String?,
+        bestLength: (m['best_length'] as num?)?.toDouble(),
+        totalLength: (m['total_length'] as num?)?.toDouble() ?? 0.0,
+        totalCount: (m['total_count'] as num?)?.toInt() ?? 0,
+        totalScore: (m['total_score'] as num?)?.toInt() ?? 0,
+        bestScore: (m['best_score'] as num?)?.toInt() ?? 0,
+        fishType: m['fish_type'] as String? ?? '배스',
+        isLunker: m['is_lunker'] as bool? ?? false,
       );
     }).toList();
-
-    // 6. 점수 기준 정렬 (동점 시 마릿수 → 최고점수 순)
-    entries.sort((a, b) {
-      if (a.totalScore != b.totalScore) return b.totalScore.compareTo(a.totalScore);
-      if (a.totalCount != b.totalCount) return b.totalCount.compareTo(a.totalCount);
-      return b.bestScore.compareTo(a.bestScore);
-    });
-
-    return entries;
   }
 
   // ── 심사 탭용: 리그 전체 조과 최신순 ──────────────────────
@@ -459,44 +362,12 @@ class LeagueRepository {
     }
   }
 
-  // ── 순위 보너스 계산 및 저장 ─────────────────────────────────
+  // ── 순위 보너스 계산 및 저장 (RPC) ─────────────────────────
   Future<void> saveRankBonuses(String leagueId) async {
-    final results = await Future.wait([
-      getLeagueRanking(leagueId),
-      getLeague(leagueId),
-    ]);
-    final rankings = results[0] as List<LeagueRankEntry>;
-    final league   = results[1] as League;
-    final n        = league.participantsCount;
-    final now      = DateTime.now().toUtc().toIso8601String();
-
-    for (int i = 0; i < rankings.length; i++) {
-      final bonus = _rankBonus(i + 1, n);
-      if (bonus <= 0) continue;
-      await _supabase
-          .from('league_participants')
-          .update({'rank_bonus': bonus, 'rank_bonus_earned_at': now})
-          .eq('league_id', leagueId)
-          .eq('user_id', rankings[i].userId);
-    }
-  }
-
-  int _rankBonus(int rank, int participantCount) {
-    final int base;
-    if (participantCount <= 6)       base = 10;
-    else if (participantCount <= 12) base = 24;
-    else if (participantCount <= 19) base = 40;
-    else                             base = 60;
-
-    final double m;
-    if (rank == 1)       m = 1.00;
-    else if (rank == 2)  m = 0.60;
-    else if (rank == 3)  m = 0.40;
-    else if (rank <= 5)  m = 0.20;
-    else if (rank <= 10) m = 0.10;
-    else                 m = 0.05;
-
-    return (participantCount * base * m).round();
+    await _supabase.rpc(
+      'save_league_rank_bonuses',
+      params: {'p_league_id': leagueId},
+    );
   }
 
   // ── 리그 정보 수정 ──────────────────────────────────────────
