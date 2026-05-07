@@ -28,9 +28,6 @@ dependencies:
   # 네트워크
   dio: ^5.8.0+1
 
-  # 로컬 저장소
-  shared_preferences: ^2.3.5
-
   # 유틸리티
   intl: ^0.20.2
   freezed_annotation: ^3.0.0
