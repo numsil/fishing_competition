@@ -41,7 +41,7 @@ android {
                 props.load(FileInputStream(keyPropertiesPath))
                 storeFile = file(props.getProperty("storeFile"))
                 storePassword = props.getProperty("storePassword")
-                keyAlias = props.getProperty("keyAlias")
+                keyAlias = "upload"
                 keyPassword = props.getProperty("keyPassword")
             }
         }
