@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -225,7 +226,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         future: PackageInfo.fromPlatform(),
                         builder: (_, snap) {
                           if (!snap.hasData) return const SizedBox();
-                          return Text('v${snap.data!.version}', style: TextStyle(fontSize: 11, color: sub));
+                          final versionText = Text('v${snap.data!.version}', style: TextStyle(fontSize: 11, color: sub));
+                          if (!kDebugMode) return versionText;
+                          return GestureDetector(
+                            onLongPress: () => context.push(AppRoutes.widgetCatalog),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('v${snap.data!.version} DEV', style: TextStyle(fontSize: 11, color: AppColors.warning)),
+                            ),
+                          );
                         },
                       ),
                     ],

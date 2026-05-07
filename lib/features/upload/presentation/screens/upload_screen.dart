@@ -416,8 +416,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   final _captionCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
-  final _lengthCtrl = TextEditingController();
-  final _weightCtrl = TextEditingController();
   final String _fish = '배스';
   bool _sharing = false;
   double _compressProgress = 0.0;
@@ -442,8 +440,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       _captionCtrl.text = text;
       _tagCtrl.text = tags;
       _locationCtrl.text = post.location ?? '';
-      _lengthCtrl.text = post.length != null ? '${post.length}' : '';
-      _weightCtrl.text = post.weight != null ? '${post.weight}' : '';
     }
   }
 
@@ -452,8 +448,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     _captionCtrl.dispose();
     _locationCtrl.dispose();
     _tagCtrl.dispose();
-    _lengthCtrl.dispose();
-    _weightCtrl.dispose();
     _compressSub?.unsubscribe();
     VideoCompress.cancelCompression();
     super.dispose();
@@ -482,8 +476,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             : null,
         caption: combinedCaption.isEmpty ? null : combinedCaption,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-        length: double.tryParse(_lengthCtrl.text.trim()),
-        weight: double.tryParse(_weightCtrl.text.trim()),
       );
 
       ref.invalidate(feedPostsProvider);
@@ -545,9 +537,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         }
       }
 
-      final lengthVal = double.tryParse(_lengthCtrl.text.trim());
-      final weightVal = double.tryParse(_weightCtrl.text.trim());
-
       // 원본 파일에서 비율 계산 (압축 전 = EXIF 정상 적용)
       double? aspectRatio;
       if (!widget.isVideo && _images.isNotEmpty) {
@@ -571,8 +560,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         fishType: _fish,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
         leagueId: null,
-        length: lengthVal,
-        weight: weightVal,
       );
 
       ref.invalidate(feedPostsProvider);
@@ -910,67 +897,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             ),
 
             Divider(height: 1, color: divColor),
-            const SizedBox(height: 20),
-
-            // ── 사이즈 입력 ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('길이 (cm)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _lengthCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: TextStyle(fontSize: 14, color: textColor),
-                          decoration: InputDecoration(
-                            hintText: '예) 42.5',
-                            hintStyle: TextStyle(color: sub, fontSize: 14),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            isDense: true,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('무게 (g)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _weightCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: TextStyle(fontSize: 14, color: textColor),
-                          decoration: InputDecoration(
-                            hintText: '예) 980',
-                            hintStyle: TextStyle(color: sub, fontSize: 14),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            isDense: true,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: divColor)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            Divider(height: 1, color: divColor),
-
             _SettingRow(label: '공개 범위', value: '전체 공개', sub: sub, textColor: textColor, divColor: divColor),
           ],
         ),

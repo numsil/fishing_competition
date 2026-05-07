@@ -61,6 +61,46 @@ UI → Provider → Repository → Supabase
 - 공통 UI는 core/widgets 사용
 - 중복 UI 구현 금지
 
+---
+
+## 공통 위젯 사용 규칙
+
+### 원칙
+모든 UI 요소는 `lib/core/widgets/` 의 통합 위젯을 우선 사용한다.
+직접 Flutter 기본 위젯(TextField, ElevatedButton, Container 등)을 스타일링하여 쓰는 것을 금지한다.
+
+### 적용 대상 (반드시 통합 위젯 사용)
+- 텍스트 입력: `AppTextField` (TextField/TextFormField 직접 사용 금지)
+- 버튼: `AppButton` (ElevatedButton/TextButton/OutlinedButton 직접 사용 금지)
+- 카드/패널: `AppCard` (Container + BoxDecoration로 카드 직접 만들기 금지)
+- 아바타: `UserAvatar` (CircleAvatar 직접 사용 금지)
+- 빈 상태: `EmptyState`
+- SVG 에셋: `AppSvg` (Image.asset으로 SVG 직접 사용 금지) / lucide_icons는 직접 사용 허용
+- 텍스트 스타일: `AppTextStyles` 토큰 사용
+
+### 적용 제외 (통합 위젯 만들지 말 것)
+- Padding, SizedBox, Row, Column, Stack 등 레이아웃 프리미티브
+- 한 화면에서만 쓰이는 화면 전용 위젯 (해당 screen 폴더에 둘 것)
+- 외부 패키지 위젯을 그대로 쓰는 경우 (예: CachedNetworkImage)
+
+### 통합 위젯이 없는 경우
+1. 기존 통합 위젯의 props 확장으로 해결 가능한지 먼저 검토
+   - 예: AppCard에 variant 추가 vs 새 위젯 만들기 → 변형이면 props 추가 우선
+2. props 확장으로 안 되면 새 통합 위젯을 `lib/core/widgets/` 에 추가
+3. 새 위젯 추가 시 사용자에게 먼저 확인 후 진행. 임의로 만들지 말 것
+
+### 디자인 토큰
+- 색상: `AppColors` 만 사용. `Color(0xFF...)` 하드코딩 금지
+- 간격: `AppSpacing` 토큰 사용 권장 (없으면 8의 배수)
+- 폰트: `AppTextStyles` 만 사용
+
+### 기존 코드 리팩토링 금지
+사용자가 명시적으로 요청한 파일 외에는 기존 코드를 통합 위젯으로 교체하지 말 것.
+새 코드 작성 시에만 본 규칙 적용.
+
+### 카탈로그
+모든 통합 위젯은 `lib/dev/widget_catalog_screen.dart` 에 추가하여 시각적으로 검증 가능하게 한다.
+
 ## Git Rules
 
 - 기본 push는 항상 `develop` 브랜치

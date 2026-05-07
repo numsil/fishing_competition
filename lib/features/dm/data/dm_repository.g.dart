@@ -23,12 +23,12 @@ final dmRepositoryProvider = AutoDisposeProvider<DmRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DmRepositoryRef = AutoDisposeProviderRef<DmRepository>;
-String _$dmConversationsHash() => r'3fd2c3e679c93770f3b2448bae4584008d047e83';
+String _$dmConversationsHash() => r'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 
 /// See also [dmConversations].
 @ProviderFor(dmConversations)
 final dmConversationsProvider =
-    AutoDisposeFutureProvider<List<DmConversation>>.internal(
+    AutoDisposeStreamProvider<List<DmConversation>>.internal(
       dmConversations,
       name: r'dmConversationsProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -40,7 +40,7 @@ final dmConversationsProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef DmConversationsRef = AutoDisposeFutureProviderRef<List<DmConversation>>;
+typedef DmConversationsRef = AutoDisposeStreamProviderRef<List<DmConversation>>;
 String _$dmMessagesHash() => r'4ad025dda7e98e0d6dc3b92a2b44c9967611a6d4';
 
 /// Copied from Dart SDK

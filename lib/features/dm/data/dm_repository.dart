@@ -49,7 +49,7 @@ class DmMessage {
       senderId: json['sender_id'] as String,
       content: json['content'] as String,
       isRead: json['is_read'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );
   }
 }
@@ -81,13 +81,12 @@ class DmRepository {
     for (final row in data as List) {
       final isUser1 = (row['user1_id'] as String) == myId;
 
-      // 숨김 처리된 대화방 필터링
       final hiddenAtStr = isUser1
           ? row['user1_hidden_at'] as String?
           : row['user2_hidden_at'] as String?;
-      final lastMessageAt = DateTime.parse(row['last_message_at'] as String);
+      final lastMessageAt = DateTime.parse(row['last_message_at'] as String).toLocal();
       if (hiddenAtStr != null) {
-        final hiddenAt = DateTime.parse(hiddenAtStr);
+        final hiddenAt = DateTime.parse(hiddenAtStr).toLocal();
         if (!lastMessageAt.isAfter(hiddenAt)) continue;
       }
 
@@ -142,15 +141,59 @@ class DmRepository {
     return result['id'] as String;
   }
 
+  // 초기 fetch + postgres_changes INSERT만 수신 → 전체 재전송 없음
   Stream<List<DmMessage>> streamMessages(String conversationId) {
-    // 주의: Supabase stream의 .order() 기본값은 ascending: false (DESC)
-    // 오래된 메시지가 위, 최신 메시지가 아래에 오도록 ASC 명시
-    return _supabase
-        .from('messages')
-        .stream(primaryKey: ['id'])
-        .eq('conversation_id', conversationId)
-        .order('created_at', ascending: true)
-        .map((data) => data.map(DmMessage.fromJson).toList());
+    final controller = StreamController<List<DmMessage>>();
+    final messages = <DmMessage>[];
+    final seenIds = <String>{};
+
+    Future<void> initialFetch() async {
+      try {
+        final data = await _supabase
+            .from('messages')
+            .select('id, conversation_id, sender_id, content, is_read, created_at')
+            .eq('conversation_id', conversationId)
+            .order('created_at', ascending: true);
+        for (final item in data as List) {
+          final msg = DmMessage.fromJson(item);
+          if (seenIds.add(msg.id)) messages.add(msg);
+        }
+        if (!controller.isClosed) controller.add(List.of(messages));
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
+      }
+    }
+
+    final channel = _supabase
+        .channel('messages_$conversationId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'conversation_id',
+            value: conversationId,
+          ),
+          callback: (payload) {
+            try {
+              final newMsg = DmMessage.fromJson(payload.newRecord);
+              if (seenIds.add(newMsg.id)) {
+                messages.add(newMsg);
+                if (!controller.isClosed) controller.add(List.of(messages));
+              }
+            } catch (_) {}
+          },
+        )
+        .subscribe();
+
+    initialFetch();
+
+    controller.onCancel = () {
+      _supabase.removeChannel(channel);
+    };
+
+    return controller.stream;
   }
 
   Future<void> sendMessage(String conversationId, String content) async {
@@ -203,9 +246,49 @@ DmRepository dmRepository(DmRepositoryRef ref) {
   return DmRepository(Supabase.instance.client);
 }
 
+// Future → Stream: conversations 테이블 UPDATE 수신으로 목록 자동 갱신
 @riverpod
-Future<List<DmConversation>> dmConversations(DmConversationsRef ref) {
-  return ref.watch(dmRepositoryProvider).getConversations();
+Stream<List<DmConversation>> dmConversations(DmConversationsRef ref) {
+  final myId = Supabase.instance.client.auth.currentUser?.id;
+  if (myId == null) return Stream.value([]);
+
+  final controller = StreamController<List<DmConversation>>.broadcast();
+  final repo = ref.read(dmRepositoryProvider);
+
+  Future<void> fetch() async {
+    try {
+      final convs = await repo.getConversations();
+      if (!controller.isClosed) controller.add(convs);
+    } catch (e) {
+      if (!controller.isClosed) controller.addError(e);
+    }
+  }
+
+  fetch();
+
+  final channel = Supabase.instance.client
+      .channel('conversations_list_$myId')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'conversations',
+        callback: (payload) {
+          final row = payload.newRecord;
+          final u1 = row['user1_id'] as String?;
+          final u2 = row['user2_id'] as String?;
+          // 내가 포함된 대화방 업데이트만 처리
+          if (u1 != myId && u2 != myId) return;
+          fetch();
+        },
+      )
+      .subscribe();
+
+  ref.onDispose(() {
+    controller.close();
+    Supabase.instance.client.removeChannel(channel);
+  });
+
+  return controller.stream;
 }
 
 @riverpod
@@ -213,6 +296,8 @@ Stream<List<DmMessage>> dmMessages(DmMessagesRef ref, String conversationId) {
   return ref.watch(dmRepositoryProvider).streamMessages(conversationId);
 }
 
+// conversations UPDATE 이벤트 수신 시 payload로 내 대화방인지 먼저 확인 후 쿼리
+// 쿼리 2개 → 1개(OR 조건)로 통합
 @riverpod
 Stream<bool> hasUnreadDms(HasUnreadDmsRef ref) {
   final myId = Supabase.instance.client.auth.currentUser?.id;
@@ -223,23 +308,18 @@ Stream<bool> hasUnreadDms(HasUnreadDmsRef ref) {
   Future<void> check() async {
     try {
       final supabase = Supabase.instance.client;
-      final user1 = await supabase
+      final rows = await supabase
           .from('conversations')
-          .select('id')
-          .eq('user1_id', myId)
-          .gt('unread_count_user1', 0)
-          .limit(1);
-      if ((user1 as List).isNotEmpty) {
-        if (!controller.isClosed) controller.add(true);
-        return;
-      }
-      final user2 = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('user2_id', myId)
-          .gt('unread_count_user2', 0)
-          .limit(1);
-      if (!controller.isClosed) controller.add((user2 as List).isNotEmpty);
+          .select('user1_id, unread_count_user1, unread_count_user2')
+          .or('user1_id.eq.$myId,user2_id.eq.$myId');
+      final hasUnread = (rows as List).any((row) {
+        final isUser1 = (row['user1_id'] as String) == myId;
+        final count = isUser1
+            ? (row['unread_count_user1'] as int? ?? 0)
+            : (row['unread_count_user2'] as int? ?? 0);
+        return count > 0;
+      });
+      if (!controller.isClosed) controller.add(hasUnread);
     } catch (_) {
       if (!controller.isClosed) controller.add(false);
     }
@@ -253,7 +333,14 @@ Stream<bool> hasUnreadDms(HasUnreadDmsRef ref) {
         event: PostgresChangeEvent.update,
         schema: 'public',
         table: 'conversations',
-        callback: (payload) => check(),
+        callback: (payload) {
+          final row = payload.newRecord;
+          final u1 = row['user1_id'] as String?;
+          final u2 = row['user2_id'] as String?;
+          // 내가 포함된 대화방 변경만 처리
+          if (u1 != myId && u2 != myId) return;
+          check();
+        },
       )
       .subscribe();
 
