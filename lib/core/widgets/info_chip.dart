@@ -38,12 +38,16 @@ class InfoChipFilled extends StatelessWidget {
     required this.label,
     required this.color,
     required this.isDark,
+    this.fontWeight = FontWeight.w600,
+    this.gap = 4,
   });
 
   final IconData icon;
   final String label;
   final Color color;
   final bool isDark;
+  final FontWeight fontWeight;
+  final double gap;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +61,11 @@ class InfoChipFilled extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 13, color: color),
-          const SizedBox(width: 4),
+          SizedBox(width: gap),
           Text(
             label,
             style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: color),
+                fontSize: 12, fontWeight: fontWeight, color: color),
           ),
         ],
       ),
