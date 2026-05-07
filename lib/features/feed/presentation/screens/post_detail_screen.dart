@@ -10,6 +10,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../my_league/data/my_league_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../widgets/post_image_carousel.dart';
@@ -67,6 +68,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       if (widget.post.leagueId != null) {
         ref.invalidate(leagueUserPostsProvider(widget.post.leagueId!, widget.post.userId));
         ref.invalidate(leagueRankingProvider(widget.post.leagueId!));
+        ref.invalidate(mySeasonStatsProvider);
+        ref.invalidate(myProfileProvider);
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
