@@ -66,8 +66,8 @@ jobs:
           cat > /tmp/key.properties <<- EOF
           storeFile=/tmp/upload-keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=upload
+          keyPassword=${{ secrets.KEYSTORE_PASSWORD }}
           EOF
           echo "KEY_PROPERTIES=/tmp/key.properties" >> $GITHUB_ENV
           echo "=== key.properties keys ==="
