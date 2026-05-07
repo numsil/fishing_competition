@@ -1038,57 +1038,6 @@ class _CatchDashboard extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        // 최대어 카드
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: maxLength != null ? AppColors.gold.withValues(alpha: 0.06) : cardBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: maxLength != null ? AppColors.gold.withValues(alpha: 0.25) : divColor,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(LucideIcons.award, color: AppColors.gold, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
-                    const SizedBox(height: 2),
-                    Text(
-                      maxLength != null
-                          ? '${maxPost?.fishType ?? "물고기"} ${maxLength!.toStringAsFixed(1)}cm'
-                          : '아직 기록 없음',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: maxLength != null ? AppColors.gold : sub,
-                      ),
-                    ),
-                    if (maxPost != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${DateFormat('yyyy.MM.dd').format(maxPost!.createdAt)}${maxPost!.location != null ? " · ${dedupeAddress(maxPost!.location!)}" : ""}',
-                        style: TextStyle(fontSize: 11, color: sub),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
