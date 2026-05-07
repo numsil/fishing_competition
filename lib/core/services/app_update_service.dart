@@ -6,8 +6,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+part 'app_update_service.g.dart';
 
 class AppVersionInfo {
   final String version;
@@ -104,4 +108,9 @@ class AppUpdateService {
       throw Exception('설치 실패: ${result.message}');
     }
   }
+}
+
+@riverpod
+AppUpdateService appUpdateService(Ref ref) {
+  return AppUpdateService(Supabase.instance.client);
 }
