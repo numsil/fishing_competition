@@ -58,7 +58,17 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # ── 7. APK 빌드 ───────────────────────────────────────────
+      # ── 7. 키스토어 복원 (release 빌드만) ────────────────────────
+      - name: Decode keystore
+        if: env.BUILD_MODE == 'release'
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/upload-keystore.jks
+          echo "KEYSTORE_PATH=/tmp/upload-keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+
+      # ── 8. APK 빌드 ───────────────────────────────────────────
       - name: Build APK
         run: |
           if [ "${{ env.BUILD_MODE }}" = "release" ]; then
