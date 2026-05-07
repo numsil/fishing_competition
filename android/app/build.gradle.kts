@@ -32,19 +32,21 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = System.getenv("KEYSTORE_PATH")
-            if (keystoreFile != null) {
-                storeFile = file(keystoreFile)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+            val keyPropertiesPath = System.getenv("KEY_PROPERTIES")
+            if (keyPropertiesPath != null) {
+                val props = java.util.Properties()
+                props.load(java.io.FileInputStream(keyPropertiesPath))
+                storeFile = file(props["storeFile"] as String)
+                storePassword = props["storePassword"] as String
+                keyAlias = props["keyAlias"] as String
+                keyPassword = props["keyPassword"] as String
             }
         }
     }
 
     buildTypes {
         release {
-            val hasKeystore = System.getenv("KEYSTORE_PATH") != null
+            val hasKeystore = System.getenv("KEY_PROPERTIES") != null
             signingConfig = if (hasKeystore)
                 signingConfigs.getByName("release")
             else
