@@ -12,6 +12,7 @@ import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/info_chip.dart';
 import '../../data/my_league_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../feed/data/post_model.dart';
@@ -1339,7 +1340,7 @@ class _MyLeagueCard extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
               child: Row(
                 children: [
-                  _InfoChip(
+                  InfoChip(
                     icon: Icons.group_outlined,
                     label: '${league.participantsCount}/${league.maxParticipants}명',
                     color: isLive && league.participantsCount >= league.maxParticipants
@@ -1347,10 +1348,10 @@ class _MyLeagueCard extends ConsumerWidget {
                         : accent,
                   ),
                   const SizedBox(width: 8),
-                  _InfoChip(icon: Icons.set_meal_outlined, label: '모든 어종', color: accent),
+                  InfoChip(icon: Icons.set_meal_outlined, label: '모든 어종', color: accent),
                   if (isUpcoming) ...[
                     const SizedBox(width: 8),
-                    _InfoChip(
+                    InfoChip(
                         icon: Icons.timer_outlined,
                         label: '모집중',
                         color: accent),
@@ -1367,21 +1368,3 @@ class _MyLeagueCard extends ConsumerWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label, required this.color});
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
-      ],
-    );
-  }
-}
