@@ -128,7 +128,11 @@ class _ActiveTabConsumer extends ConsumerWidget {
           sub: sub,
           cardBg: cardBg,
           divColor: divColor,
-          onRefresh: () async => ref.invalidate(myLeaguesProvider),
+          onRefresh: () async {
+            ref.invalidate(myLeaguesProvider);
+            ref.invalidate(mySeasonStatsProvider);
+            ref.invalidate(myProfileProvider);
+          },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
