@@ -5,7 +5,7 @@ import 'dart:math';
 /// 공식: round(length^2.5 / 800) × tier_multiplier
 /// 30cm 이하 = 0점
 int calculateFishScore(double? lengthCm) {
-  if (lengthCm == null || lengthCm <= 30) return 0;
+  if (lengthCm == null || lengthCm < 30) return 0;
 
   final base = pow(lengthCm, 2.5) / 800;
 
