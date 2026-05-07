@@ -1,21 +1,22 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import '../../router/app_router.dart';
 import '../../services/app_update_service.dart';
 import '../../widgets/update_dialog.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _introCtrl;
   late AnimationController _pulseCtrl;
@@ -31,8 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
 
     // 스플래시 애니메이션과 동시에 업데이트 체크 시작
-    final updateService = AppUpdateService(Supabase.instance.client);
-    _updateFuture = updateService.checkForUpdate();
+    _updateFuture = ref.read(appUpdateServiceProvider).checkForUpdate();
 
     _introCtrl = AnimationController(
       vsync: this,
@@ -67,20 +67,15 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
 
       if (updateInfo != null) {
-        final updateService = AppUpdateService(Supabase.instance.client);
-        await showUpdateDialog(context, updateInfo, updateService);
+        await showUpdateDialog(
+            context, updateInfo, ref.read(appUpdateServiceProvider));
         if (!mounted) return;
       }
 
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        final row = await Supabase.instance.client
-            .from('users')
-            .select('status')
-            .eq('id', user.id)
-            .maybeSingle();
-        if (row?['status'] == 'banned') {
-          await Supabase.instance.client.auth.signOut();
+      final authRepo = ref.read(authRepositoryProvider);
+      if (ref.read(currentUserProvider) != null) {
+        if (await authRepo.isCurrentUserBanned()) {
+          await authRepo.signOut();
           if (mounted) context.go(AppRoutes.login);
           return;
         }

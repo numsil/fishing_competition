@@ -2,9 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../ranking/data/ranking_repository.dart';
@@ -24,7 +24,7 @@ class _VerificationDetailScreenState
     extends ConsumerState<VerificationDetailScreen> {
   bool _loading = false;
 
-  String? get _userId => Supabase.instance.client.auth.currentUser?.id;
+  String? get _userId => ref.read(currentUserProvider)?.id;
 
   Future<void> _vote(String vote) async {
     setState(() => _loading = true);
