@@ -200,9 +200,8 @@ class _ActiveTab extends StatelessWidget {
           children: [
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.6,
-              child: _EmptyState(
+              child: _EmptyStateWithCta(
                 isDark: isDark,
-                accent: accent,
                 sub: sub,
                 message: '참여중인 리그가 없습니다',
                 buttonLabel: '리그 찾아보기',
@@ -1070,17 +1069,18 @@ class _EmptyCatchAlbum extends StatelessWidget {
 }
 
 // ── 빈 상태 ───────────────────────────────────────────────
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
+// CTA 버튼이 포함된 빈 상태 위젯 (my_league 전용)
+// core EmptyState는 정적 안내용이므로 별도 유지
+class _EmptyStateWithCta extends StatelessWidget {
+  const _EmptyStateWithCta({
     required this.isDark,
-    required this.accent,
     required this.sub,
     required this.message,
     required this.buttonLabel,
     required this.onTap,
   });
   final bool isDark;
-  final Color accent, sub;
+  final Color sub;
   final String message, buttonLabel;
   final VoidCallback onTap;
 
@@ -1127,9 +1127,8 @@ class _MyLeaguesTab extends StatelessWidget {
           children: [
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.6,
-              child: _EmptyState(
+              child: _EmptyStateWithCta(
                 isDark: isDark,
-                accent: accent,
                 sub: sub,
                 message: '개설한 리그가 없습니다',
                 buttonLabel: '리그 개설하기',
