@@ -12,6 +12,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../utils/feed_search_utils.dart';
@@ -870,7 +871,7 @@ class _MoreMenu extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _MenuItem(
+          AppMenuItem(
             icon: LucideIcons.link2,
             label: '링크 복사',
             color: textColor,
@@ -882,21 +883,21 @@ class _MoreMenu extends StatelessWidget {
             },
           ),
           Divider(height: 1, color: divColor),
-          _MenuItem(
+          AppMenuItem(
             icon: LucideIcons.share,
             label: '공유하기',
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
           Divider(height: 1, color: divColor),
-          _MenuItem(
+          AppMenuItem(
             icon: LucideIcons.userPlus,
             label: '팔로우',
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
           Divider(height: 1, color: divColor),
-          _MenuItem(
+          AppMenuItem(
             icon: LucideIcons.flag,
             label: '신고하기',
             color: AppColors.error,
@@ -904,31 +905,6 @@ class _MoreMenu extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({required this.icon, required this.label, required this.color, required this.onTap});
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 16),
-            Text(label, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w500)),
-          ],
-        ),
       ),
     );
   }
