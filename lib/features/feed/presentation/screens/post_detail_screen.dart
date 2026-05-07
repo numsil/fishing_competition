@@ -65,7 +65,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       ref.invalidate(feedPostsProvider);
       ref.invalidate(myPostsProvider);
       if (widget.post.leagueId != null) {
-        ref.invalidate(leagueUserPostsProvider((widget.post.leagueId!, widget.post.userId)));
+        ref.invalidate(leagueUserPostsProvider(widget.post.leagueId!, widget.post.userId));
         ref.invalidate(leagueRankingProvider(widget.post.leagueId!));
       }
       if (mounted) Navigator.pop(context);

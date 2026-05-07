@@ -19,15 +19,35 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
   int _filter = 0;
   String _query = '';
   final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
 
   // 0=전체, 1=모집중, 2=진행중, 3=종료
   static const _filters = ['전체', '모집중', '진행중', '종료'];
   static const _filterStatuses = ['', 'recruiting', 'in_progress', 'completed'];
 
   @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollCtrl
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    // 검색/필터 활성 시는 페이지네이션 비활성 (현재 페이지에서만 필터)
+    if (_query.isNotEmpty || _filter != 0) return;
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      ref.read(leaguesProvider.notifier).loadMore();
+    }
   }
 
   List<League> _applyFilter(List<League> all) {
@@ -156,12 +176,25 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                   );
                 }
 
+                final showLoadMore = _query.isEmpty &&
+                    _filter == 0 &&
+                    ref.read(leaguesProvider.notifier).hasMore &&
+                    leaguesData.isNotEmpty;
+                final itemCount = filtered.length + (showLoadMore ? 1 : 0);
+
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(leaguesProvider),
                   child: ListView.builder(
+                    controller: _scrollCtrl,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filtered.length,
+                    itemCount: itemCount,
                     itemBuilder: (context, index) {
+                      if (showLoadMore && index == filtered.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
                       final l = filtered[index];
                       final startStr = DateFormat('M/d').format(l.startTime);
                       final endStr = DateFormat('M/d').format(l.endTime);

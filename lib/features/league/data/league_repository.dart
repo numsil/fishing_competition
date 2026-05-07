@@ -5,10 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
-import '../../../core/utils/score_calculator.dart';
 import 'league_model.dart';
 
 part 'league_repository.g.dart';
+
+const int kLeagueListPageSize = 20;
 
 // ── 순위 항목 모델 ──────────────────────────────────────
 class LeagueRankEntry {
@@ -123,10 +124,19 @@ class LeagueRepository {
   Future<League> getLeague(String id) async {
     final data = await _supabase
         .from('leagues')
-        .select('*, league_participants(id), users!host_id(username, avatar_url)')
+        .select(
+          'id, host_id, title, description, short_description, location, '
+          'lat, lng, start_time, end_time, entry_fee, max_participants, '
+          'status, fish_types, rule, catch_limit, prize_info, is_public, '
+          'allow_gallery, intro_image_urls, created_at, '
+          'league_participants(count), users!host_id(username, avatar_url)',
+        )
         .eq('id', id)
         .single();
-    final pCount = (data['league_participants'] as List?)?.length ?? 0;
+    final lpData = data['league_participants'];
+    final pCount = (lpData is List && lpData.isNotEmpty)
+        ? ((lpData[0] as Map)['count'] as int? ?? 0)
+        : 0;
     final hostUsername = (data['users'] as Map?)?['username'] as String? ?? '';
     final hostAvatarUrl = (data['users'] as Map?)?['avatar_url'] as String?;
     return League.fromJson(data).copyWith(
@@ -136,17 +146,27 @@ class LeagueRepository {
     );
   }
 
-  Future<List<League>> getLeagues() async {
-    final response = await _supabase
+  Future<List<League>> getLeagues({
+    int limit = kLeagueListPageSize,
+    DateTime? before,
+  }) async {
+    var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(id), users!host_id(username)')
-        .order('created_at', ascending: false);
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)');
+
+    if (before != null) {
+      query = query.lt('created_at', before.toUtc().toIso8601String());
+    }
+
+    final response = await query
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return response.map((data) {
       int pCount = 0;
-      if (data['league_participants'] != null) {
-        final participants = data['league_participants'] as List;
-        pCount = participants.length;
+      final lp = data['league_participants'];
+      if (lp is List && lp.isNotEmpty) {
+        pCount = (lp[0] as Map)['count'] as int? ?? 0;
       }
       final hostUsername = (data['users'] as Map?)?['username'] as String? ?? '';
       final hostAvatarUrl = (data['users'] as Map?)?['avatar_url'] as String?;
@@ -199,122 +219,26 @@ class LeagueRepository {
 
   // ── 순위표 조회 (리그 룰 + catch_limit 기반) ──────────
   Future<List<LeagueRankEntry>> getLeagueRanking(String leagueId) async {
-    // 1. 리그 룰 + catch_limit 조회 (컬럼 미존재 시 기본값 사용)
-    String rule = '최대어';
-    int catchLimit = 1;
-    try {
-      final leagueData = await _supabase
-          .from('leagues')
-          .select('rule, catch_limit')
-          .eq('id', leagueId)
-          .single();
-      rule = leagueData['rule'] as String? ?? '최대어';
-      catchLimit = (leagueData['catch_limit'] as num?)?.toInt() ?? 1;
-    } catch (_) {}
+    final res = await _supabase.rpc(
+      'get_league_ranking',
+      params: {'p_league_id': leagueId},
+    ) as List;
 
-    // 2. 참가자 목록 + 유저 정보
-    final participants = await _supabase
-        .from('league_participants')
-        .select('user_id, users(username, avatar_url)')
-        .eq('league_id', leagueId);
-
-    // 3. 해당 리그 게시물
-    final posts = await _supabase
-        .from('posts')
-        .select('user_id, length, weight, score, fish_type, is_lunker')
-        .eq('league_id', leagueId)
-        .eq('is_deleted', false)
-        .eq('review_status', 'approved');
-
-    // 4. 유저별 데이터 구성
-    final Map<String, String> userNames = {};
-    final Map<String, String?> userAvatars = {};
-    final Map<String, List<double>> userMeasures = {};
-    final Map<String, List<int>> userScores = {};
-    final Map<String, String> userFishType = {};
-    final Map<String, bool> userLunker = {};
-
-    for (final p in participants) {
-      final uid = p['user_id'] as String;
-      userNames[uid] = (p['users'] as Map?)?['username'] as String? ?? '알 수 없음';
-      userAvatars[uid] = (p['users'] as Map?)?['avatar_url'] as String?;
-      userMeasures[uid] = [];
-      userScores[uid] = [];
-      userFishType[uid] = '배스';
-      userLunker[uid] = false;
-    }
-
-    for (final post in posts) {
-      final uid = post['user_id'] as String;
-      if (!userMeasures.containsKey(uid)) continue;
-      if (post['fish_type'] != null) userFishType[uid] = post['fish_type'] as String;
-      if (post['is_lunker'] == true) userLunker[uid] = true;
-
-      // DB에 저장된 score 사용, 없으면 length로 재계산 (기존 데이터 호환)
-      final rawScore = post['score'] as int?;
-      final length = post['length'] != null ? (post['length'] as num).toDouble() : null;
-      final weight = post['weight'] != null ? (post['weight'] as num).toDouble() : null;
-      final score = rawScore ?? calculateFishScore(length);
-      userScores[uid]!.add(score);
-
-      final double? measure = rule == '무게' ? weight : length;
-      if (measure != null) userMeasures[uid]!.add(measure);
-    }
-
-    // 5. 유저별 집계
-    final entries = userNames.keys.map((uid) {
-      final scores = List<int>.from(userScores[uid] ?? [])
-        ..sort((a, b) => b.compareTo(a));
-      final measures = List<double>.from(userMeasures[uid] ?? [])
-        ..sort((a, b) => b.compareTo(a));
-
-      final int totalScore;
-      final int bestScore;
-      final double? bestLength;
-      final int count = scores.length;
-
-      if (rule == '마릿수') {
-        totalScore = count * 10; // 마릿수 룰: 1마리당 10점
-        bestScore = scores.isNotEmpty ? scores.first : 0;
-        bestLength = measures.isNotEmpty ? measures.first : null;
-      } else {
-        // 상위 catchLimit개 score 합산
-        final topN = catchLimit > 0 && scores.length > catchLimit
-            ? scores.take(catchLimit).toList()
-            : scores;
-        totalScore = topN.fold(0, (s, v) => s + v);
-        bestScore = scores.isNotEmpty ? scores.first : 0;
-        bestLength = measures.isNotEmpty ? measures.first : null;
-      }
-
-      // totalLength는 UI 표시용 합산 길이 (기존 호환)
-      final topMeasures = catchLimit > 0 && measures.length > catchLimit
-          ? measures.take(catchLimit).toList()
-          : measures;
-      final totalLength = topMeasures.fold(0.0, (s, v) => s + v);
-
+    return res.map((row) {
+      final m = row as Map<String, dynamic>;
       return LeagueRankEntry(
-        userId: uid,
-        username: userNames[uid]!,
-        avatarUrl: userAvatars[uid],
-        bestLength: bestLength,
-        totalLength: totalLength,
-        totalCount: count,
-        totalScore: totalScore,
-        bestScore: bestScore,
-        fishType: userFishType[uid] ?? '배스',
-        isLunker: userLunker[uid] ?? false,
+        userId: m['user_id'] as String,
+        username: m['username'] as String? ?? '알 수 없음',
+        avatarUrl: m['avatar_url'] as String?,
+        bestLength: (m['best_length'] as num?)?.toDouble(),
+        totalLength: (m['total_length'] as num?)?.toDouble() ?? 0.0,
+        totalCount: (m['total_count'] as num?)?.toInt() ?? 0,
+        totalScore: (m['total_score'] as num?)?.toInt() ?? 0,
+        bestScore: (m['best_score'] as num?)?.toInt() ?? 0,
+        fishType: m['fish_type'] as String? ?? '배스',
+        isLunker: m['is_lunker'] as bool? ?? false,
       );
     }).toList();
-
-    // 6. 점수 기준 정렬 (동점 시 마릿수 → 최고점수 순)
-    entries.sort((a, b) {
-      if (a.totalScore != b.totalScore) return b.totalScore.compareTo(a.totalScore);
-      if (a.totalCount != b.totalCount) return b.totalCount.compareTo(a.totalCount);
-      return b.bestScore.compareTo(a.bestScore);
-    });
-
-    return entries;
   }
 
   // ── 심사 탭용: 리그 전체 조과 최신순 ──────────────────────
@@ -324,7 +248,8 @@ class LeagueRepository {
         .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('is_deleted', false)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(100);
 
     return data.map<Post>((d) {
       final user = d['users'] as Map?;
@@ -355,7 +280,12 @@ class LeagueRepository {
   Future<List<Post>> getUserLeaguePosts(String leagueId, String userId) async {
     final data = await _supabase
         .from('posts')
-        .select('*, users(username, avatar_url)')
+        .select(
+          'id, user_id, league_id, image_url, image_urls, aspect_ratio, '
+          'video_url, caption, fish_type, length, weight, lure_type, '
+          'catch_count, score, is_lunker, is_personal_record, review_status, '
+          'location, created_at, users(username, avatar_url)',
+        )
         .eq('league_id', leagueId)
         .eq('user_id', userId)
         .eq('is_deleted', false)
@@ -432,44 +362,12 @@ class LeagueRepository {
     }
   }
 
-  // ── 순위 보너스 계산 및 저장 ─────────────────────────────────
+  // ── 순위 보너스 계산 및 저장 (RPC) ─────────────────────────
   Future<void> saveRankBonuses(String leagueId) async {
-    final results = await Future.wait([
-      getLeagueRanking(leagueId),
-      getLeague(leagueId),
-    ]);
-    final rankings = results[0] as List<LeagueRankEntry>;
-    final league   = results[1] as League;
-    final n        = league.participantsCount;
-    final now      = DateTime.now().toUtc().toIso8601String();
-
-    for (int i = 0; i < rankings.length; i++) {
-      final bonus = _rankBonus(i + 1, n);
-      if (bonus <= 0) continue;
-      await _supabase
-          .from('league_participants')
-          .update({'rank_bonus': bonus, 'rank_bonus_earned_at': now})
-          .eq('league_id', leagueId)
-          .eq('user_id', rankings[i].userId);
-    }
-  }
-
-  int _rankBonus(int rank, int participantCount) {
-    final int base;
-    if (participantCount <= 6)       base = 10;
-    else if (participantCount <= 12) base = 24;
-    else if (participantCount <= 19) base = 40;
-    else                             base = 60;
-
-    final double m;
-    if (rank == 1)       m = 1.00;
-    else if (rank == 2)  m = 0.60;
-    else if (rank == 3)  m = 0.40;
-    else if (rank <= 5)  m = 0.20;
-    else if (rank <= 10) m = 0.10;
-    else                 m = 0.05;
-
-    return (participantCount * base * m).round();
+    await _supabase.rpc(
+      'save_league_rank_bonuses',
+      params: {'p_league_id': leagueId},
+    );
   }
 
   // ── 리그 정보 수정 ──────────────────────────────────────────
@@ -529,14 +427,48 @@ LeagueRepository leagueRepository(LeagueRepositoryRef ref) {
 }
 
 @riverpod
-Future<List<League>> leagues(LeaguesRef ref) {
-  final link = ref.keepAlive();
-  Timer(const Duration(minutes: 5), link.close);
-  return ref.watch(leagueRepositoryProvider).getLeagues();
+class Leagues extends _$Leagues {
+  bool _hasMore = true;
+  bool _loading = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<League>> build() async {
+    _hasMore = true;
+    _loading = false;
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
+    final first = await ref.watch(leagueRepositoryProvider)
+        .getLeagues(limit: kLeagueListPageSize);
+    _hasMore = first.length >= kLeagueListPageSize;
+    return first;
+  }
+
+  Future<void> loadMore() async {
+    if (_loading || !_hasMore) return;
+    final current = state.valueOrNull;
+    if (current == null || current.isEmpty) return;
+    _loading = true;
+    try {
+      final next = await ref.read(leagueRepositoryProvider).getLeagues(
+        limit: kLeagueListPageSize,
+        before: current.last.createdAt,
+      );
+      _hasMore = next.length >= kLeagueListPageSize;
+      if (next.isNotEmpty) {
+        state = AsyncData([...current, ...next]);
+      }
+    } finally {
+      _loading = false;
+    }
+  }
 }
 
 @riverpod
 Future<List<League>> myJoinedLeagues(MyJoinedLeaguesRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(leagueRepositoryProvider).getMyJoinedLeagues();
 }
 
@@ -555,27 +487,41 @@ Future<List<LeagueRankEntry>> leagueRanking(LeagueRankingRef ref, String leagueI
 }
 
 // 특정 참가자의 조과 목록
-final leagueUserPostsProvider = FutureProvider.family<List<Post>, (String, String)>(
-  (ref, params) {
-    final (leagueId, userId) = params;
-    return ref.watch(leagueRepositoryProvider).getUserLeaguePosts(leagueId, userId);
-  },
-);
+@riverpod
+Future<List<Post>> leagueUserPosts(
+  LeagueUserPostsRef ref,
+  String leagueId,
+  String userId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getUserLeaguePosts(leagueId, userId);
+}
 
-// 코드 생성 없이 수동 정의
-final leaguePendingProvider = FutureProvider.family<List<LeaguePendingEntry>, String>(
-  (ref, leagueId) => ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId),
-);
+@riverpod
+Future<List<LeaguePendingEntry>> leaguePending(
+  LeaguePendingRef ref,
+  String leagueId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId);
+}
 
-final leagueDetailProvider = FutureProvider.family<League, String>(
-  (ref, id) {
-    final link = ref.keepAlive();
-    Timer(const Duration(minutes: 5), link.close);
-    return ref.watch(leagueRepositoryProvider).getLeague(id);
-  },
-);
+@riverpod
+Future<League> leagueDetail(LeagueDetailRef ref, String id) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
+  return ref.watch(leagueRepositoryProvider).getLeague(id);
+}
 
 // 심사 탭용: 리그 전체 조과
-final leagueCatchesForReviewProvider = FutureProvider.family<List<Post>, String>(
-  (ref, leagueId) => ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId),
-);
+@riverpod
+Future<List<Post>> leagueCatchesForReview(
+  LeagueCatchesForReviewRef ref,
+  String leagueId,
+) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId);
+}

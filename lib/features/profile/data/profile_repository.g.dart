@@ -24,7 +24,7 @@ final profileRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProfileRepositoryRef = AutoDisposeProviderRef<ProfileRepository>;
-String _$myProfileHash() => r'e5e10fc08ceb6111a3a5d09cbffdc1d74656c8ac';
+String _$myProfileHash() => r'86236197a256b2e61f9d3e9d3817406e90810cf7';
 
 /// See also [myProfile].
 @ProviderFor(myProfile)
@@ -41,7 +41,7 @@ final myProfileProvider = AutoDisposeFutureProvider<UserProfile>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyProfileRef = AutoDisposeFutureProviderRef<UserProfile>;
-String _$myPostsHash() => r'ab6b28fd009f90739ac98b3d9cc12970386011b6';
+String _$myPostsHash() => r'189df8053ac4055bb381bd35ba84d8f3f240e87c';
 
 /// See also [myPosts].
 @ProviderFor(myPosts)
@@ -58,7 +58,7 @@ final myPostsProvider = AutoDisposeFutureProvider<List<Post>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyPostsRef = AutoDisposeFutureProviderRef<List<Post>>;
-String _$myPersonalRecordsHash() => r'c8a65d11cf783d1a9e3d5e357ff542b0d07c35b8';
+String _$myPersonalRecordsHash() => r'1bdfefcf93ff6bcacc1f567619237bf221e277d4';
 
 /// See also [myPersonalRecords].
 @ProviderFor(myPersonalRecords)
@@ -216,7 +216,7 @@ class _UserProfileProviderElement
   String get userId => (origin as UserProfileProvider).userId;
 }
 
-String _$userPostsHash() => r'972f5d3083c89f6ec2e2edeed5fa4eeb5132e820';
+String _$userPostsHash() => r'c442fc9d6d9412a3802843c99bdfbff0ff9838fd';
 
 /// See also [userPosts].
 @ProviderFor(userPosts)

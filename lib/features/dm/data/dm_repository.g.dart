@@ -23,7 +23,7 @@ final dmRepositoryProvider = AutoDisposeProvider<DmRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DmRepositoryRef = AutoDisposeProviderRef<DmRepository>;
-String _$dmConversationsHash() => r'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
+String _$dmConversationsHash() => r'9a5eb62a5be4f9d706be304b33cc8425dd247546';
 
 /// See also [dmConversations].
 @ProviderFor(dmConversations)
@@ -182,7 +182,7 @@ class _DmMessagesProviderElement
   String get conversationId => (origin as DmMessagesProvider).conversationId;
 }
 
-String _$hasUnreadDmsHash() => r'c40296e14b27bdf485fbc0e214693ac6653d26c6';
+String _$hasUnreadDmsHash() => r'dde5e3ec46b39af36a4f0199220826c55d1e71dc';
 
 /// See also [hasUnreadDms].
 @ProviderFor(hasUnreadDms)

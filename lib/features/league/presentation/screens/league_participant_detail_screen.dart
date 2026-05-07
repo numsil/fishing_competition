@@ -89,7 +89,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(leagueUserPostsProvider((leagueId, userId)));
+    final postsAsync = ref.watch(leagueUserPostsProvider(leagueId, userId));
     final currentUserId = ref.watch(currentUserProvider)?.id;
     final isMyPost = currentUserId != null && currentUserId == userId;
 
@@ -297,7 +297,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                                         isDark: isDark,
                                         accent: accent,
                                         onSaved: () {
-                                          ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
+                                          ref.invalidate(leagueUserPostsProvider(leagueId, userId));
                                           ref.invalidate(leagueRankingProvider(leagueId));
                                           ref.invalidate(feedPostsProvider);
                                         },
@@ -350,7 +350,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                                       onConfirmed: () async {
                                         try {
                                           await ref.read(feedRepositoryProvider).deletePost(post.id);
-                                          ref.invalidate(leagueUserPostsProvider((leagueId, userId)));
+                                          ref.invalidate(leagueUserPostsProvider(leagueId, userId));
                                           ref.invalidate(leagueRankingProvider(leagueId));
                                           ref.invalidate(feedPostsProvider);
                                         } catch (e) {

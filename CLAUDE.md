@@ -25,6 +25,16 @@ UI → Provider → Repository → Supabase
 
 ---
 
+## 성능 규칙 (Egress)
+
+- 집계(COUNT/SUM/RANK/Top N)는 RPC로, 클라 fold/reduce 금지
+- 리스트는 항상 .limit() 또는 페이지네이션 (커서 기반 권장)
+- 카운트는 `participants(count)` 사용 (ID 배열 length X)
+- `ref.watch(authStateProvider)` 직접 X → `.select((a) => a.valueOrNull?.session?.user.id)`
+- AppLifecycle.resumed에서 무거운 RPC invalidate 금지 (keepAlive로 자동 갱신)
+
+---
+
 ## 캐싱 규칙
 
 - 리스트: 5분 TTL

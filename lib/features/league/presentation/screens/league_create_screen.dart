@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
@@ -536,7 +537,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: divColor),
                                   image: DecorationImage(
-                                    image: NetworkImage(e.value),
+                                    image: CachedNetworkImageProvider(e.value),
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -1246,7 +1247,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: divColor),
                               image: DecorationImage(
-                                image: NetworkImage(url),
+                                image: CachedNetworkImageProvider(url),
                                 fit: BoxFit.cover,
                               ),
                             ),

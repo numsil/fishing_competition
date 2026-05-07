@@ -10,19 +10,31 @@ import '../../verification/data/verification_repository.dart';
 
 part 'feed_repository.g.dart';
 
+const int kFeedPageSize = 20;
+
 class FeedRepository {
   final SupabaseClient _supabase;
 
   FeedRepository(this._supabase);
 
-  Future<List<Post>> getPosts() async {
-    final response = await _supabase
+  Future<List<Post>> getPosts({
+    int limit = kFeedPageSize,
+    DateTime? before,
+  }) async {
+    var query = _supabase
         .from('posts')
         .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
-        .or('is_deleted.is.null,is_deleted.eq.false')
-        .order('created_at', ascending: false);
+        .or('is_deleted.is.null,is_deleted.eq.false');
+
+    if (before != null) {
+      query = query.lt('created_at', before.toUtc().toIso8601String());
+    }
+
+    final response = await query
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return response.map((data) {
       final post = Post.fromJson(data);
@@ -54,7 +66,8 @@ class FeedRepository {
         .from('post_comments')
         .select('id, user_id, content, created_at, users(username, avatar_url)')
         .eq('post_id', postId)
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(50);
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -278,8 +291,40 @@ FeedRepository feedRepository(FeedRepositoryRef ref) {
 }
 
 @riverpod
-Future<List<Post>> feedPosts(FeedPostsRef ref) {
-  final link = ref.keepAlive();
-  Timer(const Duration(minutes: 5), link.close);
-  return ref.watch(feedRepositoryProvider).getPosts();
+class FeedPosts extends _$FeedPosts {
+  bool _hasMore = true;
+  bool _loading = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<Post>> build() async {
+    _hasMore = true;
+    _loading = false;
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
+    final first = await ref.watch(feedRepositoryProvider)
+        .getPosts(limit: kFeedPageSize);
+    _hasMore = first.length >= kFeedPageSize;
+    return first;
+  }
+
+  Future<void> loadMore() async {
+    if (_loading || !_hasMore) return;
+    final current = state.valueOrNull;
+    if (current == null || current.isEmpty) return;
+    _loading = true;
+    try {
+      final next = await ref.read(feedRepositoryProvider).getPosts(
+        limit: kFeedPageSize,
+        before: current.last.createdAt,
+      );
+      _hasMore = next.length >= kFeedPageSize;
+      if (next.isNotEmpty) {
+        state = AsyncData([...current, ...next]);
+      }
+    } finally {
+      _loading = false;
+    }
+  }
 }

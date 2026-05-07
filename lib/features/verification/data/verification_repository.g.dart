@@ -26,7 +26,7 @@ final verificationRepositoryProvider =
 // ignore: unused_element
 typedef VerificationRepositoryRef =
     AutoDisposeProviderRef<VerificationRepository>;
-String _$isAdminUserHash() => r'32002fef4d5bc197e0b0c26c0a99dc7acbd2bb75';
+String _$isAdminUserHash() => r'12a0ca8f795fa5a273a3f05889e2e255055d30a8';
 
 /// See also [isAdminUser].
 @ProviderFor(isAdminUser)
@@ -44,7 +44,7 @@ final isAdminUserProvider = AutoDisposeFutureProvider<bool>.internal(
 // ignore: unused_element
 typedef IsAdminUserRef = AutoDisposeFutureProviderRef<bool>;
 String _$myPendingVerificationsHash() =>
-    r'5f5e8e2a3c46ab1df62b5503e7f88b87a238e6fb';
+    r'a53e750e58c1d461a8b370dbc443f461d69bcbae';
 
 /// See also [myPendingVerifications].
 @ProviderFor(myPendingVerifications)
@@ -64,7 +64,7 @@ final myPendingVerificationsProvider =
 typedef MyPendingVerificationsRef =
     AutoDisposeFutureProviderRef<List<VerificationRequest>>;
 String _$myVerificationHistoryHash() =>
-    r'1ce194a31453577f0e2b99d3e48df62c2000bb3b';
+    r'1b26a5bf70da073dc6f28aef1433b9078b5960d1';
 
 /// See also [myVerificationHistory].
 @ProviderFor(myVerificationHistory)

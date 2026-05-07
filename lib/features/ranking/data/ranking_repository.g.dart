@@ -24,7 +24,7 @@ final rankingRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef RankingRepositoryRef = AutoDisposeProviderRef<RankingRepository>;
-String _$topRankingsHash() => r'cf6d1a5d55906b7efa60635dad9ad7213d0b9abc';
+String _$topRankingsHash() => r'c613167064fbc244004cb08cc5da9fb37cde0605';
 
 /// See also [topRankings].
 @ProviderFor(topRankings)
@@ -43,7 +43,7 @@ final topRankingsProvider =
 // ignore: unused_element
 typedef TopRankingsRef = AutoDisposeFutureProviderRef<List<RankingEntry>>;
 String _$leagueScoreRankingHash() =>
-    r'b10e8ab6a2df2f7219c0feca70149910967ed798';
+    r'95bab9eb9372942194c542c25edc96a55da63fc8';
 
 /// See also [leagueScoreRanking].
 @ProviderFor(leagueScoreRanking)
@@ -63,7 +63,7 @@ final leagueScoreRankingProvider =
 typedef LeagueScoreRankingRef =
     AutoDisposeFutureProviderRef<List<ScoreRankingEntry>>;
 String _$personalScoreRankingHash() =>
-    r'e063d7d0a2bc40de334fe7154c51f27f79a1efdd';
+    r'54f808349b2e3075b7d27a9ee93a8e80cb1e3db5';
 
 /// See also [personalScoreRanking].
 @ProviderFor(personalScoreRanking)
