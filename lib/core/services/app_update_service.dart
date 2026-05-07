@@ -74,6 +74,7 @@ class AppUpdateService {
     if (Platform.isAndroid) {
       final status = await Permission.requestInstallPackages.request();
       if (!status.isGranted) {
+        await openAppSettings();
         throw Exception('install_permission_denied');
       }
     }

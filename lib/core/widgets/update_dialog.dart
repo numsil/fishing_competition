@@ -59,7 +59,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           setState(() {
             _downloading = false;
             _error = e.toString().contains('install_permission_denied')
-                ? '설정에서 "출처를 알 수 없는 앱 설치"를 허용한 후 다시 시도해 주세요.'
+                ? '앱 설정 → "출처를 알 수 없는 앱" → 허용 후 다시 시도해 주세요.'
                 : '다운로드 실패: $e';
           });
         }
