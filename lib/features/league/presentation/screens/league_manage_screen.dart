@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/info_chip.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
@@ -738,25 +739,31 @@ class _StatusCard extends StatelessWidget {
           // 정보 칩 3개
           Row(
             children: [
-              _InfoChip(
+              InfoChipFilled(
                 icon: Icons.people_outline_rounded,
                 label: '$currentParticipants/$maxParticipants명',
-                accent: accent,
+                color: accent,
                 isDark: isDark,
+                fontWeight: FontWeight.w700,
+                gap: 5,
               ),
               const SizedBox(width: 8),
-              _InfoChip(
+              InfoChipFilled(
                 icon: Icons.set_meal_rounded,
                 label: fish,
-                accent: accent,
+                color: accent,
                 isDark: isDark,
+                fontWeight: FontWeight.w700,
+                gap: 5,
               ),
               const SizedBox(width: 8),
-              _InfoChip(
+              InfoChipFilled(
                 icon: Icons.payments_outlined,
                 label: fee == 0 ? '무료' : '${fee ~/ 1000}천원',
-                accent: accent,
+                color: accent,
                 isDark: isDark,
+                fontWeight: FontWeight.w700,
+                gap: 5,
               ),
             ],
           ),
@@ -822,42 +829,6 @@ class _StatusBadge extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: color)),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.isDark,
-  });
-  final IconData icon;
-  final String label;
-  final Color accent;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: accent),
-          const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: accent)),
         ],
       ),
     );
