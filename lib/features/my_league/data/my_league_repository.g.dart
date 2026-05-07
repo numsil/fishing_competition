@@ -25,7 +25,7 @@ final myLeagueRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyLeagueRepositoryRef = AutoDisposeProviderRef<MyLeagueRepository>;
-String _$myLeaguesHash() => r'8bd96bc089a6a60355b4ca10a95fe676f9e8bf9e';
+String _$myLeaguesHash() => r'4a33bf81127148861153220034f629ba1e21cea2';
 
 /// See also [myLeagues].
 @ProviderFor(myLeagues)
@@ -43,7 +43,7 @@ final myLeaguesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MyLeaguesRef = AutoDisposeFutureProviderRef<Map<String, List<League>>>;
-String _$mySeasonStatsHash() => r'464ef4c0e9f915a97da853609123888433e55a0f';
+String _$mySeasonStatsHash() => r'303d57619d6fab4aeed2ce47eb85b0001ea9cbe2';
 
 /// See also [mySeasonStats].
 @ProviderFor(mySeasonStats)

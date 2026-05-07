@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
@@ -31,19 +33,27 @@ import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
+import '../../dev/widget_catalog_screen.dart';
 
 part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(Ref ref) {
+  // 로그아웃 후 ProviderScope 재시작 시 유저가 없으면 splash 생략하고 바로 로그인
+  final hasUser = Supabase.instance.client.auth.currentUser != null;
   return GoRouter(
-    initialLocation: AppRoutes.splash,
+    initialLocation: hasUser ? AppRoutes.splash : AppRoutes.login,
     debugLogDiagnostics: true,
     routes: [
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),
       ),
+      if (kDebugMode)
+        GoRoute(
+          path: AppRoutes.widgetCatalog,
+          builder: (context, state) => const WidgetCatalogScreen(),
+        ),
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
@@ -227,4 +237,5 @@ class AppRoutes {
   static const String dm = '/dm';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
+  static const String widgetCatalog = '/widget-catalog';
 }

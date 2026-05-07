@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../league/data/league_model.dart';
 
 part 'my_league_repository.g.dart';
@@ -188,11 +189,13 @@ MyLeagueRepository myLeagueRepository(MyLeagueRepositoryRef ref) {
 
 @riverpod
 Future<Map<String, List<League>>> myLeagues(MyLeaguesRef ref) {
+  ref.watch(authStateProvider);
   return ref.watch(myLeagueRepositoryProvider).getMyLeagues();
 }
 
 @riverpod
 Future<SeasonStats> mySeasonStats(MySeasonStatsRef ref) {
+  ref.watch(authStateProvider);
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 3), link.close);
   return ref.watch(myLeagueRepositoryProvider).getSeasonStats();
