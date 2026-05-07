@@ -25,14 +25,14 @@ class MyLeagueRepository {
     // 1. Hosted leagues
     final hostedRes = await _supabase
         .from('leagues')
-        .select('id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(id)')
+        .select('id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(count)')
         .eq('host_id', userId)
         .order('created_at', ascending: false);
 
     // 2. Participated leagues
     final participatedRes = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(id))')
+        .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, created_at, league_participants(count))')
         .eq('user_id', userId)
         .order('joined_at', ascending: false);
 
@@ -175,8 +175,9 @@ class MyLeagueRepository {
 
   League _mapLeague(Map<String, dynamic> data) {
     int pCount = 0;
-    if (data['league_participants'] != null) {
-      pCount = (data['league_participants'] as List).length;
+    final lp = data['league_participants'];
+    if (lp is List && lp.isNotEmpty) {
+      pCount = (lp[0] as Map)['count'] as int? ?? 0;
     }
     return League.fromJson(data).copyWith(participantsCount: pCount);
   }

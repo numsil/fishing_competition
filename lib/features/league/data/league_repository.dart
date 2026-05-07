@@ -128,11 +128,14 @@ class LeagueRepository {
           'lat, lng, start_time, end_time, entry_fee, max_participants, '
           'status, fish_types, rule, catch_limit, prize_info, is_public, '
           'allow_gallery, intro_image_urls, created_at, '
-          'league_participants(id), users!host_id(username, avatar_url)',
+          'league_participants(count), users!host_id(username, avatar_url)',
         )
         .eq('id', id)
         .single();
-    final pCount = (data['league_participants'] as List?)?.length ?? 0;
+    final lpData = data['league_participants'];
+    final pCount = (lpData is List && lpData.isNotEmpty)
+        ? ((lpData[0] as Map)['count'] as int? ?? 0)
+        : 0;
     final hostUsername = (data['users'] as Map?)?['username'] as String? ?? '';
     final hostAvatarUrl = (data['users'] as Map?)?['avatar_url'] as String?;
     return League.fromJson(data).copyWith(
@@ -145,14 +148,14 @@ class LeagueRepository {
   Future<List<League>> getLeagues() async {
     final response = await _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(id), users!host_id(username)')
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)')
         .order('created_at', ascending: false);
 
     return response.map((data) {
       int pCount = 0;
-      if (data['league_participants'] != null) {
-        final participants = data['league_participants'] as List;
-        pCount = participants.length;
+      final lp = data['league_participants'];
+      if (lp is List && lp.isNotEmpty) {
+        pCount = (lp[0] as Map)['count'] as int? ?? 0;
       }
       final hostUsername = (data['users'] as Map?)?['username'] as String? ?? '';
       final hostAvatarUrl = (data['users'] as Map?)?['avatar_url'] as String?;
