@@ -190,7 +190,10 @@ MyLeagueRepository myLeagueRepository(MyLeagueRepositoryRef ref) {
 
 @riverpod
 Future<Map<String, List<League>>> myLeagues(MyLeaguesRef ref) {
-  ref.watch(authStateProvider);
+  // 로그인/로그아웃 시만 재빌드 (TOKEN_REFRESHED는 무시)
+  ref.watch(authStateProvider.select(
+    (async) => async.valueOrNull?.session?.user.id,
+  ));
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
   return ref.watch(myLeagueRepositoryProvider).getMyLeagues();
@@ -198,7 +201,9 @@ Future<Map<String, List<League>>> myLeagues(MyLeaguesRef ref) {
 
 @riverpod
 Future<SeasonStats> mySeasonStats(MySeasonStatsRef ref) {
-  ref.watch(authStateProvider);
+  ref.watch(authStateProvider.select(
+    (async) => async.valueOrNull?.session?.user.id,
+  ));
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 3), link.close);
   return ref.watch(myLeagueRepositoryProvider).getSeasonStats();

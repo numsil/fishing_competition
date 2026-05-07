@@ -325,8 +325,10 @@ ProfileRepository profileRepository(ProfileRepositoryRef ref) {
 
 @riverpod
 Future<UserProfile> myProfile(MyProfileRef ref) async {
-  // authState 변화(로그아웃/로그인) 시 자동 재빌드
-  ref.watch(authStateProvider);
+  // 로그인/로그아웃 시만 자동 재빌드 (TOKEN_REFRESHED는 무시)
+  ref.watch(authStateProvider.select(
+    (async) => async.valueOrNull?.session?.user.id,
+  ));
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 3), link.close);
   final posts = await ref.watch(myPostsProvider.future);
