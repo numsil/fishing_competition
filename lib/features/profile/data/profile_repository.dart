@@ -18,6 +18,7 @@ class UserProfile {
   final int postCount;
   final int lunkerCount;
   final double? maxFishLength;
+  final Post? maxFishPost;
   final int leagueScore;
   final int anglerScore;
   final int participationCount; // 완료된 리그 참가 수
@@ -34,6 +35,7 @@ class UserProfile {
     this.postCount = 0,
     this.lunkerCount = 0,
     this.maxFishLength,
+    this.maxFishPost,
     this.leagueScore = 0,
     this.anglerScore = 0,
     this.participationCount = 0,
@@ -186,6 +188,21 @@ class ProfileRepository {
     return (res as List).fold<int>(0, (sum, row) => sum + ((row['score'] as int?) ?? 0));
   }
 
+  /// 리그/개인기록/피드 전체에서 인증된 최대 길이 게시물 1건 조회
+  Future<Post?> _fetchMaxFishPost(String userId) async {
+    final res = await _supabase
+        .from('posts')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at')
+        .eq('user_id', userId)
+        .eq('review_status', 'approved')
+        .or('is_deleted.is.null,is_deleted.eq.false')
+        .not('length', 'is', null)
+        .order('length', ascending: false)
+        .limit(1);
+    if ((res as List).isEmpty) return null;
+    return Post.fromJson(res.first as Map<String, dynamic>);
+  }
+
   /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
   Future<UserProfile> buildMyProfileFromPosts(List<Post> posts) async {
     final userId = _supabase.auth.currentUser?.id;
@@ -198,6 +215,7 @@ class ProfileRepository {
         .single();
     final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
     final stats = await _fetchLeagueStats(userId);
+    final maxFishPost = await _fetchMaxFishPost(userId);
 
     return _buildUserProfile(
       userRes: userRes,
@@ -206,6 +224,7 @@ class ProfileRepository {
       anglerScore: scores[1],
       participationCount: stats['participationCount'] ?? 0,
       winCount: stats['winCount'] ?? 0,
+      maxFishPost: maxFishPost,
     );
   }
 
@@ -311,6 +330,7 @@ class ProfileRepository {
         .single();
     final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
     final stats = await _fetchLeagueStats(userId);
+    final maxFishPost = await _fetchMaxFishPost(userId);
 
     return _buildUserProfile(
       userRes: userRes,
@@ -320,6 +340,7 @@ class ProfileRepository {
       anglerScore: scores[1],
       participationCount: stats['participationCount'] ?? 0,
       winCount: stats['winCount'] ?? 0,
+      maxFishPost: maxFishPost,
     );
   }
 
@@ -331,15 +352,11 @@ class ProfileRepository {
     int anglerScore = 0,
     int participationCount = 0,
     int winCount = 0,
+    Post? maxFishPost,
   }) {
     int lunkerCount = 0;
-    double? maxLen;
     for (final post in posts) {
       if (post.isLunker) lunkerCount++;
-      if (post.length != null) {
-        final len = post.length!;
-        if (maxLen == null || len > maxLen) maxLen = len;
-      }
     }
     return UserProfile(
       id: userRes['id'],
@@ -351,7 +368,8 @@ class ProfileRepository {
       isLunkerClub: userRes['is_lunker_club'] ?? false,
       postCount: posts.length,
       lunkerCount: lunkerCount,
-      maxFishLength: maxLen,
+      maxFishLength: maxFishPost?.length,
+      maxFishPost: maxFishPost,
       leagueScore: leagueScore,
       anglerScore: anglerScore,
       participationCount: participationCount,

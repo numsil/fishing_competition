@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -279,7 +280,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   const SizedBox(height: 10),
 
                   // 런커 기록
-                  if (profile.maxFishLength != null)
+                  if (profile.maxFishPost != null)
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -290,12 +291,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       child: Row(children: [
                         Icon(LucideIcons.award, size: 32, color: AppColors.gold),
                         const SizedBox(width: 12),
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
-                          Text('배스 ${profile.maxFishLength}cm', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.gold)),
-                          Text('2026.04.22 · 충주호', style: TextStyle(fontSize: 11, color: sub)),
-                        ]),
-                        const Spacer(),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
+                            Text(
+                              '${profile.maxFishPost!.fishType} ${profile.maxFishPost!.length!.toStringAsFixed(1)}cm',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.gold),
+                            ),
+                            Text(
+                              '${DateFormat('yyyy.MM.dd').format(profile.maxFishPost!.createdAt)}'
+                              '${profile.maxFishPost!.location != null && profile.maxFishPost!.location!.isNotEmpty ? " · ${profile.maxFishPost!.location}" : ""}',
+                              style: TextStyle(fontSize: 11, color: sub),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(width: 8),
                         Column(children: [
                           Icon(LucideIcons.checkCircle, color: AppColors.gold, size: 16),
                           const SizedBox(height: 2),
