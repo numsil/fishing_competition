@@ -63,13 +63,15 @@ jobs:
         if: env.BUILD_MODE == 'release'
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/upload-keystore.jks
-          cat > /tmp/key.properties << EOF
+          cat > /tmp/key.properties <<- EOF
           storeFile=/tmp/upload-keystore.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
           echo "KEY_PROPERTIES=/tmp/key.properties" >> $GITHUB_ENV
+          echo "=== key.properties keys ==="
+          grep -o "^[^=]*" /tmp/key.properties
 
       # ── 8. APK 빌드 ───────────────────────────────────────────
       - name: Build APK
