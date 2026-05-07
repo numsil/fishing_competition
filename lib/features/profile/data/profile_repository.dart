@@ -80,97 +80,18 @@ class ProfileRepository {
   }
 
   Future<Map<String, int>> _fetchLeagueStats(String userId) async {
-    final participatedRes = await _supabase
-        .from('league_participants')
-        .select('league_id, leagues(status, rule, catch_limit)')
-        .eq('user_id', userId);
-
-    final completedRows = participatedRes.where((p) {
-      final league = p['leagues'] as Map<String, dynamic>?;
-      return league?['status'] == 'completed';
-    }).toList();
-
-    final participationCount = completedRows.length;
-    if (participationCount == 0) return {'winCount': 0, 'participationCount': 0};
-
-    final leagueIds = completedRows.map((p) => p['league_id'] as String).toList();
-
-    List<dynamic> allPosts;
-    try {
-      allPosts = await _supabase
-          .from('posts')
-          .select('user_id, league_id, length, weight')
-          .inFilter('league_id', leagueIds)
-          .or('is_deleted.is.null,is_deleted.eq.false');
-    } catch (_) {
-      allPosts = await _supabase
-          .from('posts')
-          .select('user_id, league_id, length')
-          .inFilter('league_id', leagueIds)
-          .or('is_deleted.is.null,is_deleted.eq.false');
+    final res = await _supabase.rpc(
+      'get_user_league_stats',
+      params: {'p_user_id': userId},
+    ) as List;
+    if (res.isEmpty) {
+      return {'winCount': 0, 'participationCount': 0};
     }
-
-    final allParticipants = await _supabase
-        .from('league_participants')
-        .select('user_id, league_id')
-        .inFilter('league_id', leagueIds);
-
-    final Map<String, Map<String, dynamic>> leagueRules = {};
-    for (final p in completedRows) {
-      final lid = p['league_id'] as String;
-      final d = p['leagues'] as Map<String, dynamic>?;
-      leagueRules[lid] = {
-        'rule': d?['rule'] as String? ?? '최대어',
-        'catchLimit': (d?['catch_limit'] as num?)?.toInt() ?? 1,
-      };
-    }
-
-    final Map<String, Set<String>> participantMap = {};
-    for (final p in allParticipants) {
-      final lid = p['league_id'] as String;
-      participantMap.putIfAbsent(lid, () => {}).add(p['user_id'] as String);
-    }
-
-    final Map<String, Map<String, List<double>>> measuresMap = {};
-    for (final lid in leagueIds) {
-      measuresMap[lid] = {};
-      for (final uid in participantMap[lid] ?? <String>{}) {
-        measuresMap[lid]![uid] = [];
-      }
-    }
-
-    for (final post in allPosts) {
-      final lid = post['league_id'] as String;
-      final uid = post['user_id'] as String;
-      if (measuresMap[lid] == null || !measuresMap[lid]!.containsKey(uid)) continue;
-      final rule = leagueRules[lid]?['rule'] as String? ?? '최대어';
-      final double? measure;
-      if (rule == '무게') {
-        measure = post['weight'] != null ? (post['weight'] as num).toDouble() : null;
-      } else {
-        measure = post['length'] != null ? (post['length'] as num).toDouble() : null;
-      }
-      if (measure != null) measuresMap[lid]![uid]!.add(measure);
-    }
-
-    double calcScore(List<double> vals, String rule, int limit) {
-      if (rule == '마릿수') return vals.length.toDouble();
-      final sorted = List<double>.from(vals)..sort((a, b) => b.compareTo(a));
-      final top = limit > 0 && sorted.length > limit ? sorted.take(limit).toList() : sorted;
-      return top.fold(0.0, (s, v) => s + v);
-    }
-
-    int winCount = 0;
-    for (final lid in leagueIds) {
-      final rule = leagueRules[lid]?['rule'] as String? ?? '최대어';
-      final limit = leagueRules[lid]?['catchLimit'] as int? ?? 1;
-      final userMeasures = measuresMap[lid] ?? {};
-      final myScore = calcScore(userMeasures[userId] ?? [], rule, limit);
-      final rank = userMeasures.values.where((m) => calcScore(m, rule, limit) > myScore).length + 1;
-      if (rank == 1) winCount++;
-    }
-
-    return {'winCount': winCount, 'participationCount': participationCount};
+    final row = res.first as Map<String, dynamic>;
+    return {
+      'winCount': (row['win_count'] as num?)?.toInt() ?? 0,
+      'participationCount': (row['participation_count'] as num?)?.toInt() ?? 0,
+    };
   }
 
   Future<int> _fetchAnglerScore(String userId) async {
