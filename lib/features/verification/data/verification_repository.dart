@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'verification_model.dart';
@@ -220,6 +221,8 @@ VerificationRepository verificationRepository(VerificationRepositoryRef ref) {
 
 @riverpod
 Future<bool> isAdminUser(IsAdminUserRef ref) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 10), link.close);
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return false;
   final row = await Supabase.instance.client
@@ -234,6 +237,8 @@ Future<bool> isAdminUser(IsAdminUserRef ref) async {
 Future<List<VerificationRequest>> myPendingVerifications(
   MyPendingVerificationsRef ref,
 ) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];
   final isAdmin = await ref.read(isAdminUserProvider.future);
@@ -247,6 +252,8 @@ Future<List<VerificationRequest>> myPendingVerifications(
 Future<List<VerificationRequest>> myVerificationHistory(
   MyVerificationHistoryRef ref,
 ) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return [];
   return ref.read(verificationRepositoryProvider).getMyVerificationHistory(userId);

@@ -191,6 +191,8 @@ MyLeagueRepository myLeagueRepository(MyLeagueRepositoryRef ref) {
 @riverpod
 Future<Map<String, List<League>>> myLeagues(MyLeaguesRef ref) {
   ref.watch(authStateProvider);
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(myLeagueRepositoryProvider).getMyLeagues();
 }
 

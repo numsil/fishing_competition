@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -86,15 +87,21 @@ RankingRepository rankingRepository(RankingRepositoryRef ref) {
 
 @riverpod
 Future<List<RankingEntry>> topRankings(TopRankingsRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(rankingRepositoryProvider).getTopRankings();
 }
 
 @riverpod
 Future<List<ScoreRankingEntry>> leagueScoreRanking(LeagueScoreRankingRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(rankingRepositoryProvider).getLeagueScoreRanking();
 }
 
 @riverpod
 Future<List<ScoreRankingEntry>> personalScoreRanking(PersonalScoreRankingRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(rankingRepositoryProvider).getPersonalScoreRanking();
 }

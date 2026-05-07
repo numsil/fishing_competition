@@ -327,17 +327,23 @@ ProfileRepository profileRepository(ProfileRepositoryRef ref) {
 Future<UserProfile> myProfile(MyProfileRef ref) async {
   // authState 변화(로그아웃/로그인) 시 자동 재빌드
   ref.watch(authStateProvider);
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
   final posts = await ref.watch(myPostsProvider.future);
   return ref.watch(profileRepositoryProvider).buildMyProfileFromPosts(posts);
 }
 
 @riverpod
 Future<List<Post>> myPosts(MyPostsRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(profileRepositoryProvider).getMyPosts();
 }
 
 @riverpod
 Future<List<Post>> myPersonalRecords(MyPersonalRecordsRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(profileRepositoryProvider).getMyPersonalRecords();
 }
 
@@ -352,5 +358,7 @@ Future<UserProfile> userProfile(UserProfileRef ref, String userId) async {
 
 @riverpod
 Future<List<Post>> userPosts(UserPostsRef ref, String userId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(profileRepositoryProvider).getUserPosts(userId);
 }

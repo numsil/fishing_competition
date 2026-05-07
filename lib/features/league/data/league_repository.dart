@@ -551,6 +551,8 @@ Future<List<League>> leagues(LeaguesRef ref) {
 
 @riverpod
 Future<List<League>> myJoinedLeagues(MyJoinedLeaguesRef ref) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.watch(leagueRepositoryProvider).getMyJoinedLeagues();
 }
 
@@ -571,6 +573,8 @@ Future<List<LeagueRankEntry>> leagueRanking(LeagueRankingRef ref, String leagueI
 // 특정 참가자의 조과 목록
 final leagueUserPostsProvider = FutureProvider.family<List<Post>, (String, String)>(
   (ref, params) {
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 3), link.close);
     final (leagueId, userId) = params;
     return ref.watch(leagueRepositoryProvider).getUserLeaguePosts(leagueId, userId);
   },
@@ -578,7 +582,11 @@ final leagueUserPostsProvider = FutureProvider.family<List<Post>, (String, Strin
 
 // 코드 생성 없이 수동 정의
 final leaguePendingProvider = FutureProvider.family<List<LeaguePendingEntry>, String>(
-  (ref, leagueId) => ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId),
+  (ref, leagueId) {
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 3), link.close);
+    return ref.watch(leagueRepositoryProvider).getPendingParticipants(leagueId);
+  },
 );
 
 final leagueDetailProvider = FutureProvider.family<League, String>(
@@ -591,5 +599,9 @@ final leagueDetailProvider = FutureProvider.family<League, String>(
 
 // 심사 탭용: 리그 전체 조과
 final leagueCatchesForReviewProvider = FutureProvider.family<List<Post>, String>(
-  (ref, leagueId) => ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId),
+  (ref, leagueId) {
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 3), link.close);
+    return ref.watch(leagueRepositoryProvider).getLeagueCatchesForReview(leagueId);
+  },
 );
