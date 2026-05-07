@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -34,8 +37,8 @@ android {
         create("release") {
             val keyPropertiesPath = System.getenv("KEY_PROPERTIES")
             if (keyPropertiesPath != null) {
-                val props = java.util.Properties()
-                props.load(java.io.FileInputStream(keyPropertiesPath))
+                val props = Properties()
+                props.load(FileInputStream(keyPropertiesPath))
                 storeFile = file(props["storeFile"] as String)
                 storePassword = props["storePassword"] as String
                 keyAlias = props["keyAlias"] as String
