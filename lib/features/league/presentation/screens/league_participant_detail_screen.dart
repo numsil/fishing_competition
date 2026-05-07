@@ -13,6 +13,7 @@ import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
+import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/utils/image_downloader.dart';
 
@@ -177,28 +178,28 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                     // ── 스탯 카드 ────────────────────────
                     Row(
                       children: [
-                        _StatCard(
-                          label: _mainLabel,
+                        StatBoxTinted(
                           value: _mainValue,
-                          accent: context.accentColor,
+                          label: _mainLabel,
                           isDark: context.isDark,
+                          accent: context.accentColor,
                         ),
                         const SizedBox(width: 8),
-                        _StatCard(
-                          label: '마릿수',
+                        StatBoxTinted(
                           value: '${entry.totalCount}마리',
-                          accent: context.accentColor,
+                          label: '마릿수',
                           isDark: context.isDark,
+                          accent: context.accentColor,
                         ),
                         if (_showBestCard) ...[
                           const SizedBox(width: 8),
-                          _StatCard(
-                            label: rule == '무게' ? '최대 무게' : '최대어',
+                          StatBoxTinted(
                             value: rule == '무게'
                                 ? '${entry.bestLength!.toStringAsFixed(0)}g'
                                 : '${entry.bestLength!.toStringAsFixed(1)}cm',
-                            accent: context.accentColor,
+                            label: rule == '무게' ? '최대 무게' : '최대어',
                             isDark: context.isDark,
+                            accent: context.accentColor,
                           ),
                         ],
                       ],
@@ -382,45 +383,6 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('불러오기 실패: $e')),
-      ),
-    );
-  }
-}
-
-// ── 스탯 카드 ─────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.accent,
-    required this.isDark,
-  });
-  final String label, value;
-  final Color accent;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accent.withValues(alpha: 0.2)),
-        ),
-        child: Column(children: [
-          Text(value,
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w800, color: accent)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: isDark
-                      ? AppColors.darkTextSub
-                      : AppColors.lightTextSub)),
-        ]),
       ),
     );
   }

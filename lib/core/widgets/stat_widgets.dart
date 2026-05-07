@@ -66,3 +66,45 @@ class StatBox extends StatelessWidget {
     );
   }
 }
+
+/// accent 색 틴트 배경의 통계 카드 (StatBox와 다른 시각 컨셉)
+class StatBoxTinted extends StatelessWidget {
+  const StatBoxTinted({
+    super.key,
+    required this.value,
+    required this.label,
+    required this.isDark,
+    required this.accent,
+  });
+
+  final String value;
+  final String label;
+  final bool isDark;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accent.withValues(alpha: 0.2)),
+        ),
+        child: Column(children: [
+          Text(value,
+              style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w800, color: accent)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppColors.darkTextSub
+                      : AppColors.lightTextSub)),
+        ]),
+      ),
+    );
+  }
+}
