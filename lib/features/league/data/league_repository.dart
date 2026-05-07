@@ -333,7 +333,8 @@ class LeagueRepository {
         .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('is_deleted', false)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(100);
 
     return data.map<Post>((d) {
       final user = d['users'] as Map?;

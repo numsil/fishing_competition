@@ -62,7 +62,8 @@ class VerificationRepository {
         )
         .eq('voter_id', userId)
         .isFilter('vote', null)
-        .eq('catch_verifications.status', 'pending');
+        .eq('catch_verifications.status', 'pending')
+        .limit(50);
 
     return rows.map((row) {
       final cv = row['catch_verifications'] as Map<String, dynamic>;
@@ -90,7 +91,8 @@ class VerificationRepository {
           'id, post_id, submitter_id, status, approve_count, reject_count, created_at, posts!inner(image_url, fish_type, length, weight, location, users!inner(username, avatar_url))'
         )
         .eq('status', 'pending')
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(100);
 
     return rows.map((cv) {
       final post = cv['posts'] as Map<String, dynamic>;

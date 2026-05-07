@@ -66,7 +66,8 @@ class FeedRepository {
         .from('post_comments')
         .select('id, user_id, content, created_at, users(username, avatar_url)')
         .eq('post_id', postId)
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(50);
     return List<Map<String, dynamic>>.from(response);
   }
 
