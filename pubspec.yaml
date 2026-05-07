@@ -23,8 +23,6 @@ dependencies:
   go_router: ^14.8.1
 
   # UI
-  flutter_screenutil: ^5.9.3
-  google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
 
   # 네트워크
@@ -32,12 +30,9 @@ dependencies:
 
   # 로컬 저장소
   shared_preferences: ^2.3.5
-  flutter_secure_storage: ^9.2.4
 
   # 유틸리티
   intl: ^0.20.2
-  uuid: ^4.5.1
-  equatable: ^2.0.7
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
 
