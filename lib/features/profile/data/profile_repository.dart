@@ -48,107 +48,53 @@ class ProfileRepository {
 
   ProfileRepository(this._supabase);
 
-  Future<int> _fetchLeagueScore(String userId) async {
-    final seasonStart = '${DateTime.now().year}-01-01T00:00:00';
-    final seasonEnd   = '${DateTime.now().year + 1}-01-01T00:00:00';
-
-    final results = await Future.wait([
-      // 조과 점수
-      _supabase
-          .from('posts')
-          .select('score')
-          .eq('user_id', userId)
-          .not('league_id', 'is', null)
-          .eq('review_status', 'approved')
-          .gte('created_at', seasonStart)
-          .lt('created_at', seasonEnd)
-          .or('is_deleted.is.null,is_deleted.eq.false'),
-      // 순위 보너스 (올해 종료된 리그)
-      _supabase
-          .from('league_participants')
-          .select('rank_bonus')
-          .eq('user_id', userId)
-          .gte('rank_bonus_earned_at', seasonStart)
-          .lt('rank_bonus_earned_at', seasonEnd),
-    ]);
-
-    final catchScore = (results[0] as List)
-        .fold<int>(0, (s, r) => s + ((r['score'] as int?) ?? 0));
-    final rankBonus = (results[1] as List)
-        .fold<int>(0, (s, r) => s + ((r['rank_bonus'] as int?) ?? 0));
-    return catchScore + rankBonus;
-  }
-
-  Future<Map<String, int>> _fetchLeagueStats(String userId) async {
+  /// 통합 RPC 호출: user 정보 + 시즌 점수 + 우승/참가 + 최대어 한 번에
+  Future<UserProfile> _buildProfileViaRpc(String userId, List<Post> posts) async {
     final res = await _supabase.rpc(
-      'get_user_league_stats',
+      'get_user_profile_summary',
       params: {'p_user_id': userId},
-    ) as List;
-    if (res.isEmpty) {
-      return {'winCount': 0, 'participationCount': 0};
+    );
+    if (res == null) throw Exception('User not found');
+    final data = res as Map<String, dynamic>;
+
+    Post? maxFishPost;
+    final maxFishData = data['max_fish'] as Map<String, dynamic>?;
+    if (maxFishData != null) {
+      maxFishPost = Post.fromJson({
+        ...maxFishData,
+        'user_id': userId,
+      });
     }
-    final row = res.first as Map<String, dynamic>;
-    return {
-      'winCount': (row['win_count'] as num?)?.toInt() ?? 0,
-      'participationCount': (row['participation_count'] as num?)?.toInt() ?? 0,
-    };
+
+    int lunkerCount = 0;
+    for (final p in posts) {
+      if (p.isLunker) lunkerCount++;
+    }
+
+    return UserProfile(
+      id: data['id'] as String,
+      email: (data['email'] as String?) ?? '',
+      username: data['username'] as String,
+      userKey: (data['user_key'] as String?) ?? (data['username'] as String),
+      avatarUrl: data['avatar_url'] as String?,
+      mannerTemperature: (data['manner_temperature'] as num).toDouble(),
+      isLunkerClub: (data['is_lunker_club'] as bool?) ?? false,
+      postCount: posts.length,
+      lunkerCount: lunkerCount,
+      maxFishLength: maxFishPost?.length,
+      maxFishPost: maxFishPost,
+      leagueScore: (data['league_score'] as num?)?.toInt() ?? 0,
+      anglerScore: (data['angler_score'] as num?)?.toInt() ?? 0,
+      participationCount: (data['participation_count'] as num?)?.toInt() ?? 0,
+      winCount: (data['win_count'] as num?)?.toInt() ?? 0,
+    );
   }
 
-  Future<int> _fetchAnglerScore(String userId) async {
-    final seasonStart = '${DateTime.now().year}-01-01T00:00:00';
-    final seasonEnd   = '${DateTime.now().year + 1}-01-01T00:00:00';
-    final res = await _supabase
-        .from('posts')
-        .select('score')
-        .eq('user_id', userId)
-        .eq('is_personal_record', true)
-        .eq('review_status', 'approved')
-        .gte('created_at', seasonStart)
-        .lt('created_at', seasonEnd)
-        .or('is_deleted.is.null,is_deleted.eq.false');
-    return (res as List).fold<int>(0, (sum, row) => sum + ((row['score'] as int?) ?? 0));
-  }
-
-  /// 리그/개인기록/피드 전체에서 인증된 최대 길이 게시물 1건 조회
-  Future<Post?> _fetchMaxFishPost(String userId) async {
-    final res = await _supabase
-        .from('posts')
-        .select(
-          'id, user_id, image_url, fish_type, length, location, created_at',
-        )
-        .eq('user_id', userId)
-        .eq('review_status', 'approved')
-        .or('is_deleted.is.null,is_deleted.eq.false')
-        .not('length', 'is', null)
-        .order('length', ascending: false)
-        .limit(1);
-    if ((res as List).isEmpty) return null;
-    return Post.fromJson(res.first as Map<String, dynamic>);
-  }
-
-  /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
+  /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — RPC로 통계 일괄 조회
   Future<UserProfile> buildMyProfileFromPosts(List<Post> posts) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
-
-    final userRes = await _supabase
-        .from('users')
-        .select('id, email, username, user_key, avatar_url, manner_temperature, is_lunker_club')
-        .eq('id', userId)
-        .single();
-    final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
-    final stats = await _fetchLeagueStats(userId);
-    final maxFishPost = await _fetchMaxFishPost(userId);
-
-    return _buildUserProfile(
-      userRes: userRes,
-      posts: posts,
-      leagueScore: scores[0],
-      anglerScore: scores[1],
-      participationCount: stats['participationCount'] ?? 0,
-      winCount: stats['winCount'] ?? 0,
-      maxFishPost: maxFishPost,
-    );
+    return _buildProfileViaRpc(userId, posts);
   }
 
   Future<bool> isUserKeyAvailable(String userKey) async {
@@ -244,60 +190,9 @@ class ProfileRepository {
     return post.copyWith(username: username, avatarUrl: avatarUrl);
   }
 
-  /// posts는 userPostsProvider에서 이미 받아온 것을 재사용 — users만 조회
-  Future<UserProfile> buildUserProfileFromPosts(String userId, List<Post> posts) async {
-    final userRes = await _supabase
-        .from('users')
-        .select('id, email, username, user_key, avatar_url, manner_temperature, is_lunker_club')
-        .eq('id', userId)
-        .single();
-    final scores = await Future.wait([_fetchLeagueScore(userId), _fetchAnglerScore(userId)]);
-    final stats = await _fetchLeagueStats(userId);
-    final maxFishPost = await _fetchMaxFishPost(userId);
-
-    return _buildUserProfile(
-      userRes: userRes,
-      posts: posts,
-      emailFallback: '',
-      leagueScore: scores[0],
-      anglerScore: scores[1],
-      participationCount: stats['participationCount'] ?? 0,
-      winCount: stats['winCount'] ?? 0,
-      maxFishPost: maxFishPost,
-    );
-  }
-
-  UserProfile _buildUserProfile({
-    required Map<String, dynamic> userRes,
-    required List<Post> posts,
-    String emailFallback = '',
-    int leagueScore = 0,
-    int anglerScore = 0,
-    int participationCount = 0,
-    int winCount = 0,
-    Post? maxFishPost,
-  }) {
-    int lunkerCount = 0;
-    for (final post in posts) {
-      if (post.isLunker) lunkerCount++;
-    }
-    return UserProfile(
-      id: userRes['id'],
-      email: userRes['email'] ?? emailFallback,
-      username: userRes['username'],
-      userKey: userRes['user_key'] ?? userRes['username'],
-      avatarUrl: userRes['avatar_url'],
-      mannerTemperature: (userRes['manner_temperature'] as num).toDouble(),
-      isLunkerClub: userRes['is_lunker_club'] ?? false,
-      postCount: posts.length,
-      lunkerCount: lunkerCount,
-      maxFishLength: maxFishPost?.length,
-      maxFishPost: maxFishPost,
-      leagueScore: leagueScore,
-      anglerScore: anglerScore,
-      participationCount: participationCount,
-      winCount: winCount,
-    );
+  /// posts는 userPostsProvider에서 이미 받아온 것을 재사용
+  Future<UserProfile> buildUserProfileFromPosts(String userId, List<Post> posts) {
+    return _buildProfileViaRpc(userId, posts);
   }
 
   Future<List<Post>> getUserPosts(String userId) async {
