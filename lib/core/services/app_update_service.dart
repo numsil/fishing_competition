@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:open_file/open_file.dart';
@@ -72,8 +74,16 @@ class AppUpdateService {
     void Function(double progress)? onProgress,
   }) async {
     if (Platform.isAndroid) {
-      final status = await Permission.requestInstallPackages.request();
+      var status = await Permission.requestInstallPackages.status;
       if (!status.isGranted) {
+        // 해당 앱의 "출처를 알 수 없는 앱" 설정 페이지로 직접 이동
+        final info = await PackageInfo.fromPlatform();
+        final intent = AndroidIntent(
+          action: 'android.settings.MANAGE_UNKNOWN_APP_SOURCES',
+          data: 'package:${info.packageName}',
+          flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+        );
+        await intent.launch();
         throw Exception('install_permission_denied');
       }
     }
