@@ -13,18 +13,23 @@ class AuthRepository {
 
   Future<AuthResponse> signInWithEmail(String email, String password) async {
     final response = await _supabase.auth.signInWithPassword(email: email, password: password);
-    if (response.user != null) {
-      final row = await _supabase
-          .from('users')
-          .select('status')
-          .eq('id', response.user!.id)
-          .maybeSingle();
-      if (row?['status'] == 'banned') {
-        await _supabase.auth.signOut();
-        throw Exception('banned');
-      }
+    if (response.user != null && await isCurrentUserBanned()) {
+      await _supabase.auth.signOut();
+      throw Exception('banned');
     }
     return response;
+  }
+
+  /// 현재 로그인된 사용자가 banned 상태인지 확인
+  Future<bool> isCurrentUserBanned() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+    final row = await _supabase
+        .from('users')
+        .select('status')
+        .eq('id', user.id)
+        .maybeSingle();
+    return row?['status'] == 'banned';
   }
 
   Future<String> _generateUniqueUserKey(String username) async {
