@@ -23,24 +23,7 @@ final leagueRepositoryProvider = AutoDisposeProvider<LeagueRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LeagueRepositoryRef = AutoDisposeProviderRef<LeagueRepository>;
-String _$leaguesHash() => r'79e8b292e2d37b69418e5b961ee6a654cb8087d6';
-
-/// See also [leagues].
-@ProviderFor(leagues)
-final leaguesProvider = AutoDisposeFutureProvider<List<League>>.internal(
-  leagues,
-  name: r'leaguesProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$leaguesHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef LeaguesRef = AutoDisposeFutureProviderRef<List<League>>;
-String _$myJoinedLeaguesHash() => r'4b0f3c3280f1930217c70045880350cd4e2731ab';
+String _$myJoinedLeaguesHash() => r'097e7b31b8a668e67476d5cf29d6a65ad9c275ff';
 
 /// See also [myJoinedLeagues].
 @ProviderFor(myJoinedLeagues)
@@ -314,5 +297,21 @@ class _LeagueRankingProviderElement
   String get leagueId => (origin as LeagueRankingProvider).leagueId;
 }
 
+String _$leaguesHash() => r'58edb952f42ca906730e5751fefdcb24b9ee66e1';
+
+/// See also [Leagues].
+@ProviderFor(Leagues)
+final leaguesProvider =
+    AutoDisposeAsyncNotifierProvider<Leagues, List<League>>.internal(
+      Leagues.new,
+      name: r'leaguesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$leaguesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$Leagues = AutoDisposeAsyncNotifier<List<League>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

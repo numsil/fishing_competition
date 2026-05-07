@@ -10,6 +10,8 @@ import 'league_model.dart';
 
 part 'league_repository.g.dart';
 
+const int kLeagueListPageSize = 20;
+
 // ── 순위 항목 모델 ──────────────────────────────────────
 class LeagueRankEntry {
   final String userId;
@@ -145,11 +147,21 @@ class LeagueRepository {
     );
   }
 
-  Future<List<League>> getLeagues() async {
-    final response = await _supabase
+  Future<List<League>> getLeagues({
+    int limit = kLeagueListPageSize,
+    DateTime? before,
+  }) async {
+    var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)')
-        .order('created_at', ascending: false);
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)');
+
+    if (before != null) {
+      query = query.lt('created_at', before.toUtc().toIso8601String());
+    }
+
+    final response = await query
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return response.map((data) {
       int pCount = 0;
@@ -544,10 +556,42 @@ LeagueRepository leagueRepository(LeagueRepositoryRef ref) {
 }
 
 @riverpod
-Future<List<League>> leagues(LeaguesRef ref) {
-  final link = ref.keepAlive();
-  Timer(const Duration(minutes: 5), link.close);
-  return ref.watch(leagueRepositoryProvider).getLeagues();
+class Leagues extends _$Leagues {
+  bool _hasMore = true;
+  bool _loading = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<League>> build() async {
+    _hasMore = true;
+    _loading = false;
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
+    final first = await ref.watch(leagueRepositoryProvider)
+        .getLeagues(limit: kLeagueListPageSize);
+    _hasMore = first.length >= kLeagueListPageSize;
+    return first;
+  }
+
+  Future<void> loadMore() async {
+    if (_loading || !_hasMore) return;
+    final current = state.valueOrNull;
+    if (current == null || current.isEmpty) return;
+    _loading = true;
+    try {
+      final next = await ref.read(leagueRepositoryProvider).getLeagues(
+        limit: kLeagueListPageSize,
+        before: current.last.createdAt,
+      );
+      _hasMore = next.length >= kLeagueListPageSize;
+      if (next.isNotEmpty) {
+        state = AsyncData([...current, ...next]);
+      }
+    } finally {
+      _loading = false;
+    }
+  }
 }
 
 @riverpod
