@@ -962,7 +962,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         _buildLimitChip(1, '1마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(3, '3마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(5, '5마리', context.accentColor, divColor, sub, context.isDark),
-                        _buildLimitChip(10, '10마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(0, '전체', context.accentColor, divColor, sub, context.isDark),
                         // 직접 입력 칩
                         GestureDetector(
@@ -1168,7 +1167,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                   _prizes[i].rank = '${i + 1}위';
                                 }
                               }),
-                              child: Icon(Icons.remove_circle_outline, size: 20, color: sub),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: Colors.red),
                             ),
                           ],
                         ],
@@ -1227,7 +1226,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                                   _prizes[i].rank = '${i + 1}위';
                                 }
                               }),
-                              child: Icon(Icons.remove_circle_outline, size: 20, color: sub),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: Colors.red),
                             ),
                           ],
                         ],
