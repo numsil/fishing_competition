@@ -149,6 +149,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
         alignment: 0.1,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
       );
     }
   }
