@@ -204,6 +204,10 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
   }
 
   void _deleteLeague(BuildContext context, League league) {
+    if (league.status == 'completed') {
+      AppSnackBar.error(context, '종료된 리그는 삭제할 수 없습니다.\n참가자 전적 데이터가 보호됩니다.');
+      return;
+    }
     showDeleteConfirmSheet(
       context,
       title: '리그 삭제',
@@ -377,11 +381,12 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
             title: const Text('대회 관리',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             actions: [
-              TextButton(
-                onPressed: () => _deleteLeague(context, league),
-                child: const Text('리그삭제',
-                    style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 14)),
-              ),
+              if (league.status != 'completed')
+                TextButton(
+                  onPressed: () => _deleteLeague(context, league),
+                  child: const Text('리그삭제',
+                      style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
               TextButton(
                 onPressed: () async {
                   await Navigator.push(
@@ -463,10 +468,15 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                           Tab(text: '실시간 순위'),
                           Tab(text: '심사'),
                         ]
-                      : [
-                          _RankingTabLabel(leagueId: widget.leagueId),
-                          _PendingTabLabel(leagueId: widget.leagueId),
-                        ],
+                      : status == LeagueManageStatus.ended
+                          ? const [
+                              Tab(text: '최종 순위'),
+                              Tab(text: '참가자 목록'),
+                            ]
+                          : [
+                              _RankingTabLabel(leagueId: widget.leagueId),
+                              _PendingTabLabel(leagueId: widget.leagueId),
+                            ],
                 ),
               ),
 
@@ -484,37 +494,60 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                           ),
                           CatchReviewTab(leagueId: widget.leagueId),
                         ]
-                      : [
-                          // 모집 중 / 종료: 참가자 관리 + 참가 신청
-                          _RankingTabBody(
-                            leagueId: widget.leagueId,
-                            status: status,
-                            isDark: context.isDark,
-                            accent: context.accentColor,
-                            sub: sub,
-                            cardBg: cardBg,
-                            divColor: divColor,
-                            onKick: _kickParticipant,
-                            onRefresh: () async {
-                              ref.invalidate(leagueRankingProvider(widget.leagueId));
-                              ref.invalidate(leagueDetailProvider(widget.leagueId));
-                            },
-                          ),
-                          _PendingTabBody(
-                            leagueId: widget.leagueId,
-                            isDark: context.isDark,
-                            accent: context.accentColor,
-                            sub: sub,
-                            cardBg: cardBg,
-                            divColor: divColor,
-                            onApprove: _approvePending,
-                            onReject: _rejectPending,
-                            onRefresh: () async {
-                              ref.invalidate(leaguePendingProvider(widget.leagueId));
-                              ref.invalidate(leagueDetailProvider(widget.leagueId));
-                            },
-                          ),
-                        ],
+                      : status == LeagueManageStatus.ended
+                          ? [
+                              // 종료: 최종 순위 + 참가자 목록
+                              LeagueRankingTab(
+                                league: league,
+                                isDark: context.isDark,
+                                accent: context.accentColor,
+                              ),
+                              _RankingTabBody(
+                                leagueId: widget.leagueId,
+                                status: status,
+                                isDark: context.isDark,
+                                accent: context.accentColor,
+                                sub: sub,
+                                cardBg: cardBg,
+                                divColor: divColor,
+                                onKick: (_) {},
+                                onRefresh: () async {
+                                  ref.invalidate(leagueRankingProvider(widget.leagueId));
+                                  ref.invalidate(leagueDetailProvider(widget.leagueId));
+                                },
+                              ),
+                            ]
+                          : [
+                              // 모집 중: 참가자 관리 + 참가 신청
+                              _RankingTabBody(
+                                leagueId: widget.leagueId,
+                                status: status,
+                                isDark: context.isDark,
+                                accent: context.accentColor,
+                                sub: sub,
+                                cardBg: cardBg,
+                                divColor: divColor,
+                                onKick: _kickParticipant,
+                                onRefresh: () async {
+                                  ref.invalidate(leagueRankingProvider(widget.leagueId));
+                                  ref.invalidate(leagueDetailProvider(widget.leagueId));
+                                },
+                              ),
+                              _PendingTabBody(
+                                leagueId: widget.leagueId,
+                                isDark: context.isDark,
+                                accent: context.accentColor,
+                                sub: sub,
+                                cardBg: cardBg,
+                                divColor: divColor,
+                                onApprove: _approvePending,
+                                onReject: _rejectPending,
+                                onRefresh: () async {
+                                  ref.invalidate(leaguePendingProvider(widget.leagueId));
+                                  ref.invalidate(leagueDetailProvider(widget.leagueId));
+                                },
+                              ),
+                            ],
                 ),
               ),
             ],
