@@ -63,6 +63,14 @@ class AppTheme {
             borderSide:
                 const BorderSide(color: AppColors.neonGreen, width: 1.5),
           ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          ),
           hintStyle: const TextStyle(color: AppColors.darkTextSub),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -190,6 +198,14 @@ class AppTheme {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.navy, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.error, width: 1.5),
           ),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

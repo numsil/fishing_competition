@@ -41,6 +41,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _introCtrl = TextEditingController();
 
   DateTimeRange? _dateRange;
+  bool _dateRangeError = false;
   final _startTimeCtrl = TextEditingController();
   final _endTimeCtrl = TextEditingController();
   String _rule = '합산 길이';
@@ -161,6 +162,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   Future<void> _submit() async {
     final formValid = _formKey.currentState?.validate() ?? false;
 
+    if (_dateRange == null) setState(() => _dateRangeError = true);
     if (!formValid || _dateRange == null) {
       await _scrollToFirstError();
       return;
@@ -317,7 +319,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         );
       },
     );
-    if (result != null) setState(() => _dateRange = result);
+    if (result != null) setState(() { _dateRange = result; _dateRangeError = false; });
   }
 
   // ── 지도 선택 팝업 ──
@@ -770,7 +772,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _dateRange != null ? context.accentColor : divColor,
+                      color: _dateRangeError
+                          ? AppColors.error
+                          : _dateRange != null ? context.accentColor : divColor,
                     ),
                   ),
                   child: Row(
@@ -799,12 +803,21 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ),
                 ),
               ),
+                if (_dateRangeError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Text(
+                      '일정을 선택해주세요',
+                      style: TextStyle(fontSize: 12, color: AppColors.error),
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _startTimeCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [_TimeInputFormatter()],
                         maxLength: 5,
@@ -828,6 +841,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Expanded(
                       child: TextField(
                         controller: _endTimeCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [_TimeInputFormatter()],
                         maxLength: 5,
