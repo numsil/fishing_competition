@@ -1159,6 +1159,18 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               onChanged: (v) => _prizes[e.key].value = v,
                             ),
                           ),
+                          if (_prizes.length > 1) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _prizes.removeAt(e.key);
+                                for (var i = 0; i < _prizes.length; i++) {
+                                  _prizes[i].rank = '${i + 1}위';
+                                }
+                              }),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: sub),
+                            ),
+                          ],
                         ],
                       ),
                     )),
@@ -1206,6 +1218,18 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               onChanged: (v) => _prizes[e.key].value = v,
                             ),
                           ),
+                          if (_prizes.length > 1) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _prizes.removeAt(e.key);
+                                for (var i = 0; i < _prizes.length; i++) {
+                                  _prizes[i].rank = '${i + 1}위';
+                                }
+                              }),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: sub),
+                            ),
+                          ],
                         ],
                       ),
                     )),
@@ -1455,7 +1479,7 @@ class _ImgBtn extends StatelessWidget {
 // ── 시상 항목 모델 ──
 class _PrizeItem {
   _PrizeItem({required this.rank, required this.value});
-  final String rank;
+  String rank;
   String value;
 }
 
