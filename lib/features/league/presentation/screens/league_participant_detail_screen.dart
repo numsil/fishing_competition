@@ -18,7 +18,7 @@ import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/utils/image_downloader.dart';
 import '../../../my_league/data/my_league_repository.dart';
-import '../../../profile/data/profile_repository.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 
 // ── 라우터에서 extras로 전달할 args ─────────────────────────
 class LeagueParticipantArgs {
@@ -357,7 +357,7 @@ class LeagueParticipantDetailScreen extends ConsumerWidget {
                                           ref.invalidate(leagueRankingProvider(leagueId));
                                           ref.invalidate(feedPostsProvider);
                                           ref.invalidate(mySeasonStatsProvider);
-                                          ref.invalidate(myProfileProvider);
+                                          invalidateScoreCaches(ref);
                                         } catch (e) {
                                           if (context.mounted) AppSnackBar.error(context, '삭제 실패: $e');
                                         }

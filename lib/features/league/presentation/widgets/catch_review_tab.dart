@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../data/league_repository.dart';
 import '../screens/catch_review_detail_screen.dart';
 import 'catch_review_item.dart';
@@ -66,12 +67,14 @@ class CatchReviewTab extends ConsumerWidget {
                   // 상세 화면에서 보류/해지 후 목록 갱신
                   ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                   ref.invalidate(leagueRankingProvider(leagueId));
+                  invalidateScoreCaches(ref);
                 },
                 onHold: () async {
                   try {
                     await ref.read(leagueRepositoryProvider).holdPost(post.id);
                     ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                     ref.invalidate(leagueRankingProvider(leagueId));
+                    invalidateScoreCaches(ref);
                   } catch (e) {
                     if (await handleIfBanned(e)) return;
                     if (context.mounted) {
@@ -84,6 +87,7 @@ class CatchReviewTab extends ConsumerWidget {
                     await ref.read(leagueRepositoryProvider).unholdPost(post.id);
                     ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                     ref.invalidate(leagueRankingProvider(leagueId));
+                    invalidateScoreCaches(ref);
                   } catch (e) {
                     if (await handleIfBanned(e)) return;
                     if (context.mounted) {

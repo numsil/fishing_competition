@@ -16,6 +16,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/utils/image_downloader.dart';
 
@@ -49,7 +50,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         try {
           await ref.read(feedRepositoryProvider).deletePost(post.id);
           ref.invalidate(myPersonalRecordsProvider);
-          ref.invalidate(myProfileProvider);
+          invalidateScoreCaches(ref);
           if (mounted) Navigator.pop(context);
         } catch (e) {
           if (mounted) AppSnackBar.error(context, '삭제 실패: $e');

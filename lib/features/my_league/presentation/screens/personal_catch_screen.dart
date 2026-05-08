@@ -12,6 +12,7 @@ import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
@@ -188,7 +189,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
         isPersonalRecord: true,
       );
       ref.invalidate(myPersonalRecordsProvider);
-      ref.invalidate(myProfileProvider);
+      invalidateScoreCaches(ref);
       if (mounted) {
                 AppSnackBar.success(context, '조과가 기록되었습니다! 🎣');
         Navigator.pop(context, true);
