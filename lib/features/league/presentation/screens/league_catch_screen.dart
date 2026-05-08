@@ -10,6 +10,7 @@ import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../../../core/utils/image_compress.dart';
@@ -115,6 +116,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
       ref.invalidate(leagueUserPostsProvider(widget.league.id, user.id));
       ref.invalidate(feedPostsProvider);
       ref.invalidate(myPostsProvider);
+      invalidateScoreCaches(ref);
       if (mounted) {
                 AppSnackBar.success(context, '조과가 등록되었습니다! 🎣');
         Navigator.pop(context, true);

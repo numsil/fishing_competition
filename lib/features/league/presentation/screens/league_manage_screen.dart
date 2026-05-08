@@ -13,6 +13,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import 'league_create_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -142,6 +143,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     await ref.read(leagueRepositoryProvider).updateLeagueStatus(widget.leagueId, 'completed');
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     ref.invalidate(leagueRankingProvider(widget.leagueId));
+    invalidateScoreCaches(ref);
     if (mounted) {
             AppSnackBar.info(context, '대회가 종료되었습니다. 최종 결과가 확정됩니다.');
     }

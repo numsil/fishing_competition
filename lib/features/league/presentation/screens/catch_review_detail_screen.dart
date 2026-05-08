@@ -8,6 +8,7 @@ import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../feed/data/post_model.dart';
+import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../data/league_repository.dart';
 
 class CatchReviewDetailScreen extends ConsumerStatefulWidget {
@@ -50,6 +51,7 @@ class _CatchReviewDetailScreenState
       }
       ref.invalidate(leagueCatchesForReviewProvider(widget.leagueId));
       ref.invalidate(leagueRankingProvider(widget.leagueId));
+      invalidateScoreCaches(ref);
     } catch (e) {
       if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '처리 실패: $e');
