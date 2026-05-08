@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
+import '../../../core/utils/storage_cleanup.dart';
 import 'league_model.dart';
 
 part 'league_repository.g.dart';
@@ -346,9 +347,38 @@ class LeagueRepository {
 
   // ── 리그 삭제 ──────────────────────────────────────────────
   Future<void> deleteLeague(String leagueId) async {
-    // 리그 소속 posts 먼저 삭제 (league_id SET NULL 방지)
+    // 1. 삭제 전에 storage path 추출용 데이터 모음
+    final postsRows = await _supabase
+        .from('posts')
+        .select('image_url, image_urls, video_url')
+        .eq('league_id', leagueId);
+
+    final leagueRow = await _supabase
+        .from('leagues')
+        .select('intro_image_urls')
+        .eq('id', leagueId)
+        .maybeSingle();
+
+    // 2. DB 삭제 (리그 소속 posts 먼저 — league_id FK 제약)
     await _supabase.from('posts').delete().eq('league_id', leagueId);
     await _supabase.from('leagues').delete().eq('id', leagueId);
+
+    // 3. Storage 파일 best-effort 정리
+    for (final row in postsRows) {
+      final imageUrls = (row['image_urls'] as List?)?.cast<String>();
+      await removePostStorageFiles(
+        _supabase,
+        imageUrl: row['image_url'] as String?,
+        imageUrls: imageUrls,
+        videoUrl: row['video_url'] as String?,
+      );
+    }
+
+    if (leagueRow != null) {
+      final introUrls =
+          (leagueRow['intro_image_urls'] as List?)?.cast<String>();
+      await removeLeagueIntroFiles(_supabase, introUrls);
+    }
   }
 
   // ── 리그 상태 변경 ──────────────────────────────────────────

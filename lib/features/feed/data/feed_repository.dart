@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/image_compress.dart';
 import '../../../core/utils/score_calculator.dart';
+import '../../../core/utils/storage_cleanup.dart';
 import 'post_model.dart';
 import '../../verification/data/verification_repository.dart';
 
@@ -72,7 +73,23 @@ class FeedRepository {
   }
 
   Future<void> deletePost(String postId) async {
+    final row = await _supabase
+        .from('posts')
+        .select('image_url, image_urls, video_url')
+        .eq('id', postId)
+        .maybeSingle();
+
     await _supabase.from('posts').delete().eq('id', postId);
+
+    if (row != null) {
+      final imageUrls = (row['image_urls'] as List?)?.cast<String>();
+      await removePostStorageFiles(
+        _supabase,
+        imageUrl: row['image_url'] as String?,
+        imageUrls: imageUrls,
+        videoUrl: row['video_url'] as String?,
+      );
+    }
   }
 
   Future<void> updatePostMeta({

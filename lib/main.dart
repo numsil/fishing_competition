@@ -42,13 +42,16 @@ class AppRootWidget extends StatefulWidget {
   State<AppRootWidget> createState() => _AppRootWidgetState();
 }
 
-class _AppRootWidgetState extends State<AppRootWidget> {
+class _AppRootWidgetState extends State<AppRootWidget>
+    with WidgetsBindingObserver {
   int _scopeKey = 0;
   StreamSubscription<AuthState>? _authSub;
+  bool _checkingBan = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.signedOut) {
         setState(() => _scopeKey++);
@@ -58,8 +61,40 @@ class _AppRootWidgetState extends State<AppRootWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _verifyNotBanned();
+    }
+  }
+
+  /// 앱이 포그라운드로 돌아올 때 banned/삭제 상태를 재확인.
+  /// 정지된 유저는 즉시 강제 로그아웃 → ProviderScope 리셋되어 로그인 화면으로 이동.
+  Future<void> _verifyNotBanned() async {
+    if (_checkingBan) return;
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    _checkingBan = true;
+    try {
+      final row = await supabase
+          .from('users')
+          .select('status, is_deleted')
+          .eq('id', user.id)
+          .maybeSingle();
+      final inactive = row == null ||
+          row['status'] == 'banned' ||
+          row['is_deleted'] == true;
+      if (inactive) {
+        await supabase.auth.signOut();
+      }
+    } catch (_) {/* 네트워크 에러는 무시 (다음 resume 때 재시도) */}
+    _checkingBan = false;
   }
 
   @override
