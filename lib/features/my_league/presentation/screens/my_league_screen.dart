@@ -118,11 +118,8 @@ class _ActiveTabConsumer extends ConsumerWidget {
       skipLoadingOnReload: true,
       data: (myLeaguesMap) {
         final participated = myLeaguesMap['participated'] ?? [];
-        final activeLeagues = participated
-            .where((l) => l.status != 'completed' && l.status != 'canceled')
-            .toList();
         return _ActiveTab(
-          leagues: activeLeagues,
+          leagues: participated,
           isDark: isDark,
           accent: accent,
           sub: sub,
@@ -218,7 +215,8 @@ class _ActiveTab extends StatelessWidget {
     }
 
     final liveLeagues = leagues.where((l) => l.status == 'in_progress').toList();
-    final otherLeagues = leagues.where((l) => l.status != 'in_progress').toList();
+    final recruitingLeagues = leagues.where((l) => l.status == 'recruiting').toList();
+    final completedLeagues = leagues.where((l) => l.status == 'completed').toList();
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -256,13 +254,29 @@ class _ActiveTab extends StatelessWidget {
                 )),
           ],
 
-          // ── 참여중 리그 섹션 ─────────────────────────
-          if (otherLeagues.isNotEmpty) ...[
+          // ── 모집중 리그 섹션 ─────────────────────────
+          if (recruitingLeagues.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('참여중인 리그 ${otherLeagues.length}개',
+            Text('참여중인 리그 ${recruitingLeagues.length}개',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
             const SizedBox(height: 10),
-            ...otherLeagues.map((e) => _ActiveLeagueCard(
+            ...recruitingLeagues.map((e) => _ActiveLeagueCard(
+                  league: e,
+                  isDark: isDark,
+                  accent: accent,
+                  sub: sub,
+                  cardBg: cardBg,
+                  divColor: divColor,
+                )),
+          ],
+
+          // ── 종료된 리그 섹션 ─────────────────────────
+          if (completedLeagues.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('종료된 리그 ${completedLeagues.length}개',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sub)),
+            const SizedBox(height: 10),
+            ...completedLeagues.map((e) => _ActiveLeagueCard(
                   league: e,
                   isDark: isDark,
                   accent: accent,
@@ -455,6 +469,8 @@ class _ActiveLeagueCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
+                _VisibilityBadge(isPublic: league.isPublic, sub: sub),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1271,6 +1287,8 @@ class _MyLeagueCard extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  _VisibilityBadge(isPublic: league.isPublic, sub: sub),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1366,6 +1384,41 @@ class _MyLeagueCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VisibilityBadge extends StatelessWidget {
+  const _VisibilityBadge({required this.isPublic, required this.sub});
+  final bool isPublic;
+  final Color sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPublic ? AppColors.success : sub;
+    final icon = isPublic ? LucideIcons.globe : LucideIcons.lock;
+    final label = isPublic ? '공개' : '비공개';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

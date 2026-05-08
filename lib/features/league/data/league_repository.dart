@@ -45,10 +45,12 @@ class LeaguePendingEntry {
     required this.userId,
     required this.username,
     required this.joinedAt,
+    this.avatarUrl,
   });
   final String userId;
   final String username;
   final DateTime joinedAt;
+  final String? avatarUrl;
 }
 
 class LeagueRepository {
@@ -84,8 +86,8 @@ class LeagueRepository {
     required String location,
     double? lat,
     double? lng,
-    required DateTime startTime,
-    required DateTime endTime,
+    DateTime? startTime,
+    DateTime? endTime,
     int entryFee = 0,
     int maxParticipants = 100,
     String fishTypes = '배스',
@@ -107,8 +109,8 @@ class LeagueRepository {
       'location': location,
       'lat': lat,
       'lng': lng,
-      'start_time': startTime.toIso8601String(),
-      'end_time': endTime.toIso8601String(),
+      if (startTime != null) 'start_time': startTime.toIso8601String(),
+      if (endTime != null) 'end_time': endTime.toIso8601String(),
       'entry_fee': entryFee,
       'max_participants': maxParticipants,
       'status': 'recruiting',
@@ -153,7 +155,7 @@ class LeagueRepository {
   }) async {
     var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)');
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)');
 
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());
@@ -176,13 +178,15 @@ class LeagueRepository {
   }
 
   // ── 참가 신청 ────────────────────────────────────────
-  Future<void> joinLeague(String leagueId) async {
+  /// 공개 리그(isPublic=true)는 즉시 'approved',
+  /// 비공개 리그(isPublic=false)는 'pending' 으로 INSERT → 호스트 승인 대기.
+  Future<void> joinLeague(String leagueId, {required bool isPublic}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
     await _supabase.from('league_participants').insert({
       'league_id': leagueId,
       'user_id': userId,
-      'status': 'approved',
+      'status': isPublic ? 'approved' : 'pending',
     });
   }
 
@@ -193,7 +197,7 @@ class LeagueRepository {
 
     final response = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at)')
+        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at)')
         .eq('user_id', userId)
         .eq('status', 'approved');
 
@@ -216,6 +220,19 @@ class LeagueRepository {
         .eq('user_id', userId)
         .maybeSingle();
     return res != null;
+  }
+
+  /// 내 참가 상태 반환: 'pending' | 'approved' | 'rejected' | null(미신청).
+  Future<String?> getMyParticipantStatus(String leagueId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return null;
+    final res = await _supabase
+        .from('league_participants')
+        .select('status')
+        .eq('league_id', leagueId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    return res?['status'] as String?;
   }
 
   // ── 순위표 조회 (리그 룰 + catch_limit 기반) ──────────
@@ -305,15 +322,19 @@ class LeagueRepository {
   Future<List<LeaguePendingEntry>> getPendingParticipants(String leagueId) async {
     final data = await _supabase
         .from('league_participants')
-        .select('user_id, created_at, users(username)')
+        .select('user_id, joined_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('status', 'pending')
-        .order('created_at');
-    return data.map((d) => LeaguePendingEntry(
-      userId: d['user_id'] as String,
-      username: (d['users'] as Map?)?['username'] as String? ?? '알 수 없음',
-      joinedAt: DateTime.parse(d['created_at'] as String),
-    )).toList();
+        .order('joined_at');
+    return data.map((d) {
+      final user = d['users'] as Map?;
+      return LeaguePendingEntry(
+        userId: d['user_id'] as String,
+        username: user?['username'] as String? ?? '알 수 없음',
+        avatarUrl: user?['avatar_url'] as String?,
+        joinedAt: DateTime.parse(d['joined_at'] as String),
+      );
+    }).toList();
   }
 
   // ── 참가 신청 수락 ──────────────────────────────────────────
@@ -507,6 +528,13 @@ Future<bool> isJoined(IsJoinedRef ref, String leagueId) {
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 3), link.close);
   return ref.watch(leagueRepositoryProvider).isJoined(leagueId);
+}
+
+@riverpod
+Future<String?> myParticipantStatus(MyParticipantStatusRef ref, String leagueId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getMyParticipantStatus(leagueId);
 }
 
 @riverpod

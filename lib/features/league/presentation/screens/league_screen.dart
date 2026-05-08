@@ -223,6 +223,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                         hostUsername: l.hostUsername,
                         startTime: l.startTime,
                         endTime: l.endTime,
+                        isPublic: l.isPublic,
                       );
                     },
                   ),
@@ -267,12 +268,14 @@ class _LeagueItem extends StatelessWidget {
     required this.hostUsername,
     required this.startTime,
     required this.endTime,
+    required this.isPublic,
   });
 
   final String id, title, location, date, prize, rule, hostUsername;
   final int participants, max;
   final _Status status;
   final DateTime startTime, endTime;
+  final bool isPublic;
 
   @override
   Widget build(BuildContext context) {
@@ -318,6 +321,8 @@ class _LeagueItem extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                _VisibilityBadge(isPublic: isPublic, sub: sub),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -404,6 +409,41 @@ class _LeagueItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VisibilityBadge extends StatelessWidget {
+  const _VisibilityBadge({required this.isPublic, required this.sub});
+  final bool isPublic;
+  final Color sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPublic ? AppColors.success : sub;
+    final icon = isPublic ? LucideIcons.globe : LucideIcons.lock;
+    final label = isPublic ? '공개' : '비공개';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

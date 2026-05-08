@@ -52,6 +52,7 @@ class LeagueRankingTab extends ConsumerWidget {
             ref.invalidate(leagueRankingProvider(league.id));
             ref.invalidate(leagueDetailProvider(league.id));
             ref.invalidate(isJoinedProvider(league.id));
+            ref.invalidate(myParticipantStatusProvider(league.id));
           },
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),

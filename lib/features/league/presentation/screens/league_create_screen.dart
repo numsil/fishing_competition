@@ -41,10 +41,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _introCtrl = TextEditingController();
 
   DateTimeRange? _dateRange;
+  bool _dateRangeError = false;
   final _startTimeCtrl = TextEditingController();
   final _endTimeCtrl = TextEditingController();
-  String _rule = '최대어';
-  int _catchLimit = 1; // 0=전체, 1,3,5,10
+  String _rule = '합산 길이';
+  int _catchLimit = 1; // 0=전체, 1,3,5,10, 그 외=직접입력
+  bool _customLimitMode = false;
+  final _customLimitCtrl = TextEditingController();
   bool _isPublic = true;
   bool _allowGallery = true;
 
@@ -66,7 +69,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _imagePicker = ImagePicker();
 
   bool _submitting = false;
-  bool _showDateError = false;
 
   // 필수 항목 스크롤 앵커
   final _nameKey = GlobalKey();
@@ -75,8 +77,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _maxKey = GlobalKey();
 
   bool get _isEditMode => widget.league != null;
+  bool get _isEnded => widget.league?.status == 'completed';
 
-  static const _rules = ['최대어', '합산 길이', '마릿수', '무게'];
+  static const _rules = ['합산 길이', '마릿수', '최대어', '무게'];
 
   @override
   void initState() {
@@ -124,15 +127,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     _etcPrizeCtrl.dispose();
     _startTimeCtrl.dispose();
     _endTimeCtrl.dispose();
+    _customLimitCtrl.dispose();
     super.dispose();
   }
 
   // ── 첫 번째 미입력 필수 항목으로 스크롤 ──
-  Future<void> _scrollToFirstError({required bool dateValid}) async {
+  Future<void> _scrollToFirstError() async {
     GlobalKey? firstKey;
     if (_nameCtrl.text.trim().isEmpty) {
       firstKey = _nameKey;
-    } else if (!dateValid) {
+    } else if (_dateRange == null) {
       firstKey = _dateKey;
     } else if (_locationCtrl.text.trim().isEmpty) {
       firstKey = _locationKey;
@@ -149,20 +153,18 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
         alignment: 0.1,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
       );
     }
   }
 
   // ── 개설 / 수정 공통 제출 ──
   Future<void> _submit() async {
-    setState(() => _showDateError = false);
-
     final formValid = _formKey.currentState?.validate() ?? false;
-    final dateValid = _dateRange != null;
-    if (!dateValid) setState(() => _showDateError = true);
 
-    if (!formValid || !dateValid) {
-      await _scrollToFirstError(dateValid: dateValid);
+    if (_dateRange == null) setState(() => _dateRangeError = true);
+    if (!formValid || _dateRange == null) {
+      await _scrollToFirstError();
       return;
     }
 
@@ -178,8 +180,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
-          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
+          startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
+          endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
           entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
           maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
           rule: _rule,
@@ -212,8 +214,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
-          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
+          startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
+          endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
           entryFee: int.tryParse(_feeCtrl.text) ?? 0,
           maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
@@ -239,9 +241,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   // ── 룰 미리보기 텍스트 ──
   String get _rulePreview {
     if (_rule == '마릿수') return '마릿수 기준으로 순위를 결정합니다';
+    if (_rule == '최대어') return '가장 큰 물고기 1마리 기준';
     final limitStr = _catchLimit == 0 ? '전체' : '$_catchLimit마리';
     switch (_rule) {
-      case '최대어': return '상위 $limitStr 중 가장 큰 물고기 기준';
       case '합산 길이': return '상위 $limitStr 길이(cm) 합산 기준';
       case '무게': return '상위 $limitStr 무게(g) 합산 기준';
       default: return '$limitStr $_rule 기준';
@@ -250,9 +252,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   // ── catch_limit 칩 ──
   Widget _buildLimitChip(int limit, String label, Color accent, Color divColor, Color sub, bool isDark) {
-    final sel = _catchLimit == limit;
+    final sel = !_customLimitMode && _catchLimit == limit;
     return GestureDetector(
-      onTap: () => setState(() => _catchLimit = limit),
+      onTap: _isEnded ? null : () => setState(() { _catchLimit = limit; _customLimitMode = false; }),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
@@ -317,7 +319,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         );
       },
     );
-    if (result != null) setState(() => _dateRange = result);
+    if (result != null) setState(() { _dateRange = result; _dateRangeError = false; });
   }
 
   // ── 지도 선택 팝업 ──
@@ -687,12 +689,35 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 60),
           children: [
 
+            // ── 종료 리그 안내 배너 ──
+            if (_isEnded)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      '종료된 리그입니다. 간단소개와 대회소개만 수정할 수 있습니다.',
+                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                    ),
+                  ),
+                ]),
+              ),
+
             // ── 대회명 ──
             Padding(
               key: _nameKey,
               padding: const EdgeInsets.only(bottom: 20),
               child: TextFormField(
                 controller: _nameCtrl,
+                readOnly: _isEnded,
                 decoration: InputDecoration(
                   labelText: '대회명',
                   labelStyle: TextStyle(color: context.accentColor, fontWeight: FontWeight.w600),
@@ -739,10 +764,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                 GestureDetector(
-                onTap: () {
-                  setState(() => _showDateError = false);
-                  _pickDateRange();
-                },
+                onTap: _isEnded ? null : _pickDateRange,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -750,9 +772,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _showDateError
+                      color: _dateRangeError
                           ? AppColors.error
-                          : (_dateRange != null ? context.accentColor : divColor),
+                          : _dateRange != null ? context.accentColor : divColor,
                     ),
                   ),
                   child: Row(
@@ -781,9 +803,9 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ),
                 ),
               ),
-                if (_showDateError)
+                if (_dateRangeError)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 12),
+                    padding: const EdgeInsets.only(top: 6, left: 4),
                     child: Text(
                       '일정을 선택해주세요',
                       style: TextStyle(fontSize: 12, color: AppColors.error),
@@ -795,6 +817,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Expanded(
                       child: TextField(
                         controller: _startTimeCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [_TimeInputFormatter()],
                         maxLength: 5,
@@ -818,6 +841,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Expanded(
                       child: TextField(
                         controller: _endTimeCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [_TimeInputFormatter()],
                         maxLength: 5,
@@ -854,9 +878,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 children: [
                   TextFormField(
                     controller: _locationCtrl,
+                    readOnly: _isEnded,
                     decoration: InputDecoration(
                       hintText: '지도에서 선택하거나 직접 입력',
-                      suffixIcon: IconButton(
+                      suffixIcon: _isEnded ? null : IconButton(
                         onPressed: _openMapPicker,
                         icon: Icon(Icons.map_outlined, color: context.accentColor, size: 22),
                         tooltip: '지도에서 선택',
@@ -920,10 +945,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     children: _rules.map((rule) {
                       final sel = _rule == rule;
                       return GestureDetector(
-                        onTap: () => setState(() {
+                        onTap: _isEnded ? null : () => setState(() {
                           _rule = rule;
-                          // 마릿수는 catchLimit 의미 없음
-                          if (rule == '마릿수') _catchLimit = 0;
+                          // 마릿수는 catchLimit 의미 없음, 최대어는 항상 1마리
+                          if (rule == '마릿수') { _catchLimit = 0; _customLimitMode = false; }
+                          else if (rule == '최대어') { _catchLimit = 1; _customLimitMode = false; }
                           else if (_catchLimit == 0) _catchLimit = 1;
                         }),
                         child: Container(
@@ -946,8 +972,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     }).toList(),
                   ),
 
-                  // Step 2: 마릿수 제한 (마릿수 룰 제외)
-                  if (_rule != '마릿수') ...[
+                  // Step 2: 마릿수 제한 (마릿수·최대어 룰 제외)
+                  if (_rule != '마릿수' && _rule != '최대어') ...[
                     const SizedBox(height: 14),
                     Text('몇 마리 기준으로 점수를 계산하나요?',
                         style: TextStyle(fontSize: 12, color: sub)),
@@ -958,10 +984,65 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         _buildLimitChip(1, '1마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(3, '3마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(5, '5마리', context.accentColor, divColor, sub, context.isDark),
-                        _buildLimitChip(10, '10마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(0, '전체', context.accentColor, divColor, sub, context.isDark),
+                        // 직접 입력 칩
+                        GestureDetector(
+                          onTap: _isEnded ? null : () => setState(() {
+                            _customLimitMode = true;
+                            _customLimitCtrl.clear();
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _customLimitMode ? context.accentColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _customLimitMode ? context.accentColor : divColor),
+                            ),
+                            child: Text(
+                              _customLimitMode ? '${_catchLimit}마리' : '직접 입력',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: _customLimitMode ? FontWeight.w700 : FontWeight.w400,
+                                color: _customLimitMode ? (context.isDark ? Colors.black : Colors.white) : sub,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
+                    if (_customLimitMode) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _customLimitCtrl,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '마릿수 입력 (예: 7)',
+                                hintStyle: TextStyle(fontSize: 13, color: sub),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(color: divColor),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(color: context.accentColor),
+                                ),
+                                suffixText: '마리',
+                              ),
+                              style: const TextStyle(fontSize: 13),
+                              onChanged: (v) {
+                                final n = int.tryParse(v);
+                                if (n != null && n > 0) setState(() => _catchLimit = n);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     // 현재 설정 미리보기
                     Container(
@@ -998,6 +1079,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       bottomPad: 0,
                       child: TextFormField(
                         controller: _maxCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: const InputDecoration(hintText: '0', suffixText: '명'),
@@ -1018,6 +1100,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       bottomPad: 0,
                       child: TextFormField(
                         controller: _feeCtrl,
+                        readOnly: _isEnded,
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: const InputDecoration(hintText: '0', suffixText: '원'),
@@ -1099,12 +1182,24 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               onChanged: (v) => _prizes[e.key].value = v,
                             ),
                           ),
+                          if (_prizes.length > 1) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: _isEnded ? null : () => setState(() {
+                                _prizes.removeAt(e.key);
+                                for (var i = 0; i < _prizes.length; i++) {
+                                  _prizes[i].rank = '${i + 1}위';
+                                }
+                              }),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: _isEnded ? Colors.grey : Colors.red),
+                            ),
+                          ],
                         ],
                       ),
                     )),
                     // 추가 버튼
                     TextButton.icon(
-                      onPressed: () => setState(() => _prizes.add(
+                      onPressed: _isEnded ? null : () => setState(() => _prizes.add(
                         _PrizeItem(rank: '${_prizes.length + 1}위', value: ''),
                       )),
                       icon: Icon(Icons.add_circle_outline, size: 18, color: context.accentColor),
@@ -1146,11 +1241,23 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               onChanged: (v) => _prizes[e.key].value = v,
                             ),
                           ),
+                          if (_prizes.length > 1) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: _isEnded ? null : () => setState(() {
+                                _prizes.removeAt(e.key);
+                                for (var i = 0; i < _prizes.length; i++) {
+                                  _prizes[i].rank = '${i + 1}위';
+                                }
+                              }),
+                              child: Icon(Icons.remove_circle_outline, size: 20, color: _isEnded ? Colors.grey : Colors.red),
+                            ),
+                          ],
                         ],
                       ),
                     )),
                     TextButton.icon(
-                      onPressed: () => setState(() => _prizes.add(
+                      onPressed: _isEnded ? null : () => setState(() => _prizes.add(
                         _PrizeItem(rank: '${_prizes.length + 1}위', value: ''),
                       )),
                       icon: Icon(Icons.add_circle_outline, size: 18, color: context.accentColor),
@@ -1295,7 +1402,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     ),
                     value: _isPublic,
                     activeColor: context.accentColor,
-                    onChanged: (v) => setState(() => _isPublic = v),
+                    onChanged: _isEnded ? null : (v) => setState(() => _isPublic = v),
                   ),
                   Divider(height: 1, color: divColor),
                   SwitchListTile(
@@ -1310,7 +1417,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     ),
                     value: _allowGallery,
                     activeColor: context.accentColor,
-                    onChanged: (v) => setState(() => _allowGallery = v),
+                    onChanged: _isEnded ? null : (v) => setState(() => _allowGallery = v),
                   ),
                 ],
                 ),
@@ -1395,7 +1502,7 @@ class _ImgBtn extends StatelessWidget {
 // ── 시상 항목 모델 ──
 class _PrizeItem {
   _PrizeItem({required this.rank, required this.value});
-  final String rank;
+  String rank;
   String value;
 }
 

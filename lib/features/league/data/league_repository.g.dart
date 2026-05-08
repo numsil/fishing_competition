@@ -176,6 +176,127 @@ class _IsJoinedProviderElement extends AutoDisposeFutureProviderElement<bool>
   String get leagueId => (origin as IsJoinedProvider).leagueId;
 }
 
+String _$myParticipantStatusHash() =>
+    r'7f00cbb2f0de3ec9377f6539a60d0cd4c98a60d9';
+
+/// See also [myParticipantStatus].
+@ProviderFor(myParticipantStatus)
+const myParticipantStatusProvider = MyParticipantStatusFamily();
+
+/// See also [myParticipantStatus].
+class MyParticipantStatusFamily extends Family<AsyncValue<String?>> {
+  /// See also [myParticipantStatus].
+  const MyParticipantStatusFamily();
+
+  /// See also [myParticipantStatus].
+  MyParticipantStatusProvider call(String leagueId) {
+    return MyParticipantStatusProvider(leagueId);
+  }
+
+  @override
+  MyParticipantStatusProvider getProviderOverride(
+    covariant MyParticipantStatusProvider provider,
+  ) {
+    return call(provider.leagueId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'myParticipantStatusProvider';
+}
+
+/// See also [myParticipantStatus].
+class MyParticipantStatusProvider extends AutoDisposeFutureProvider<String?> {
+  /// See also [myParticipantStatus].
+  MyParticipantStatusProvider(String leagueId)
+    : this._internal(
+        (ref) => myParticipantStatus(ref as MyParticipantStatusRef, leagueId),
+        from: myParticipantStatusProvider,
+        name: r'myParticipantStatusProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$myParticipantStatusHash,
+        dependencies: MyParticipantStatusFamily._dependencies,
+        allTransitiveDependencies:
+            MyParticipantStatusFamily._allTransitiveDependencies,
+        leagueId: leagueId,
+      );
+
+  MyParticipantStatusProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.leagueId,
+  }) : super.internal();
+
+  final String leagueId;
+
+  @override
+  Override overrideWith(
+    FutureOr<String?> Function(MyParticipantStatusRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: MyParticipantStatusProvider._internal(
+        (ref) => create(ref as MyParticipantStatusRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        leagueId: leagueId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<String?> createElement() {
+    return _MyParticipantStatusProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MyParticipantStatusProvider && other.leagueId == leagueId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, leagueId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin MyParticipantStatusRef on AutoDisposeFutureProviderRef<String?> {
+  /// The parameter `leagueId` of this provider.
+  String get leagueId;
+}
+
+class _MyParticipantStatusProviderElement
+    extends AutoDisposeFutureProviderElement<String?>
+    with MyParticipantStatusRef {
+  _MyParticipantStatusProviderElement(super.provider);
+
+  @override
+  String get leagueId => (origin as MyParticipantStatusProvider).leagueId;
+}
+
 String _$leagueRankingHash() => r'03ba07038b93db85ae943ea5ef0770f56f007bdf';
 
 /// See also [leagueRanking].

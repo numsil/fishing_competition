@@ -81,6 +81,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     // 이미 invalidate됨. resume마다 재페치하지 않음.
     ref.invalidate(leagueDetailProvider(widget.league.id));
     ref.invalidate(isJoinedProvider(widget.league.id));
+    ref.invalidate(myParticipantStatusProvider(widget.league.id));
     if (_isHost && widget.league.status == 'in_progress') {
       ref.invalidate(leagueCatchesForReviewProvider(widget.league.id));
     }
@@ -144,12 +145,21 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   Future<void> _join() async {
     setState(() => _joining = true);
     try {
-      await ref.read(leagueRepositoryProvider).joinLeague(widget.league.id);
+      await ref.read(leagueRepositoryProvider).joinLeague(
+        widget.league.id,
+        isPublic: widget.league.isPublic,
+      );
       ref.invalidate(leagueDetailProvider(widget.league.id));
       ref.invalidate(isJoinedProvider(widget.league.id));
+      ref.invalidate(myParticipantStatusProvider(widget.league.id));
       ref.invalidate(leagueRankingProvider(widget.league.id));
       if (mounted) {
-                AppSnackBar.success(context, '참가 신청이 완료되었습니다!');
+        AppSnackBar.success(
+          context,
+          widget.league.isPublic
+              ? '참가가 완료되었습니다! 🎣'
+              : '참가 신청이 접수되었습니다. 호스트 승인 후 활동 가능합니다.',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -172,6 +182,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         try {
           await ref.read(leagueRepositoryProvider).leaveLeague(widget.league.id);
           ref.invalidate(isJoinedProvider(widget.league.id));
+          ref.invalidate(myParticipantStatusProvider(widget.league.id));
           ref.invalidate(leagueDetailProvider(widget.league.id));
           ref.invalidate(leagueRankingProvider(widget.league.id));
           if (mounted) AppSnackBar.info(context, '참가가 취소되었습니다.');
@@ -770,9 +781,9 @@ class _BottomBar extends ConsumerWidget {
     // ── 진행중: 참가자에게만 카메라 버튼 (순위 탭에서만) ─────
     if (league.status == 'in_progress') {
       if (!showCatchButton) return const SizedBox.shrink();
-      return ref.watch(isJoinedProvider(league.id)).when(
-        data: (joined) {
-          if (!joined) return const SizedBox.shrink();
+      return ref.watch(myParticipantStatusProvider(league.id)).when(
+        data: (status) {
+          if (status != 'approved') return const SizedBox.shrink();
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -870,9 +881,83 @@ class _BottomBar extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: ref.watch(isJoinedProvider(league.id)).when(
-          data: (joined) {
-            if (joined) {
+        child: ref.watch(myParticipantStatusProvider(league.id)).when(
+          data: (status) {
+            // 승인 대기 중 → 안내 + 취소 버튼
+            if (status == 'pending') {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.clock, size: 18, color: AppColors.warning),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            '호스트 승인을 기다리는 중입니다',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: !cancelling ? onCancelJoin : null,
+                      icon: cancelling
+                          ? const SizedBox(
+                              width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(LucideIcons.userMinus, size: 18),
+                      label: Text(cancelling ? '처리 중...' : '신청 취소'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+            // 거절·강퇴된 상태 → 비활성 안내
+            if (status == 'rejected') {
+              return Container(
+                width: double.infinity,
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                ),
+                child: const Text(
+                  '참가가 거절되었습니다',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.error,
+                  ),
+                ),
+              );
+            }
+            if (status == 'approved') {
               // 참가 완료 상태 → 취소 버튼
               return SizedBox(
                 height: 54,
