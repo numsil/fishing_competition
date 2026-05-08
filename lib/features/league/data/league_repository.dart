@@ -45,10 +45,12 @@ class LeaguePendingEntry {
     required this.userId,
     required this.username,
     required this.joinedAt,
+    this.avatarUrl,
   });
   final String userId;
   final String username;
   final DateTime joinedAt;
+  final String? avatarUrl;
 }
 
 class LeagueRepository {
@@ -320,15 +322,19 @@ class LeagueRepository {
   Future<List<LeaguePendingEntry>> getPendingParticipants(String leagueId) async {
     final data = await _supabase
         .from('league_participants')
-        .select('user_id, joined_at, users(username)')
+        .select('user_id, joined_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('status', 'pending')
         .order('joined_at');
-    return data.map((d) => LeaguePendingEntry(
-      userId: d['user_id'] as String,
-      username: (d['users'] as Map?)?['username'] as String? ?? '알 수 없음',
-      joinedAt: DateTime.parse(d['joined_at'] as String),
-    )).toList();
+    return data.map((d) {
+      final user = d['users'] as Map?;
+      return LeaguePendingEntry(
+        userId: d['user_id'] as String,
+        username: user?['username'] as String? ?? '알 수 없음',
+        avatarUrl: user?['avatar_url'] as String?,
+        joinedAt: DateTime.parse(d['joined_at'] as String),
+      );
+    }).toList();
   }
 
   // ── 참가 신청 수락 ──────────────────────────────────────────

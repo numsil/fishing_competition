@@ -77,6 +77,7 @@ List<_Participant> _pendingEntriesToParticipants(List<LeaguePendingEntry> entrie
     id: e.userId,
     name: e.username,
     username: e.username,
+    avatarUrl: e.avatarUrl,
     joinDate: DateFormat('MM.dd').format(e.joinedAt),
     isPending: true,
   )).toList();
@@ -173,12 +174,32 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
   }
 
   void _rejectPending(_Participant p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('참가 신청 거절'),
+        content: Text('${p.name} 님의 참가 신청을 거절하시겠습니까?\n거절된 사용자는 다시 신청해야 합니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('거절'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     await ref.read(leagueRepositoryProvider)
         .removeParticipant(widget.leagueId, p.id);
     ref.invalidate(leaguePendingProvider(widget.leagueId));
     ref.invalidate(leagueDetailProvider(widget.leagueId));
     if (mounted) {
-            AppSnackBar.info(context, '${p.name} 님의 참가 신청을 거절했습니다.');
+      AppSnackBar.info(context, '${p.name} 님의 참가 신청을 거절했습니다.');
     }
   }
 
@@ -1187,28 +1208,28 @@ class _PendingTab extends StatelessWidget {
                 ),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: sub,
-                    side: BorderSide(color: divColor),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    minimumSize: Size.zero,
+                    foregroundColor: AppColors.error,
+                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    minimumSize: const Size(64, 38),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () => onReject(p),
-                  child: const Text('거절', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: const Text('거절', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: isDark ? Colors.black : Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: const Size(64, 38),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () => onApprove(p),
-                  child: const Text('수락', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  child: const Text('수락', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
                 ),
               ],
             ),
