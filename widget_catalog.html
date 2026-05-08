@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUK 위젯 카탈로그</title>
+<style>
+  :root {
+    --bg: #09090B;
+    --surface: #18181B;
+    --surface2: #27272A;
+    --accent: #00FF88;
+    --accent-dim: #00CC6A;
+    --text: #FAFAFA;
+    --text-sub: #A1A1AA;
+    --divider: #27272A;
+    --error: #EF4444;
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --info: #3B82F6;
+    --gold: #FFD700;
+    --navy: #1A2A6C;
+  }
+  [data-theme="light"] {
+    --bg: #F4F4F5;
+    --surface: #FFFFFF;
+    --surface2: #E4E4E7;
+    --accent: #1A2A6C;
+    --accent-dim: #2E4099;
+    --text: #09090B;
+    --text-sub: #71717A;
+    --divider: #E4E4E7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* 헤더 */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--divider);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header h1 { font-size: 16px; font-weight: 800; }
+  .debug-badge {
+    background: rgba(245,158,11,0.15);
+    color: var(--warning);
+    font-size: 10px; font-weight: 800;
+    padding: 3px 8px; border-radius: 6px;
+  }
+  .theme-toggle {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--divider);
+    color: var(--text);
+    padding: 6px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+  }
+  .theme-toggle:hover { opacity: 0.8; }
+
+  /* 레이아웃 */
+  .layout { display: flex; }
+  .sidebar {
+    width: 200px; min-height: calc(100vh - 53px);
+    background: var(--surface);
+    border-right: 1px solid var(--divider);
+    padding: 16px 0;
+    position: sticky; top: 53px; height: calc(100vh - 53px);
+    overflow-y: auto;
+  }
+  .sidebar a {
+    display: block; padding: 8px 20px;
+    color: var(--text-sub); text-decoration: none;
+    font-size: 13px; font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar a:hover { color: var(--text); border-left-color: var(--accent); background: rgba(255,255,255,0.03); }
+  .sidebar-label {
+    padding: 14px 20px 4px;
+    font-size: 10px; font-weight: 700;
+    color: var(--text-sub); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .content { flex: 1; padding: 32px; max-width: 900px; }
+
+  /* 섹션 */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 20px;
+  }
+  .section-title .bar {
+    width: 3px; height: 16px; border-radius: 2px;
+    background: var(--accent);
+  }
+  .section-title h2 { font-size: 15px; font-weight: 800; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+
+  /* 색상 */
+  .color-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .color-chip { text-align: center; }
+  .color-swatch {
+    width: 56px; height: 56px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 6px;
+  }
+  .color-chip span { font-size: 10px; color: var(--text-sub); }
+
+  /* 타이포그래피 */
+  .typo-row {
+    display: flex; align-items: baseline; gap: 16px;
+    padding: 6px 0; border-bottom: 1px solid var(--divider);
+  }
+  .typo-tag {
+    width: 100px; font-size: 11px; color: var(--text-sub);
+    font-family: 'SF Mono', monospace; flex-shrink: 0;
+  }
+
+  /* 버튼 */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 0 20px; border-radius: 10px; border: none;
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+    text-decoration: none;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-lg { height: 52px; padding: 0 24px; font-size: 16px; }
+  .btn-md { height: 44px; padding: 0 20px; }
+  .btn-sm { height: 36px; padding: 0 16px; font-size: 13px; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--divider); }
+  .btn-ghost { background: transparent; color: var(--accent); }
+  .btn-destructive { background: var(--error); color: #fff; }
+  .btn-disabled { background: var(--surface2); color: var(--text-sub); cursor: not-allowed; opacity: 0.45; }
+  .btn-full { width: 100%; }
+
+  /* 텍스트 필드 */
+  .field-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 13px; font-weight: 600; }
+  .field {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text); font-size: 14px;
+    outline: none; width: 100%; transition: border-color 0.15s;
+  }
+  .field:focus { border-color: var(--accent); }
+  .field::placeholder { color: var(--text-sub); }
+  .field:disabled { opacity: 0.45; cursor: not-allowed; }
+  .field-icon-wrap { position: relative; }
+  .field-icon-wrap .field { padding-right: 36px; }
+  .field-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-sub); font-size: 16px; }
+  textarea.field { resize: vertical; min-height: 80px; }
+
+  /* 카드 */
+  .card {
+    border-radius: 14px; padding: 16px;
+  }
+  .card-surface {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+  }
+  .card-tinted {
+    background: rgba(0,255,136,0.08);
+  }
+  [data-theme="light"] .card-tinted { background: rgba(26,42,108,0.06); }
+  .card-outlined {
+    background: transparent;
+    border: 1px solid var(--divider);
+  }
+  .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .card p { font-size: 12px; color: var(--text-sub); }
+
+  /* 칩 */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600;
+  }
+  .chip-filled {
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* 스낵바 */
+  .snackbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; color: #fff;
+    margin-bottom: 8px;
+  }
+  .snackbar-success { background: var(--success); box-shadow: 0 4px 12px rgba(34,197,94,0.35); }
+  .snackbar-error { background: var(--error); box-shadow: 0 4px 12px rgba(239,68,68,0.35); }
+  .snackbar-warning { background: var(--warning); box-shadow: 0 4px 12px rgba(245,158,11,0.35); }
+  .snackbar-info { background: var(--info); box-shadow: 0 4px 12px rgba(59,130,246,0.35); }
+
+  /* 모달 */
+  .modal-demo {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 28px 24px 20px;
+    max-width: 320px;
+    border: 1px solid var(--divider);
+  }
+  .modal-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px; font-size: 24px;
+    background: rgba(239,68,68,0.12);
+  }
+  .modal-title { font-size: 17px; font-weight: 800; text-align: center; margin-bottom: 8px; }
+  .modal-body { font-size: 14px; color: var(--text-sub); text-align: center; line-height: 1.5; margin-bottom: 24px; }
+  .modal-divider { border: none; border-top: 1px solid var(--divider); margin-bottom: 12px; }
+  .modal-actions { display: flex; gap: 10px; }
+
+  /* 통계 */
+  .stat-box {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: 12px; padding: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-width: 80px;
+  }
+  .stat-box-icon { font-size: 18px; color: var(--text-sub); }
+  .stat-box-value { font-size: 14px; font-weight: 800; color: var(--accent); }
+  .stat-box-label { font-size: 11px; color: var(--text-sub); }
+  .stat-box-tinted {
+    flex: 1; border-radius: 12px; padding: 14px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-width: 80px;
+  }
+  [data-theme="light"] .stat-box-tinted {
+    background: rgba(26,42,108,0.06);
+    border-color: rgba(26,42,108,0.2);
+  }
+  .stat-box-tinted .value { font-size: 15px; font-weight: 800; color: var(--accent); }
+  .stat-box-tinted .label { font-size: 11px; color: var(--text-sub); }
+  .stat-number { text-align: center; }
+  .stat-number .value { font-size: 16px; font-weight: 800; }
+  .stat-number .label { font-size: 11px; color: var(--text-sub); }
+
+  /* 점수 카드 */
+  .score-card {
+    background: var(--surface); border-radius: 14px; padding: 14px;
+    border: 1px solid var(--divider);
+    margin-bottom: 10px;
+  }
+  .score-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .score-card-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sub); font-weight: 600; }
+  .score-badge {
+    padding: 2px 7px; border-radius: 6px;
+    font-size: 10px; font-weight: 800;
+  }
+  .score-value { font-size: 16px; font-weight: 900; }
+  .progress-bar {
+    height: 6px; border-radius: 3px;
+    background: var(--surface2); overflow: hidden; margin-bottom: 4px;
+  }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .progress-hint { font-size: 10px; color: var(--text-sub); text-align: right; }
+
+  /* 섹션 라벨 */
+  .section-label-demo {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 8px;
+  }
+  .section-label-bar { width: 3px; height: 14px; border-radius: 2px; }
+  .section-label-text { font-size: 14px; font-weight: 700; }
+
+  /* 메뉴 아이템 */
+  .menu-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 15px 20px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .menu-item:hover { background: rgba(255,255,255,0.04); }
+  .menu-item span { font-size: 15px; font-weight: 500; }
+
+  /* EmptyState */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 40px; gap: 12px;
+  }
+  .empty-icon {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+  }
+  .empty-msg { font-size: 15px; font-weight: 600; color: var(--text-sub); }
+  .empty-sub { font-size: 13px; color: var(--text-sub); text-align: center; }
+
+  /* 슬라이드 확인 */
+  .slide-bar {
+    height: 58px; border-radius: 29px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    display: flex; align-items: center; padding: 0 4px;
+    position: relative; max-width: 300px;
+    overflow: hidden;
+  }
+  .slide-thumb {
+    width: 50px; height: 50px; border-radius: 25px;
+    background: var(--error); display: flex; align-items: center;
+    justify-content: center; color: #fff; font-size: 20px;
+    flex-shrink: 0;
+  }
+  .slide-label {
+    flex: 1; text-align: center;
+    font-size: 14px; font-weight: 600;
+    color: rgba(239,68,68,0.75);
+  }
+
+  /* 인포 칩 */
+  .chips-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>HUK 위젯 카탈로그</h1>
+  <span class="debug-badge">DEBUG</span>
+  <button class="theme-toggle" onclick="toggleTheme()">☀️ 라이트 모드</button>
+</div>
+
+<div class="layout">
+  <!-- 사이드바 -->
+  <nav class="sidebar">
+    <div class="sidebar-label">기초</div>
+    <a href="#colors">색상</a>
+    <a href="#typography">타이포그래피</a>
+    <div class="sidebar-label">입력</div>
+    <a href="#buttons">버튼</a>
+    <a href="#fields">텍스트 필드</a>
+    <div class="sidebar-label">컨테이너</div>
+    <a href="#cards">카드</a>
+    <a href="#chips">칩</a>
+    <a href="#section-label">섹션 라벨</a>
+    <div class="sidebar-label">피드백</div>
+    <a href="#snackbar">알림 (SnackBar)</a>
+    <a href="#modal">모달 / 다이얼로그</a>
+    <a href="#slide">SlideToConfirm</a>
+    <div class="sidebar-label">데이터</div>
+    <a href="#stats">통계 위젯</a>
+    <a href="#score">점수 카드</a>
+    <div class="sidebar-label">기타</div>
+    <a href="#menu">메뉴 아이템</a>
+    <a href="#empty">EmptyState</a>
+  </nav>
+
+  <!-- 메인 -->
+  <main class="content">
+
+    <!-- 색상 -->
+    <div class="section" id="colors">
+      <div class="section-title"><div class="bar"></div><h2>색상</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:14px;">다크/라이트 토글로 변화 확인</p>
+      <div class="color-grid" id="color-grid"></div>
+    </div>
+
+    <!-- 타이포그래피 -->
+    <div class="section" id="typography">
+      <div class="section-title"><div class="bar"></div><h2>타이포그래피</h2></div>
+      <div class="typo-row"><span class="typo-tag">heading1</span><span style="font-size:20px;font-weight:800">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">heading2</span><span style="font-size:18px;font-weight:800">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">heading3</span><span style="font-size:16px;font-weight:800">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">heading4</span><span style="font-size:15px;font-weight:800">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">bodyBold</span><span style="font-size:14px;font-weight:700">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">body</span><span style="font-size:14px;font-weight:500">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">bodySmall</span><span style="font-size:13px;font-weight:500">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">caption</span><span style="font-size:12px;font-weight:500">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">captionBold</span><span style="font-size:12px;font-weight:600">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">captionSmall</span><span style="font-size:11px;font-weight:500">가나다 ABC 123</span></div>
+      <div class="typo-row"><span class="typo-tag">badge</span><span style="font-size:10px;font-weight:800">가나다 ABC 123</span></div>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="section" id="buttons">
+      <div class="section-title"><div class="bar"></div><h2>버튼</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">Variant</p>
+      <div class="col" style="max-width:400px">
+        <button class="btn btn-lg btn-primary btn-full">primary</button>
+        <button class="btn btn-lg btn-secondary btn-full">secondary</button>
+        <button class="btn btn-lg btn-ghost btn-full">ghost</button>
+        <button class="btn btn-lg btn-destructive btn-full">destructive</button>
+        <button class="btn btn-lg btn-disabled btn-full" disabled>disabled</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-sub);margin: 20px 0 12px;">Size</p>
+      <div class="row" style="align-items:center">
+        <button class="btn btn-sm btn-primary">sm</button>
+        <button class="btn btn-md btn-primary">md</button>
+        <button class="btn btn-lg btn-primary">lg</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-sub);margin: 20px 0 12px;">아이콘 버튼</p>
+      <div class="row">
+        <button class="btn btn-md btn-primary">🐟 아이콘 버튼</button>
+        <button class="btn btn-md btn-secondary">📍 위치 추가</button>
+        <button class="btn btn-md btn-destructive">🗑️ 삭제</button>
+      </div>
+    </div>
+
+    <!-- 텍스트 필드 -->
+    <div class="section" id="fields">
+      <div class="section-title"><div class="bar"></div><h2>텍스트 필드</h2></div>
+      <div class="col" style="max-width:400px">
+        <div class="field-wrap">
+          <label class="field-label">기본 필드</label>
+          <input class="field" placeholder="입력하세요">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">비밀번호</label>
+          <input class="field" type="password" placeholder="비밀번호 입력">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">여러 줄</label>
+          <textarea class="field" placeholder="내용을 입력하세요"></textarea>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">아이콘 포함</label>
+          <div class="field-icon-wrap">
+            <input class="field" placeholder="위치 검색">
+            <span class="field-icon">📍</span>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">비활성화</label>
+          <input class="field" placeholder="입력 불가" disabled>
+        </div>
+      </div>
+    </div>
+
+    <!-- 카드 -->
+    <div class="section" id="cards">
+      <div class="section-title"><div class="bar"></div><h2>카드</h2></div>
+      <div class="col" style="max-width:400px">
+        <div class="card card-surface">
+          <h3>surface 카드</h3>
+          <p>기본 카드 스타일, surface 배경 + border</p>
+        </div>
+        <div class="card card-tinted">
+          <h3>tinted 카드</h3>
+          <p>accent 색 틴트 배경, 강조용</p>
+        </div>
+        <div class="card card-outlined">
+          <h3>outlined 카드</h3>
+          <p>배경 없음, 테두리만</p>
+        </div>
+        <div class="card card-surface" style="cursor:pointer" onmouseenter="this.style.opacity='.85'" onmouseleave="this.style.opacity='1'">
+          <h3>탭 가능한 카드</h3>
+          <p>onTap 있는 카드, hover 효과</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 칩 -->
+    <div class="section" id="chips">
+      <div class="section-title"><div class="bar"></div><h2>칩</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">InfoChip (배경 없음)</p>
+      <div class="chips-row">
+        <span class="chip" style="color:var(--accent)">🐟 InfoChip</span>
+        <span class="chip" style="color:var(--info)">📍 위치</span>
+        <span class="chip" style="color:var(--gold)">🏆 런커</span>
+        <span class="chip" style="color:var(--error)">⚠️ 경고</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">InfoChipFilled (배경 있음)</p>
+      <div class="chips-row">
+        <span class="chip chip-filled" style="color:var(--accent);background:rgba(0,255,136,0.12)">🐟 InfoChipFilled</span>
+        <span class="chip chip-filled" style="color:var(--gold);background:rgba(255,215,0,0.12)">🏆 1위</span>
+        <span class="chip chip-filled" style="color:var(--success);background:rgba(34,197,94,0.12)">✅ 인증</span>
+        <span class="chip chip-filled" style="color:var(--warning);background:rgba(245,158,11,0.12)">⚠️ 경고</span>
+        <span class="chip chip-filled" style="color:var(--error);background:rgba(239,68,68,0.12)">❌ 에러</span>
+      </div>
+    </div>
+
+    <!-- 섹션 라벨 -->
+    <div class="section" id="section-label">
+      <div class="section-title"><div class="bar"></div><h2>섹션 라벨</h2></div>
+      <div class="section-label-demo">
+        <div class="section-label-bar" style="background:var(--accent)"></div>
+        <span class="section-label-text">기본 섹션 라벨</span>
+      </div>
+      <div class="section-label-demo">
+        <div class="section-label-bar" style="background:var(--error)"></div>
+        <span class="section-label-text">에러 색상</span>
+      </div>
+      <div class="section-label-demo">
+        <div class="section-label-bar" style="background:var(--gold)"></div>
+        <span class="section-label-text">골드 색상</span>
+      </div>
+    </div>
+
+    <!-- 알림 -->
+    <div class="section" id="snackbar">
+      <div class="section-title"><div class="bar"></div><h2>알림 (SnackBar)</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">상단 배너 방식, 1.8초 후 자동 사라짐</p>
+      <div class="snackbar snackbar-success">✅ &nbsp;성공 메시지입니다</div>
+      <div class="snackbar snackbar-error">❌ &nbsp;에러 메시지입니다</div>
+      <div class="snackbar snackbar-warning">⚠️ &nbsp;경고 메시지입니다</div>
+      <div class="snackbar snackbar-info">ℹ️ &nbsp;안내 메시지입니다</div>
+    </div>
+
+    <!-- 모달 -->
+    <div class="section" id="modal">
+      <div class="section-title"><div class="bar"></div><h2>모달 / 다이얼로그</h2></div>
+      <div class="modal-demo">
+        <div class="modal-icon">🗑️</div>
+        <div class="modal-title">정말 삭제하시겠어요?</div>
+        <div class="modal-body">삭제하면 복구할 수 없어요.</div>
+        <hr class="modal-divider">
+        <div class="modal-actions">
+          <button class="btn btn-md btn-secondary" style="flex:1">취소</button>
+          <button class="btn btn-md btn-destructive" style="flex:1">삭제</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SlideToConfirm -->
+    <div class="section" id="slide">
+      <div class="section-title"><div class="bar"></div><h2>SlideToConfirm</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">삭제 등 파괴적 액션에 사용. 슬라이드 70% 이상 시 확인.</p>
+      <div class="slide-bar">
+        <div class="slide-thumb">›</div>
+        <span class="slide-label">›› 밀어서 삭제 ‹‹</span>
+      </div>
+    </div>
+
+    <!-- 통계 -->
+    <div class="section" id="stats">
+      <div class="section-title"><div class="bar"></div><h2>통계 위젯</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">StatBox — 아이콘 + 숫자 + 라벨</p>
+      <div class="row" style="margin-bottom:16px">
+        <div class="stat-box"><span class="stat-box-icon">🐟</span><span class="stat-box-value">42</span><span class="stat-box-label">게시물</span></div>
+        <div class="stat-box"><span class="stat-box-icon">🏆</span><span class="stat-box-value">3</span><span class="stat-box-label">리그</span></div>
+        <div class="stat-box"><span class="stat-box-icon">🏅</span><span class="stat-box-value">1</span><span class="stat-box-label">런커</span></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">StatBoxTinted — accent 틴트 배경</p>
+      <div class="row" style="margin-bottom:16px">
+        <div class="stat-box-tinted"><span class="value">52cm</span><span class="label">최대 길이</span></div>
+        <div class="stat-box-tinted"><span class="value">1,250g</span><span class="label">최대 무게</span></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">StatNumber — 숫자 + 라벨 (프로필용)</p>
+      <div class="row" style="justify-content:space-around;max-width:300px">
+        <div class="stat-number"><div class="value">128</div><div class="label">게시물</div></div>
+        <div class="stat-number"><div class="value">47</div><div class="label">팔로워</div></div>
+        <div class="stat-number"><div class="value">23</div><div class="label">팔로잉</div></div>
+      </div>
+    </div>
+
+    <!-- 점수 카드 -->
+    <div class="section" id="score">
+      <div class="section-title"><div class="bar"></div><h2>점수 카드 (ScoreCard)</h2></div>
+      <div id="score-cards"></div>
+    </div>
+
+    <!-- 메뉴 아이템 -->
+    <div class="section" id="menu">
+      <div class="section-title"><div class="bar"></div><h2>메뉴 아이템 (AppMenuItem)</h2></div>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">바텀시트 등 옵션 목록에 사용</p>
+      <div class="card card-surface" style="padding:0;max-width:400px;overflow:hidden;border-radius:14px">
+        <div class="menu-item"><span>✏️</span><span style="color:var(--text)">수정</span></div>
+        <div style="height:1px;background:var(--divider)"></div>
+        <div class="menu-item"><span>🔗</span><span style="color:var(--text)">공유</span></div>
+        <div style="height:1px;background:var(--divider)"></div>
+        <div class="menu-item"><span>🗑️</span><span style="color:var(--error)">삭제</span></div>
+      </div>
+    </div>
+
+    <!-- EmptyState -->
+    <div class="section" id="empty">
+      <div class="section-title"><div class="bar"></div><h2>EmptyState</h2></div>
+      <div class="card card-surface" style="max-width:400px">
+        <div class="empty-state">
+          <div class="empty-icon" style="background:rgba(161,161,170,0.1)">🐟</div>
+          <span class="empty-msg">아직 게시물이 없어요</span>
+          <span class="empty-sub">첫 번째 조과를 기록해보세요</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // 테마 토글
+  function toggleTheme() {
+    const html = document.documentElement;
+    const btn = document.querySelector('.theme-toggle');
+    if (html.dataset.theme === 'light') {
+      html.removeAttribute('data-theme');
+      btn.textContent = '☀️ 라이트 모드';
+      renderColors(true);
+      renderScoreCards();
+    } else {
+      html.dataset.theme = 'light';
+      btn.textContent = '🌙 다크 모드';
+      renderColors(false);
+      renderScoreCards();
+    }
+  }
+
+  // 색상 팔레트 렌더
+  function renderColors(isDark = true) {
+    const darkColors = [
+      { name: 'darkBg', hex: '#09090B' },
+      { name: 'darkSurface', hex: '#18181B' },
+      { name: 'darkSurface2', hex: '#27272A' },
+      { name: 'neonGreen', hex: '#00FF88' },
+      { name: 'neonGreenDim', hex: '#00CC6A' },
+      { name: 'darkText', hex: '#FAFAFA' },
+      { name: 'darkTextSub', hex: '#A1A1AA' },
+      { name: 'darkDivider', hex: '#27272A' },
+    ];
+    const lightColors = [
+      { name: 'lightBg', hex: '#F4F4F5' },
+      { name: 'lightSurface', hex: '#FFFFFF' },
+      { name: 'navy', hex: '#1A2A6C' },
+      { name: 'navyLight', hex: '#2E4099' },
+      { name: 'lightText', hex: '#09090B' },
+      { name: 'lightTextSub', hex: '#71717A' },
+      { name: 'lightDivider', hex: '#E4E4E7' },
+    ];
+    const shared = [
+      { name: 'gold', hex: '#FFD700' },
+      { name: 'success', hex: '#22C55E' },
+      { name: 'warning', hex: '#F59E0B' },
+      { name: 'error', hex: '#EF4444' },
+      { name: 'info', hex: '#3B82F6' },
+      { name: 'liveRed', hex: '#FF3B30' },
+      { name: 'silver', hex: '#B0BEC5' },
+      { name: 'bronze', hex: '#CD7F32' },
+    ];
+
+    const list = [...(isDark ? darkColors : lightColors), ...shared];
+    document.getElementById('color-grid').innerHTML = list.map(c => `
+      <div class="color-chip">
+        <div class="color-swatch" style="background:${c.hex}" title="${c.hex}"></div>
+        <span>${c.name}</span>
+      </div>
+    `).join('');
+  }
+
+  // 점수 카드 렌더
+  function scoreTier(score) {
+    if (score < 300)   return { name: '루키',          color: '#9E9E9E', next: 300,   prev: 0 };
+    if (score < 800)   return { name: '앵글러',        color: '#4CAF50', next: 800,   prev: 300 };
+    if (score < 2000)  return { name: '프로',          color: '#2196F3', next: 2000,  prev: 800 };
+    if (score < 5000)  return { name: '다이아몬드',   color: '#00BCD4', next: 5000,  prev: 2000 };
+    if (score < 10000) return { name: '마스터',        color: '#9C27B0', next: 10000, prev: 5000 };
+    if (score < 20000) return { name: '그랜드마스터', color: '#E91E63', next: 20000, prev: 10000 };
+    return               { name: '레전드',            color: '#FFD700', next: 20000, prev: 20000 };
+  }
+
+  function renderScoreCards() {
+    const samples = [
+      { label: '개인 기록 점수', score: 850 },
+      { label: '리그 점수', score: 4500 },
+      { label: '그랜드마스터', score: 12000 },
+      { label: '레전드', score: 21000 },
+    ];
+    document.getElementById('score-cards').innerHTML = samples.map(s => {
+      const t = scoreTier(s.score);
+      const progress = s.score >= 20000 ? 1 : (s.score - t.prev) / (t.next - t.prev);
+      return `
+        <div class="score-card">
+          <div class="score-card-header">
+            <span class="score-card-label">🐟 ${s.label}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="score-badge" style="color:${t.color};background:${t.color}22">${t.name}</span>
+              <span class="score-value" style="color:${t.color}">${s.score.toLocaleString()}pt</span>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${(progress*100).toFixed(0)}%;background:${t.color}"></div>
+          </div>
+          ${s.score < 20000 ? `<div class="progress-hint">다음 티어까지 ${(t.next - s.score).toLocaleString()}pt</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 초기 렌더
+  renderColors(true);
+  renderScoreCards();
+</script>
+</body>
+</html>

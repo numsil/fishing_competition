@@ -1,0 +1,395 @@
+==============================================================================
+HUK 낚시 대회 앱 — Category A (Database Egress) 수정 계획
+작성일: 2026-05-07
+원칙: 작게, 단계적으로, 측정하면서
+==============================================================================
+
+[ 진행 원칙 ]
+- 한 단계 끝나면 develop에 커밋·푸시하고 측정
+- 측정 도구: Supabase 대시보드 → Reports → API Egress
+- 각 Phase 시작 전에 그 시점의 일일 평균 Egress(MB)를 기록
+- 잘못 됐을 때 되돌릴 수 있도록 Phase별로 별도 PR/커밋
+- 한 Phase 안에서도 sub-step 단위로 commit (롤백 단위를 잘게)
+- UI가 보이지 않는 영역(예: limit 추가)은 빠르게, UI 동반 영역(페이지네이션)은
+  실기기 검증 필수
+
+==============================================================================
+PHASE 1. 안전한 단순 수정 — 예상 0.5~1일 / 위험 낮음
+==============================================================================
+"코드 한 줄~몇 줄짜리" 수정만 모은 단계.
+효과는 즉시 나오고, 잘못 되도 영향 범위가 명확함.
+
+------------------------------------------------------------------------------
+1.1  select('*') / 과다 컬럼 정리   (A-3-7, A-3-11, A-3-16)
+------------------------------------------------------------------------------
+대상 파일/위치:
+  ① lib/features/league/data/league_repository.dart:126   (getLeague)
+  ② lib/features/league/data/league_repository.dart:358   (getUserLeaguePosts)
+  ③ lib/features/profile/data/profile_repository.dart:192 (_fetchMaxFishPost)
+
+작업 내용:
+  - ①: leagues 테이블 컬럼 중 화면에서 실제 쓰는 컬럼만 명시
+    (이미 라인 142 getLeagues가 명시형이라 그 목록을 기준으로 +
+     상세에서 필요한 description, intro_image_urls, prize_info,
+     fish_types, is_public, allow_gallery 등 추가)
+  - ②: getUserLeaguePosts에서 화면이 쓰는 컬럼만 명시
+    (라인 324 getLeagueCatchesForReview의 select가 좋은 참고)
+  - ③: 최대어 카드가 실제 사용하는 컬럼만
+    (id, image_url, fish_type, length, location, created_at 정도면 충분한지
+     UI 코드 먼저 확인)
+
+영향 화면:
+  - 리그 상세 화면 (league_detail_screen)
+  - 리그 참가자 상세 화면 (league_participant_detail_screen)
+  - 프로필 화면의 최대어 카드
+
+검증 체크리스트:
+  □ 리그 상세에서 모든 정보(소개글/이미지/규칙) 정상 표시
+  □ 참가자 상세에서 게시물 카드 정상 표시
+  □ 프로필 최대어 카드 정상 표시
+  □ Post.fromJson / League.fromJson에서 누락 필드로 인한 NPE 없는지
+
+리스크: 컬럼 누락으로 화면 빈 값. → 테스트 필수.
+
+커밋 단위 권장: 파일별로 1커밋 (총 3커밋)
+
+------------------------------------------------------------------------------
+1.2  count 패턴 통일   (A-3-8)
+------------------------------------------------------------------------------
+대상 파일/위치:
+  ① lib/features/league/data/league_repository.dart:126
+     (getLeague의 league_participants(id))
+  ② lib/features/league/data/league_repository.dart:142
+     (getLeagues의 league_participants(id))
+  ③ lib/features/my_league/data/my_league_repository.dart:28
+     (getMyLeagues의 hosted)
+  ④ lib/features/my_league/data/my_league_repository.dart:35
+     (getMyLeagues의 participated)
+
+작업 내용:
+  - 모든 league_participants(id) → league_participants(count) 로 변경
+  - 응답 파싱부에서
+      participants.length
+    였던 부분을
+      participants[0]['count'] (또는 다른 형태)
+    로 변경
+  - 모범 사례: feed_repository.dart:21 의 post_comments(count) 처리 부분
+    (라인 34 근처의 commentsData[0]['count'] 패턴 그대로 적용)
+
+영향 화면:
+  - 리그 목록 (league_screen)
+  - 리그 상세 (league_detail_screen)
+  - 마이리그 (my_league_screen) — 호스트한/참가한 두 탭 모두
+
+검증 체크리스트:
+  □ 리그 목록의 "참가자 N명" 숫자 정상
+  □ 리그 상세의 참가자 수 정상
+  □ 마이리그 호스트한/참가한 탭 각 카드의 참가자 수 정상
+  □ 참가 신청/취소 후 숫자 갱신 정상
+
+리스크: 파싱 형태 변경으로 0이 표시되거나 NPE. → 4곳 모두 같이 수정해야 함.
+        (한 곳만 빠뜨리면 그 화면만 0으로 표시됨)
+
+커밋 단위 권장: 4곳을 한 커밋으로 묶기 (한 패턴 통일이 본질이라)
+
+------------------------------------------------------------------------------
+1.3  limit 추가   (A-3-13, A-3-14, A-3-15)
+------------------------------------------------------------------------------
+대상 파일/위치:
+  ① lib/features/feed/data/feed_repository.dart:52       (getComments)
+  ② lib/features/league/data/league_repository.dart:321  (getLeagueCatchesForReview)
+  ③ lib/features/verification/data/verification_repository.dart:46 (getPendingForMe)
+  ④ lib/features/verification/data/verification_repository.dart:84 (getAllPendingVerifications)
+
+작업 내용:
+  - 안전망 limit 추가 (페이지네이션은 Phase 2에서)
+    · 댓글: 50 정도
+    · 심사 탭: 100 정도
+    · 인증 대기/이력: 50 정도
+  - 화면에서 "더 보기" UI 없어도 됨 (당장은 갯수 자체가 적은 영역들)
+
+영향 화면:
+  - 게시물 댓글 화면
+  - 호스트의 심사 탭
+  - 인증 화면
+
+검증 체크리스트:
+  □ 정상적인 사용 흐름에서 표시되어야 할 항목이 잘림 없는지
+    (댓글 50개 미만 게시물에서 모두 보여야 함)
+  □ limit 도달 시점은 흔치 않으니 회귀만 확인
+
+리스크: 매우 낮음. 단순 .limit(N) 추가.
+
+커밋 단위 권장: 4곳 한 커밋
+
+------------------------------------------------------------------------------
+PHASE 1 완료 후 측정
+------------------------------------------------------------------------------
+□ Supabase 대시보드 Egress 24시간 평균값 기록
+□ 1.2 (count 패턴) 효과가 가장 클 것으로 예상 — 리그 목록·상세 진입 빈도 高
+□ 측정 후 Phase 2 진행 여부 결정
+
+==============================================================================
+PHASE 2. 페이지네이션 — 예상 1~2일 / 위험 중간
+==============================================================================
+"가장 큰 응답을 잘게 나누기" 단계. UI 변경이 동반됨.
+
+------------------------------------------------------------------------------
+2.1  피드 페이지네이션   (A-3-1)   ★ Critical
+------------------------------------------------------------------------------
+대상 파일:
+  - lib/features/feed/data/feed_repository.dart:18 (getPosts)
+  - lib/features/feed/data/feed_repository.dart:280 (feedPostsProvider)
+  - lib/features/feed/presentation/screens/ 의 피드 화면 (스크롤 컨트롤러)
+
+작업 흐름:
+  Step A. Repository에 페이지 인자 추가
+    - getPosts({int limit = 20, DateTime? before}) 형태
+    - before가 있으면 created_at < before 필터 (커서 기반)
+    - 정렬은 기존 그대로 created_at desc
+
+  Step B. Provider 변경
+    - feedPostsProvider를 단순 Future → 페이지 누적 상태로 변경
+      방법 옵션:
+        (i) StateNotifier/Notifier로 직접 페이지 관리
+        (ii) AsyncNotifier + 내부에 List<Post> 누적
+      주의: family로 만들면 안 됨 (key가 달라지면 캐시 의미 없음)
+
+  Step C. 화면 UI
+    - ListView/GridView에 ScrollController 부착
+    - 끝 도달 감지(또는 visibility_detector — 이미 의존성 있음) → 다음 페이지 로드
+    - 마지막 페이지 도달 시 "더 없음" 상태 표시
+
+  Step D. 무효화 정책 정리 ⚠️ 중요
+    - 현재 league_catch_screen, league_participant_detail_screen 등에서
+      ref.invalidate(feedPostsProvider) 가 호출됨
+    - 페이지네이션 후에는 invalidate가 "전체 캐시 폐기"가 됨
+    - 정책 결정 필요:
+        (a) invalidate 시 첫 페이지만 다시 받고 누적 상태 유지
+        (b) invalidate 시 전체 리셋 후 첫 페이지 재로드
+    - 권장: (b)가 단순하지만 사용자 경험상 스크롤 위치 잃음.
+            (a)가 좋지만 구현 복잡. 우선은 (b)로 시작 가능.
+
+검증 체크리스트:
+  □ 첫 진입 시 20개 보임
+  □ 끝까지 스크롤 시 추가 20개 자동 로드
+  □ 마지막 도달 시 더 이상 안 받음
+  □ pull-to-refresh 시 첫 페이지부터 재로드
+  □ 게시물 삭제/공유/승인 등 액션 후 피드 갱신 정상
+  □ 새 게시물 작성 후 피드 상단에 보임
+
+리스크: invalidate 정책 잘못 잡으면 UX 회귀. 실기기 검증 필수.
+
+커밋 단위 권장: Step A~D 각각 분리 커밋 (롤백 가능하게)
+
+------------------------------------------------------------------------------
+2.2  리그 목록 페이지네이션   (A-3-9)
+------------------------------------------------------------------------------
+대상 파일:
+  - lib/features/league/data/league_repository.dart:139 (getLeagues)
+  - lib/features/league/data/league_repository.dart:532 (leaguesProvider)
+  - lib/features/league/presentation/screens/league_screen.dart
+
+작업 흐름: 2.1과 동일한 4단계.
+
+검증 체크리스트:
+  □ 리그 목록 무한스크롤 정상
+  □ 리그 생성/수정/삭제 후 목록 갱신
+  □ 빈 상태 처리
+
+리스크: 2.1과 동일.
+
+커밋 단위 권장: 2.1과 동일.
+
+------------------------------------------------------------------------------
+PHASE 2 완료 후 측정
+------------------------------------------------------------------------------
+□ Egress 평균값 다시 기록 — 가장 큰 감소 예상되는 단계
+□ 사용자 체감 속도(피드 첫 로딩) 비교
+
+==============================================================================
+PHASE 3. 서버 함수(RPC) 도입 — 예상 3~5일 / 위험 중~높음
+==============================================================================
+"DB가 해야 할 계산을 DB로 되돌리기" 단계.
+가장 효과가 크고 가장 까다로움.
+
+먼저 Supabase SQL Editor에 함수 작성·테스트 → 클라 호출.
+RLS 정책 검토 필수 (함수가 누구의 데이터를 노출하는지).
+
+------------------------------------------------------------------------------
+3.1  시즌 랭킹 RPC   (A-3-2 + A-3-3)   ★ 가장 단순한 RPC부터
+------------------------------------------------------------------------------
+만들 함수:
+  - get_league_score_ranking(season_year int, top_n int = 10)
+      반환: user_id, username, avatar_url, total_score
+      내부:
+        ① posts 중 league_id IS NOT NULL, review_status='approved',
+           is_deleted=false, 시즌 범위 필터 → user별 SUM(score)
+        ② league_participants 중 rank_bonus>0, 시즌 범위 → user별 SUM(rank_bonus)
+        ③ ① + ② JOIN users → ORDER BY total DESC LIMIT N
+  - get_personal_score_ranking(season_year int, top_n int = 10)
+      반환: user_id, username, avatar_url, total_score
+      내부: posts 중 is_personal_record=true, approved, is_deleted=false,
+            시즌 범위 → user별 SUM → JOIN users → ORDER BY DESC LIMIT N
+
+클라 변경:
+  - lib/features/ranking/data/ranking_repository.dart
+    · getLeagueScoreRanking() → _supabase.rpc('get_league_score_ranking', ...)
+    · getPersonalScoreRanking() → _supabase.rpc('get_personal_score_ranking', ...)
+    · _calcScore, _mergeRows, _buildEntries 클라 함수는 단순 응답 매핑으로 축소
+    · 단 score 컬럼이 NULL인 옛 row 처리는 DB에서 COALESCE 또는 마이그레이션
+      (현재 클라는 score==null이면 length로 재계산 — DB로 옮기려면 같은 로직 SQL)
+
+영향 화면:
+  - lib/features/ranking/presentation/screens/ranking_screen.dart
+    응답 구조가 동일하면 화면 코드 변경 거의 없음.
+
+검증 체크리스트:
+  □ 새 RPC가 기존 결과와 정확히 같은 Top 10을 반환 (동등성 테스트)
+    · 임시로 클라에서 두 결과 비교 로깅 후 폐기
+  □ 점수 0건 사용자 미포함
+  □ 시즌 경계(연말~연초) 정확
+  □ 응답 시간 비교 (RPC가 더 빠른지)
+  □ RLS: anon/authenticated 어디서 호출 가능한지 명시
+
+리스크: SQL 함수에 옛 데이터(score==null) 대응 누락 시 결과 다름.
+        → 마이그레이션으로 score 채우거나 함수에서 length로 fallback.
+
+커밋 단위 권장: SQL 마이그레이션 1커밋, 클라 변경 1커밋, 임시 비교 로직 제거 1커밋
+
+------------------------------------------------------------------------------
+3.2  리그 랭킹 RPC   (A-3-10 + A-3-12)
+------------------------------------------------------------------------------
+만들 함수:
+  - get_league_ranking(league_id uuid)
+      반환: user_id, username, avatar_url, best_length, total_length,
+            total_count, total_score, best_score, fish_type, is_lunker
+      내부: rule(최대어/무게/마릿수)·catch_limit 분기 + GROUP BY user
+            (현재 league_repository.dart:201~317의 클라 로직을 SQL로 이식)
+
+  - save_league_rank_bonuses(league_id uuid)
+      내부: get_league_ranking 호출 → _rankBonus 산식(클라 라인 457~473) 이식
+            → league_participants 일괄 UPDATE (set rank_bonus=...)
+
+클라 변경:
+  - lib/features/league/data/league_repository.dart
+    · getLeagueRanking() → rpc 호출, 내부 집계 로직 제거
+    · saveRankBonuses() → rpc 호출 1회, for 루프 제거
+    · _rankBonus 함수는 SQL로 이전했으니 클라에서 제거 가능
+      (단 표시용이면 유지)
+
+영향 화면:
+  - league_ranking_tab, league_detail_screen, league_manage_screen
+  - 결과 구조 동일하게 만들면 화면 변경 없음
+
+검증 체크리스트:
+  □ 마릿수/최대어/무게 룰 각 케이스에서 새 함수 결과 == 기존 결과
+    · 실제 운영 리그 몇 개로 비교
+  □ 동점자 처리 (마릿수 → 최고점수) 일치
+  □ 리그 종료 → 보너스 저장 → 참가자별 rank_bonus 정확
+  □ catch_limit 0 또는 비정상 값 처리
+
+리스크: 룰 분기 SQL 작성이 까다로움. 테스트가 본 작업의 절반.
+
+커밋 단위 권장: SQL 1커밋, 클라 getLeagueRanking 이관 1커밋,
+                 saveRankBonuses 이관 1커밋
+
+------------------------------------------------------------------------------
+3.3  프로필/시즌 통계 RPC   (A-3-4 + A-3-5 + A-3-6 + A-3-17)   ★ 가장 큰 작업
+------------------------------------------------------------------------------
+만들 함수:
+  - get_user_profile_summary(target_user_id uuid)
+      반환 (1행):
+        id, email, username, user_key, avatar_url,
+        manner_temperature, is_lunker_club,
+        league_score, angler_score,
+        participation_count, win_count,
+        max_fish_post_id, max_fish_image_url, max_fish_length,
+        max_fish_fish_type, max_fish_location, max_fish_created_at
+      내부: profile_repository.dart 의
+        _fetchLeagueScore + _fetchAnglerScore + _fetchLeagueStats + _fetchMaxFishPost
+        를 모두 합쳐 SQL로 작성
+
+  - get_my_season_stats(target_user_id uuid)
+      반환 (1행):
+        best_rank, max_fish_length
+      내부: my_league_repository.dart 의 getSeasonStats 통계만
+
+  ※ 두 함수는 일부 SQL 공유 가능 (CTE로 묶기). 그러나 표시 형태가 달라 분리 권장.
+
+클라 변경:
+  - lib/features/profile/data/profile_repository.dart
+    · buildMyProfileFromPosts / buildUserProfileFromPosts 를 RPC 호출 1회로 단순화
+    · _fetchLeagueScore / _fetchAnglerScore / _fetchLeagueStats / _fetchMaxFishPost
+      → 모두 제거 (또는 deprecated 표시 후 다음 PR에서 제거)
+  - lib/features/my_league/data/my_league_repository.dart
+    · getSeasonStats → RPC 호출
+    · 내부 집계 로직 제거
+
+영향 화면:
+  - 내 프로필, 다른 사람 프로필
+  - 마이리그(시즌 통계)
+
+검증 체크리스트:
+  □ 우승 횟수 / 참가 횟수: 실제 운영 사용자 몇 명으로 직접 비교
+  □ 최대어 카드: 표시 정보(이미지/길이/위치/날짜) 모두 정상
+  □ 점수: 클라 fold 결과와 RPC 결과 일치
+  □ best_rank: 마릿수/최대어/무게 룰 각각에서 정확
+  □ 시즌 경계(연말~연초)
+  □ 권한: 다른 사용자 프로필 보기에서 RLS 통과 (email 노출 정책 확인 — 필요 시
+    함수 반환에서 제외)
+
+리스크: 가장 까다로운 RPC. 우승 판정 SQL이 클라와 정확히 같아야 함.
+        → 단계적 진행 권장:
+          ① RPC 임시 작성 + 클라에서 두 결과 비교 로깅
+          ② 충분히 검증되면 클라 집계 코드 제거
+
+커밋 단위 권장:
+  SQL 마이그레이션 1커밋
+  클라 호출 추가 + 비교 로깅 1커밋
+  검증 후 클라 집계 코드 제거 1커밋
+  my_league 쪽도 동일 패턴으로 별도 커밋
+
+------------------------------------------------------------------------------
+PHASE 3 완료 후 측정
+------------------------------------------------------------------------------
+□ Egress 평균값 — 큰 감소 예상 (Critical 4건 중 3건 해결)
+□ 프로필 화면 진입 응답 시간 비교
+□ 랭킹 화면 진입 응답 시간 비교
+
+==============================================================================
+처리 안 한 항목 정리
+==============================================================================
+- A-3-17 직렬 쿼리 다발: 3.3에서 RPC 1회 호출로 자연 해결
+- A-3-12 N+1 PATCH: 3.2에서 save_league_rank_bonuses RPC로 자연 해결
+- A-3-6 SUM 클라 합산: 3.3에서 자연 해결
+
+==============================================================================
+전체 일정 요약 (혼자 작업 기준)
+==============================================================================
+Phase 1: 0.5~1일   ─ 위험 낮음 ─ Critical 0, High 1, Medium 4, Low 1 해결
+Phase 2: 1~2일     ─ 위험 중간 ─ Critical 1, High 1 해결
+Phase 3: 3~5일     ─ 위험 중~높음 ─ Critical 3, High 3, Medium 3 해결
+                   (3.1 → 3.2 → 3.3 순서 권장)
+
+총: 5~8일 (테스트 포함)
+
+==============================================================================
+체크포인트 (각 Phase 사이)
+==============================================================================
+□ Supabase 대시보드 Egress 측정값 기록
+□ 회귀 테스트 (각 Phase의 영향 화면 모두)
+□ develop 브랜치에 푸시 + 친구들 1~2명에게 테스트 부탁
+□ 다음 Phase 진행 결정
+
+==============================================================================
+주의사항
+==============================================================================
+- 빌드 번호: pubspec.yaml 빌드 번호 +1 (배포 시)
+- 캐시: ref.invalidate 정책 변경 시 부수효과 점검
+- RLS: RPC 작성 시 SECURITY DEFINER vs INVOKER 결정
+       (SECURITY DEFINER 시 함수 내부에서 권한 검증 직접 작성)
+- 마이그레이션 파일: Supabase project의 supabase/migrations/ 에 SQL 보관
+  (현재 프로젝트에 마이그레이션 폴더 있는지 확인 필요)
+
+==============================================================================

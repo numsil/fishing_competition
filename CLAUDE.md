@@ -111,6 +111,24 @@ UI → Provider → Repository → Supabase
 ### 카탈로그
 모든 통합 위젯은 `lib/dev/widget_catalog_screen.dart` 에 추가하여 시각적으로 검증 가능하게 한다.
 
+## Supabase 스키마 관리
+
+- **SQL Editor에서 직접 DDL 실행 금지** (CREATE/ALTER/DROP 등). 모든 스키마 변경은 마이그레이션 파일로 관리한다.
+- 변경 절차:
+  1. `/Users/jun/.local/bin/supabase migration new <설명>` 으로 파일 생성
+  2. `supabase/migrations/<timestamp>_<설명>.sql` 에 SQL 작성
+  3. prod 적용 (Docker 없이 psql 직접 사용):
+     ```
+     PGPASSWORD='<DB_PW>' psql "postgresql://postgres.zpcmpfrswlbnqkqrmvxu@aws-1-ap-south-1.pooler.supabase.com:5432/postgres" -f supabase/migrations/<파일>.sql
+     ```
+- DB 비밀번호는 코드/문서에 절대 하드코딩 금지. 사용자가 직접 입력한다.
+- 베이스라인 dump: `supabase/migrations/20260508115651_remote_schema.sql` (prod 전체 스키마, 참고용)
+- `supabase_old/` 는 구 마이그레이션 백업 폴더 (gitignored, 건드리지 말 것)
+- `supabase db push` / `supabase db pull` 은 Docker 필요 → 사용 X. psql 직접 사용
+- DML(INSERT/UPDATE/DELETE)은 SQL Editor 사용 가능 (스키마 변경 아님)
+
+---
+
 ## Git Rules
 
 - 기본 push는 항상 `develop` 브랜치

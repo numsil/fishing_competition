@@ -1,0 +1,393 @@
+==============================================================================
+HUK 낚시 대회 앱 — 데이터 사용량 감사 보고서
+Category A. Database Egress (Postgres → Client)
+작성일: 2026-05-07
+대상: lib/ 전체 (DM 제외)
+==============================================================================
+
+[ 사전 정보 ]
+- 상태관리: flutter_riverpod 2.6.1 (riverpod_generator 사용)
+- Supabase: supabase_flutter 2.12.4
+- 초기화: lib/main.dart:26 (글로벌 싱글턴)
+- Repository 9개: ranking, auth, league, my_league, verification, profile,
+  feed, dm(제외), core/services/app_update_service
+
+==============================================================================
+A-1. Realtime 구독 (.stream) — 0건
+==============================================================================
+DM 외에는 .stream() 사용처 없음. 양호.
+
+==============================================================================
+A-2. postgres_changes 채널 — 0건
+==============================================================================
+DM 외에는 .channel() / onPostgresChanges 사용처 없음. 양호.
+(upload_screen.dart의 _compressSub.unsubscribe()는 video_compress 패키지의
+ progress subscription으로 Supabase 채널 아님)
+
+==============================================================================
+A-4. RPC 함수 — 사용 0건 (구조적 이슈)
+==============================================================================
+DM 외에는 _supabase.rpc(...) 호출이 한 건도 없음.
+이는 단순 미사용이 아니라, DB에서 처리해야 할 집계가 모두 클라이언트로 행을
+끌어내려 처리되는 원인. A-3-2, A-3-3, A-3-4, A-3-5, A-3-6, A-3-10에 직접 영향.
+
+==============================================================================
+A-3. 쿼리 효율 — 발견 17건
+==============================================================================
+
+------------------------------------------------------------------------------
+[A-3-1] 피드 메인 — 페이지네이션 부재
+------------------------------------------------------------------------------
+파일: lib/features/feed/data/feed_repository.dart:18
+현재 코드:
+  Future<List<Post>> getPosts() async {
+    final response = await _supabase
+        .from('posts')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio,
+                 video_url, caption, fish_type, length, weight, catch_count,
+                 is_lunker, is_personal_record, review_status, location,
+                 created_at, users(username, avatar_url), post_comments(count)')
+        .isFilter('league_id', null)
+        .eq('is_personal_record', false)
+        .or('is_deleted.is.null,is_deleted.eq.false')
+        .order('created_at', ascending: false);
+
+문제점: DB Egress. .limit()/.range() 없음 → 누적된 모든 일반 피드 게시물을
+        한 번에 가져옴. ref.invalidate(feedPostsProvider)가 리그 활동 곳곳에서
+        호출되어 keepAlive 5분이 무력화됨.
+심각도: Critical
+예상 영향: 게시물 1k → 1MB+, 10k → 10MB+ 단위로 선형 증가.
+수정 방향: range(0,19) 페이지네이션 + 커서 기반 추가 fetch (lt('created_at', last)).
+리스크: pull-to-refresh / invalidate 흐름에서 첫 페이지만 재로드하도록 정리.
+
+------------------------------------------------------------------------------
+[A-3-2] 리그 누적 점수 랭킹 — 전체 데이터 클라 합산
+------------------------------------------------------------------------------
+파일: lib/features/ranking/data/ranking_repository.dart:62
+현재 코드:
+  final results = await Future.wait([
+    _supabase.from('posts')
+        .select('user_id, score, length, users!inner(username, avatar_url)')
+        .not('league_id', 'is', null)
+        .eq('is_deleted', false)
+        .eq('review_status', 'approved'),
+    _supabase.from('league_participants')
+        .select('user_id, rank_bonus, users!inner(username, avatar_url)')
+        .gt('rank_bonus', 0),
+  ]);
+
+문제점: DB Egress.
+        ① .limit() 없음
+        ② 시즌(연도) 필터 없음 — 누적 전체
+        ③ DB가 SUM/GROUP BY 가능한데 row 모두 받아 클라에서 합산
+        ④ 화면은 Top 10만 표시 (.take(10)) — 다 받고 자름
+심각도: Critical
+예상 영향: 시즌 누적되면서 리그 승인 게시물 수 × 모든 사용자 row가 매 호출.
+수정 방향: Postgres SQL 함수(RPC)로 GROUP BY user + Top N + users join 서버 집계.
+리스크: 점수 계산 함수와 DB 동기화. (score 컬럼이 이미 DB에 있어 이관 가능)
+
+------------------------------------------------------------------------------
+[A-3-3] 개인 기록 점수 랭킹 — 동일 패턴
+------------------------------------------------------------------------------
+파일: lib/features/ranking/data/ranking_repository.dart:85
+현재 코드:
+  final res = await _supabase.from('posts')
+      .select('user_id, score, length, users!inner(username, avatar_url)')
+      .eq('is_personal_record', true)
+      .eq('is_deleted', false)
+      .eq('review_status', 'approved');
+
+문제점: DB Egress. limit/시즌 필터 없음. 모든 인증된 개인기록 다운로드 후
+        클라 합산·Top 10.
+심각도: High
+예상 영향: 개인기록 게시물 수에 선형. 매 랭킹 탭 진입 시.
+수정 방향: A-3-2와 동일하게 RPC로 서버 집계 + Top N.
+
+------------------------------------------------------------------------------
+[A-3-4] 프로필 진입 시 — 다른 사람 리그 데이터까지 다운로드
+------------------------------------------------------------------------------
+파일: lib/features/profile/data/profile_repository.dart:82 (_fetchLeagueStats)
+현재 코드 (요약):
+  final participatedRes = await _supabase.from('league_participants')
+      .select('league_id, leagues(status, rule, catch_limit)')
+      .eq('user_id', userId);
+  ...
+  allPosts = await _supabase.from('posts')
+      .select('user_id, league_id, length, weight')
+      .inFilter('league_id', leagueIds)
+      .or('is_deleted.is.null,is_deleted.eq.false');
+  final allParticipants = await _supabase.from('league_participants')
+      .select('user_id, league_id')
+      .inFilter('league_id', leagueIds);
+
+문제점: DB Egress. 본인 우승 횟수/참가 횟수 통계를 위해, 본인이 참가한 모든
+        완료 리그의 모든 참가자 + 모든 게시물을 클라이언트에 끌고 와 순위 계산.
+        status 필터를 클라에서 함 → completed 외 리그까지 leagues 데이터 동반.
+심각도: Critical
+예상 영향: 10개 리그 × 평균 30명 × 평균 50게시물 ≈ 1.5만 row 다운로드.
+           프로필 1회 진입 = 매우 큰 페이로드.
+수정 방향: 우승/참가 횟수 산출 RPC (서버에서 리그별 GROUP BY/RANK).
+리스크: 우승 판정(rule/catch_limit/마릿수) 분기 SQL 정확 이식 필요.
+
+------------------------------------------------------------------------------
+[A-3-5] 마이리그 시즌 통계 — 동일 패턴 중복
+------------------------------------------------------------------------------
+파일: lib/features/my_league/data/my_league_repository.dart:52 (getSeasonStats)
+현재 코드: A-3-4와 거의 동일
+
+문제점: DB Egress. 프로필/마이리그 두 화면이 같은 구조의 무거운 fetch를 각각
+        수행 — 캐시 공유도 안 됨.
+심각도: High
+예상 영향: 프로필+마이리그 둘 다 보면 동일 비용 두 번 지불.
+수정 방향: A-3-4 RPC 재사용. 두 호출처가 결과 캐시(또는 단일 Provider) 공유.
+리스크: 두 화면 통계 정의 일치 여부 확인 (bestRank vs winCount).
+
+------------------------------------------------------------------------------
+[A-3-6] 시즌 점수 합산 — DB SUM이 클라 합산
+------------------------------------------------------------------------------
+파일: lib/features/profile/data/profile_repository.dart:51 (_fetchLeagueScore)
+       lib/features/profile/data/profile_repository.dart:176 (_fetchAnglerScore)
+현재 코드 (요약):
+  _supabase.from('posts').select('score')
+    .eq('user_id', userId).not('league_id','is',null)
+    .eq('review_status','approved')
+    .gte('created_at', seasonStart).lt('created_at', seasonEnd)
+    .or('is_deleted.is.null,is_deleted.eq.false');
+  ... fold<int>(0, (s,r) => s + ((r['score'] as int?) ?? 0));
+
+문제점: DB Egress. 점수 합산만 필요한데 row 단위 score 모두 끌고 와 클라 fold.
+심각도: Medium
+예상 영향: 시즌 게시물 100개면 약 5KB. 프로필/userProfile 진입마다 2회씩.
+수정 방향: SQL 함수로 sum(score), 또는 PostgREST select=sum(score) 검토.
+리스크: SUM 권한 RLS 처리.
+
+------------------------------------------------------------------------------
+[A-3-7] select('*') — 무거운 컬럼 동반 다운로드
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:126, :358
+현재 코드:
+  // 126
+  .from('leagues').select('*, league_participants(id), users!host_id(username, avatar_url)')
+  // 358
+  .from('posts').select('*, users(username, avatar_url)')
+
+문제점: DB Egress. CLAUDE.md에서 명시적으로 금지된 select('*').
+        leagues에는 description, intro_image_urls(배열), prize_info 등 무거운
+        컬럼 포함. posts.*도 video_url 등 미사용 필드 동반.
+심각도: High
+예상 영향: intro_image_urls 큰 경우 row당 수 KB 추가. 상세 진입마다.
+수정 방향: 화면에서 실제 쓰는 컬럼만 명시 (getLeagues 라인 142처럼).
+리스크: 누락 필드 발생 시 NPE — 컬럼 목록 신중 검토.
+
+------------------------------------------------------------------------------
+[A-3-8] league_participants(id) — ID 전체 받고 length만 사용
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:126, :142
+       lib/features/my_league/data/my_league_repository.dart:28, :35
+현재 코드 (예시):
+  .select('id, host_id, title, ..., league_participants(id), users!host_id(username)')
+  ...
+  int pCount = 0;
+  if (data['league_participants'] != null) {
+    final participants = data['league_participants'] as List;
+    pCount = participants.length;  // 길이만 씀
+  }
+
+문제점: DB Egress. 카운트만 필요한데 모든 참가자 ID 행을 함께 받아 length만 사용.
+        리그 100개 × 참가자 100명이면 응답에 1만 ID 포함.
+심각도: High
+예상 영향: 리그 목록/마이리그/리그 상세 모두 동일 패턴 4곳. 가장 빠르게 비용 폭발.
+수정 방향: PostgREST count syntax `league_participants(count)` 사용.
+           (feed_repository.dart:21의 post_comments(count)가 같은 코드베이스에
+            모범 사례로 이미 존재)
+리스크: 응답 파싱 형태가 [{count: N}]로 변경 — read 로직 수정 필요.
+
+------------------------------------------------------------------------------
+[A-3-9] leagues 목록 — 페이지네이션 부재
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:139 (getLeagues)
+현재 코드:
+  final response = await _supabase.from('leagues')
+      .select('id, host_id, ..., league_participants(id), users!host_id(username)')
+      .order('created_at', ascending: false);
+
+문제점: DB Egress. .limit() 없음. 리그 누적되면 매번 전체. A-3-8과 결합.
+심각도: High
+예상 영향: 리그 1k/10k 누적 시 매 진입 1MB+.
+수정 방향: .range() + 무한스크롤.
+리스크: league_screen.dart 무효화 로직 점검.
+
+------------------------------------------------------------------------------
+[A-3-10] 리그 랭킹 — 전체 게시물 다운로드 후 클라 집계
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:201 (getLeagueRanking)
+현재 코드 (요약):
+  // participants
+  .from('league_participants').select('user_id, users(username, avatar_url)')
+      .eq('league_id', leagueId);
+  // posts: 해당 리그 모든 approved 게시물
+  .from('posts').select('user_id, length, weight, score, fish_type, is_lunker')
+      .eq('league_id', leagueId).eq('is_deleted', false)
+      .eq('review_status', 'approved');
+
+문제점: DB Egress. 리그 게시물 수에 선형. league_detail_screen 곳곳에서
+        ref.invalidate(leagueRankingProvider(...))가 호출됨(승인/거부/참가/취소
+        모두) — keepAlive 5분이 무력화.
+심각도: High
+예상 영향: 게시물 200개 × 6컬럼 ≈ 30KB+. 액션 1회마다 invalidate.
+수정 방향: RPC로 서버 GROUP BY + 정렬·집계 → 사용자 수만큼만 응답.
+리스크: 마릿수/최대어/무게 룰 분기 SQL 정확 이식.
+
+------------------------------------------------------------------------------
+[A-3-11] 참가자 상세 — posts.* 사용
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:355 (getUserLeaguePosts)
+현재 코드:
+  .from('posts').select('*, users(username, avatar_url)')
+      .eq('league_id', leagueId).eq('user_id', userId)
+      .eq('is_deleted', false).order('created_at', ascending: false);
+
+문제점: DB Egress. * 사용으로 모든 컬럼(video_url 등) 동반. limit 없음.
+심각도: Medium
+예상 영향: 사용자당 게시물 수 × 컬럼 폭. 참가자 상세 진입마다.
+수정 방향: 명시 컬럼 + limit/페이지네이션.
+리스크: copyWith 필드 누락 주의.
+
+------------------------------------------------------------------------------
+[A-3-12] 순위 보너스 저장 — for 루프 안 PATCH (N+1 write)
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:436 (saveRankBonuses)
+현재 코드:
+  for (int i = 0; i < rankings.length; i++) {
+    final bonus = _rankBonus(i + 1, n);
+    if (bonus <= 0) continue;
+    await _supabase.from('league_participants')
+        .update({'rank_bonus': bonus, 'rank_bonus_earned_at': now})
+        .eq('league_id', leagueId).eq('user_id', rankings[i].userId);
+  }
+
+문제점: DB Egress(쓰기 응답) + 요청 수. 참가자 N명 → 직렬 PATCH N회.
+        saveRankBonuses 진입 직전 getLeagueRanking + getLeague 또 호출 — 데이터
+        재페치.
+심각도: Medium (쓰기 빈도 낮음, 리그 종료 시 1회)
+예상 영향: 리그 종료 시 참가자 수 × 1 RTT.
+수정 방향: RPC로 서버에서 보너스 계산+UPDATE 일괄. getLeagueRanking 인자로 전달.
+리스크: 룰 계산 SQL — A-3-10 RPC와 묶어 처리하면 효율적.
+
+------------------------------------------------------------------------------
+[A-3-13] 댓글 목록 — limit 없음
+------------------------------------------------------------------------------
+파일: lib/features/feed/data/feed_repository.dart:52 (getComments)
+현재 코드:
+  .from('post_comments').select('id, user_id, content, created_at,
+                                  users(username, avatar_url)')
+      .eq('post_id', postId).order('created_at', ascending: true);
+
+문제점: DB Egress. 댓글 많은 게시물에서 매 진입 전체 다운로드.
+심각도: Medium
+예상 영향: 인기 게시물 댓글 수백 개면 매 진입 수 KB.
+수정 방향: 페이지네이션(최신 N + 더보기) 또는 가상 스크롤.
+리스크: 시간 정렬·표시 로직 영향.
+
+------------------------------------------------------------------------------
+[A-3-14] 심사 탭 — 리그 전체 게시물 limit 없음
+------------------------------------------------------------------------------
+파일: lib/features/league/data/league_repository.dart:321 (getLeagueCatchesForReview)
+현재 코드:
+  .from('posts').select('id, user_id, league_id, image_url, image_urls,
+                         aspect_ratio, fish_type, length, weight, score,
+                         review_status, created_at, users(username, avatar_url)')
+      .eq('league_id', leagueId).eq('is_deleted', false)
+      .order('created_at', ascending: false);
+
+문제점: DB Egress. limit 없음. 호스트 심사 화면이라 빈도 적지만 진입마다 전체.
+심각도: Medium
+예상 영향: 리그 게시물 100개면 수십 KB.
+수정 방향: 페이지네이션 + status별(pending/held) 필터.
+리스크: 심사 흐름 UX 점검.
+
+------------------------------------------------------------------------------
+[A-3-15] 인증 대기/이력 — limit 부재
+------------------------------------------------------------------------------
+파일: lib/features/verification/data/verification_repository.dart:46 (getPendingForMe)
+       lib/features/verification/data/verification_repository.dart:84 (getAllPendingVerifications)
+현재 코드 (요약):
+  // 46: vote가 null인 모든 verification_votes + 중첩 join 모두
+  .select('verification_id, vote, catch_verifications!inner(...post!inner(..., users!inner(...))) ')
+  // 84: 모든 status=pending catch_verifications + 중첩 post + users
+
+문제점: DB Egress + 큰 join row. 미응답 누적 가능, 운영자는 전체.
+        게시물 image_url 등 무거운 필드 동반.
+심각도: Medium
+예상 영향: 미응답 vote 100개면 응답 수십 KB.
+수정 방향: limit 도입. 페이지네이션.
+리스크: 인증 우선순위 정렬 정책 점검.
+
+------------------------------------------------------------------------------
+[A-3-16] 최대어 1건 — 컬럼 과다
+------------------------------------------------------------------------------
+파일: lib/features/profile/data/profile_repository.dart:192 (_fetchMaxFishPost)
+현재 코드:
+  .from('posts').select('id, user_id, league_id, image_url, image_urls,
+                         aspect_ratio, video_url, caption, fish_type, length,
+                         weight, catch_count, is_lunker, is_personal_record,
+                         review_status, location, created_at')
+    ... .order('length', ascending: false).limit(1);
+
+문제점: DB Egress. 카드 1장인데 image_urls(배열), video_url 등 다수 컬럼 동반.
+심각도: Low
+예상 영향: row 1건이라 미미하지만 수 KB 추가 가능.
+수정 방향: 카드 표시 최소 컬럼(id, image_url, fish_type, length, location, created_at).
+리스크: Post.fromJson 누락 필드 처리 확인.
+
+------------------------------------------------------------------------------
+[A-3-17] 프로필 빌드 — 직렬 쿼리 다발
+------------------------------------------------------------------------------
+파일: lib/features/profile/data/profile_repository.dart:207 (buildMyProfileFromPosts)
+       lib/features/profile/data/profile_repository.dart:325 (buildUserProfileFromPosts)
+현재 코드 (요약):
+  final userRes = await _supabase.from('users').select(...).single();
+  final scores = await Future.wait([_fetchLeagueScore, _fetchAnglerScore]); // 2 병렬
+  final stats = await _fetchLeagueStats(userId);   // 내부 3쿼리
+  final maxFishPost = await _fetchMaxFishPost(userId);
+
+문제점: DB Egress(요청 수+합산 페이로드). 화면 1회 진입에 약 7~8 쿼리.
+        stats/maxFish 직렬 + 각각 무거움(특히 _fetchLeagueStats).
+심각도: Medium
+예상 영향: 프로필 진입 시 8 RTT × 평균 응답.
+수정 방향: 단일 RPC get_user_profile_summary(user_id)로 통계·최대어·점수 일괄.
+리스크: RLS/권한 SQL 함수에서 명시.
+
+==============================================================================
+이미 잘 된 부분 (참고)
+==============================================================================
+- feed_repository.dart:21 — post_comments(count): PostgREST count 패턴 ✓
+  (A-3-8 수정 시 동일 패턴 활용)
+- ranking_repository.dart:48 getTopRankings: .limit(10) ✓
+- verification_repository.dart:195 getMyVerificationHistory: .limit(30) ✓
+- my_league_repository.dart:65, profile_repository.dart:201: .limit(1) ✓
+- 대부분의 select가 컬럼 명시형 ✓
+- Repository 패턴 + Riverpod keepAlive 5분/3분 적용 다수 ✓
+
+==============================================================================
+A 카테고리 요약
+==============================================================================
+| 검사 영역      | 검사 파일 수 | 발견 | Critical | High | Medium | Low |
+|---------------|------------|------|---------|------|--------|-----|
+| A-1 stream    | 9 repos    | 0    | 0       | 0    | 0      | 0   |
+| A-2 channel   | 9 repos    | 0    | 0       | 0    | 0      | 0   |
+| A-3 query     | 9 repos    | 17   | 4       | 6    | 6      | 1   |
+| A-4 RPC       | 9 repos    | 0(*) | —       | —    | —      | —   |
+| 합계          | —          | 17   | 4       | 6    | 6      | 1   |
+(*) 구조적 부재로 A-3 다수 항목의 근본 원인
+
+핵심 메시지:
+- 가장 큰 DB Egress 누수 원인은
+  ① "DB가 집계해야 할 데이터를 row 단위로 클라에 다운로드해 처리"
+     (랭킹/시즌통계/프로필통계)
+  ② 페이지네이션 부재 (피드/리그목록)
+  두 축임.
+- N+1 SELECT는 거의 없음 (쓰기 N+1은 saveRankBonuses 1건).
+- Realtime/채널 누수는 DM 외에는 없음.
+
+==============================================================================

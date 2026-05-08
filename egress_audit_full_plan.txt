@@ -1,0 +1,967 @@
+==============================================================================
+HUK 낚시 대회 앱 — 데이터 사용량 개선 작업 상세 계획 (통합본)
+범위: A 잔여 + B + C(없음) + D + E + F + G(없음) + H
+대상: lib/ 전체 (DM 제외)
+A-3-1 (피드 페이지네이션) 이미 해결됨 (commit 63e5b3e)
+작성일: 2026-05-07
+==============================================================================
+
+[ 진행 원칙 ]
+- 한 Group 끝 → develop 푸시 → Supabase 대시보드 측정 → 다음 진행 결정
+- Group 내부도 sub-step 별 commit (롤백 단위 잘게)
+- 각 sub-step 후 flutter analyze 통과 확인 (필수)
+- UI 동반 변경은 실기기 검증 필수 (β/γ/F)
+- SQL 변경은 Supabase Studio에서 함수 테스트 후 클라 적용
+- 사용자가 명시 요청 전엔 main 푸시·빌드 번호 변경 금지
+- 본 계획은 모두 적용 후 정식 배포 시점을 가정
+
+==============================================================================
+0. 사전 점검 (작업 시작 전 반드시)
+==============================================================================
+
+0.1 Supabase 대시보드 측정값 기록
+  - Reports → API Egress 일일 평균 (MB)
+  - Reports → Storage Bandwidth 일일 평균 (MB)
+  - Reports → Database Size
+  - 현재 Plan (Free/Pro/Team)
+  - 기록 위치: 별도 메모 또는 본 파일 하단
+
+0.2 Image Transformation 가능 여부
+  - Settings → Storage → Image Transformation 토글 확인
+  - Pro 플랜 이상 필요할 수 있음
+  - 결과:
+    □ 가능 → Group β 그대로
+    □ 불가 → Group β 대신 Group ε(썸네일 분리)
+
+0.3 백업 / 브랜치 정책
+  - 현재 develop 브랜치
+  - 각 Group 작업은 develop 위에서 직접 커밋 (작은 단위라 별도 브랜치 불필요)
+  - 큰 변경 (Group δ3 등)은 별도 브랜치 권장
+
+0.4 Supabase 마이그레이션 폴더 확인
+  - 프로젝트에 supabase/migrations/ 존재 여부
+  - 없으면 SQL 변경 내용은 별도 .sql 파일로 보관
+
+==============================================================================
+GROUP α — 한 줄짜리 묶음 (예상: 0.5~1일 / 위험: 낮음)
+==============================================================================
+"코드 한 줄~몇 줄짜리" 변경만 모음. 여러 카테고리 동시 처리.
+영향 범위 좁고 즉시 효과. 사용자 수와 무관하게 모든 호출에 적용됨.
+
+해결 항목: A-3-7, A-3-8, A-3-13, A-3-14, A-3-15, A-3-16, B-1-1, D-1-1, E-5/H-2, F-1
+순효과: Critical 0, High 5, Medium 4, Low 2
+
+------------------------------------------------------------------------------
+α-1. select('*') 정리   (A-3-7, A-3-11, A-3-16)
+------------------------------------------------------------------------------
+대상:
+  ① lib/features/league/data/league_repository.dart:126 (getLeague)
+  ② lib/features/league/data/league_repository.dart:358 (getUserLeaguePosts)
+  ③ lib/features/profile/data/profile_repository.dart:192 (_fetchMaxFishPost)
+
+작업:
+  - ① getLeague: 라인 142 getLeagues의 컬럼 목록을 기준으로
+    상세 화면에 필요한 컬럼만 추가 명시 (description, intro_image_urls,
+    prize_info, fish_types, is_public, allow_gallery, lat, lng,
+    rule, catch_limit 등)
+  - ② getUserLeaguePosts: 라인 324 getLeagueCatchesForReview의 select 목록 참고
+    (id, user_id, league_id, image_url, image_urls, aspect_ratio, fish_type,
+     length, weight, score, review_status, created_at, users(...))
+  - ③ _fetchMaxFishPost: 카드 1장 표시에 필요한 최소 컬럼 (id, image_url,
+    fish_type, length, location, created_at) — Post.fromJson 영향 검증
+
+영향 화면:
+  - 리그 상세 화면
+  - 리그 참가자 상세 화면 (게시물 카드)
+  - 프로필 화면 최대어 카드
+
+검증:
+  □ 각 화면 정상 표시 확인
+  □ Post.fromJson / League.fromJson 누락 필드 NPE 없는지 (실기기)
+  □ flutter analyze 통과
+
+커밋: 파일별 1커밋 (총 3커밋)
+시간: 30~60분
+
+------------------------------------------------------------------------------
+α-2. league_participants(count) 패턴 통일   (A-3-8)
+------------------------------------------------------------------------------
+대상:
+  ① league_repository.dart:126 (getLeague)
+  ② league_repository.dart:142 (getLeagues)
+  ③ my_league_repository.dart:28 (getMyLeagues hosted)
+  ④ my_league_repository.dart:35 (getMyLeagues participated)
+
+작업:
+  - 모든 league_participants(id) → league_participants(count)
+  - 응답 파싱부의 (data['league_participants'] as List).length 를
+    응답이 [{count: N}] 형태로 변경됨에 맞춰 수정
+  - 모범 사례: feed_repository.dart:21 의 post_comments(count) 라인 34
+    근처 (commentsData[0]['count'] 패턴)
+  - hosted/participated 두 경로 모두 동일 적용
+
+영향 화면:
+  - 리그 목록 (참가자 N명 표시)
+  - 리그 상세 (참가자 수)
+  - 마이리그 호스트한/참가한 두 탭의 카드
+
+검증:
+  □ 각 화면의 "참가자 N명" 숫자 정상
+  □ 0명 리그도 "0명" 표시 (응답이 [{count: 0}] 인 경우)
+  □ 참가 신청/취소 후 카운트 갱신 정상
+  □ flutter analyze 통과
+
+커밋: 4곳 모두 한 커밋 (한 패턴 통일이 본질)
+시간: 30~60분
+
+------------------------------------------------------------------------------
+α-3. limit 추가 안전망   (A-3-13, A-3-14, A-3-15)
+------------------------------------------------------------------------------
+대상:
+  ① feed_repository.dart:52 (getComments)        → limit(50)
+  ② league_repository.dart:321 (getLeagueCatchesForReview) → limit(100)
+  ③ verification_repository.dart:46 (getPendingForMe)      → limit(50)
+  ④ verification_repository.dart:84 (getAllPendingVerifications) → limit(100)
+
+작업:
+  - 각 쿼리 끝에 .limit(N) 추가만
+  - 페이지네이션 UI는 별도 작업 (당장 갯수 자체가 적은 영역)
+
+영향 화면:
+  - 게시물 댓글 화면
+  - 호스트 심사 탭
+  - 인증 화면
+
+검증:
+  □ 평소 사용 흐름에서 잘림 없는지 (50개 미만 댓글에서 모두 보이는지)
+  □ flutter analyze 통과
+
+커밋: 4곳 한 커밋
+시간: 15~30분
+
+------------------------------------------------------------------------------
+α-4. NetworkImage → CachedNetworkImage   (B-1-1)
+------------------------------------------------------------------------------
+대상:
+  ① league_create_screen.dart:539 (DecorationImage 안)
+  ② league_create_screen.dart:1249 (DecorationImage 안)
+
+작업:
+  - DecorationImage(image: NetworkImage(url)) →
+    DecorationImage(image: CachedNetworkImageProvider(url))
+  - import 'package:cached_network_image/cached_network_image.dart' 확인
+
+영향 화면: 리그 생성/수정 미리보기 (사용 빈도 낮음)
+검증:
+  □ 미리보기 정상 표시
+  □ flutter analyze 통과
+
+커밋: 1커밋
+시간: 10분
+
+------------------------------------------------------------------------------
+α-5. keepAlive 누락 일괄 추가   (D-1-1)
+------------------------------------------------------------------------------
+대상 Provider (15개+, 각 파일에 흩어짐):
+
+  파일: lib/features/profile/data/profile_repository.dart
+    - myProfile (라인 403)        → 3분 (프로필류)
+    - myPosts (라인 411)          → 5분 (리스트류)
+    - myPersonalRecords (라인 416)→ 5분
+    - userPosts (라인 430)        → 5분
+
+  파일: lib/features/ranking/data/ranking_repository.dart
+    - topRankings (라인 157)            → 5분 (글로벌 랭킹)
+    - leagueScoreRanking (라인 162)     → 5분
+    - personalScoreRanking (라인 167)   → 5분
+
+  파일: lib/features/league/data/league_repository.dart
+    - myJoinedLeagues (라인 538)        → 5분 (리스트)
+    - leagueUserPostsProvider (라인 558) → 5분
+    - leaguePendingProvider (라인 566)   → 3분 (호스트가 자주 봄)
+    - leagueCatchesForReviewProvider (라인 579) → 3분
+
+  파일: lib/features/my_league/data/my_league_repository.dart
+    - myLeagues (라인 190)        → 5분
+
+  파일: lib/features/verification/data/verification_repository.dart
+    - isAdminUser (라인 221)            → 10분 (거의 안 변함)
+    - myPendingVerifications (라인 233) → 3분
+    - myVerificationHistory (라인 246)  → 5분
+
+작업:
+  - 각 @riverpod Future 함수 또는 family Provider 안에 다음 패턴 추가:
+      final link = ref.keepAlive();
+      Timer(const Duration(minutes: N), link.close);
+  - 기존 keepAlive 적용된 Provider들과 동일한 패턴
+  - import 'dart:async' (Timer) 추가 필요한 파일 확인
+
+영향 범위: 화면 재진입 시 즉시 재페치 → N분간 캐시 유지
+
+검증:
+  □ flutter analyze 통과
+  □ build_runner 재실행 (Provider 시그니처 변경은 없으나 안전 위해)
+  □ 각 화면 진입 → 다른 화면 → 빠르게 재진입 시 깜빡임 없는지 확인
+
+리스크: 캐시 stale 가능성 — invalidate 호출처 그대로면 문제 없음
+       (107회 invalidate 호출처 모두 변경 없이 동작)
+
+커밋: 파일별로 묶어 5커밋 (5 repository)
+시간: 1~2시간
+
+------------------------------------------------------------------------------
+α-6. _refreshAll 범위 축소   (F-1)
+------------------------------------------------------------------------------
+대상: lib/features/league/presentation/screens/league_detail_screen.dart:79~113
+
+현재:
+  void _refreshAll() {
+    ref.invalidate(leagueDetailProvider(widget.league.id));
+    ref.invalidate(isJoinedProvider(widget.league.id));
+    ref.invalidate(leagueRankingProvider(widget.league.id));   // 무거움
+    if (_isHost && widget.league.status == 'in_progress') {
+      ref.invalidate(leagueCatchesForReviewProvider(widget.league.id));
+    }
+  }
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshAll();
+  }
+
+작업 (옵션 A: 디바운스 + 랭킹 제외 — 권장):
+  - State 클래스에 DateTime? _lastRefresh 필드 추가
+  - resume 시: 마지막 refresh 후 5분 미만이면 skip
+  - leagueRankingProvider invalidate 제거 — 사용자가 랭킹 탭 클릭 시
+    탭 위젯 build에서 자연 갱신되도록 (이미 ref.watch 사용 중)
+  - 또는 leagueRankingProvider만 별도 정책 (10분 디바운스)
+
+작업 (옵션 B: 단순 — 랭킹만 제외):
+  - _refreshAll에서 leagueRankingProvider 줄만 제거
+
+권장: 옵션 B로 시작. 효과 측정 후 부족하면 A.
+
+영향 화면: 리그 상세 화면 백그라운드↔포그라운드 전환
+
+검증:
+  □ 리그 상세 진입 → 다른 앱 보고 와서 데이터 stale 아닌지
+  □ 사용자가 랭킹 탭 클릭 시 정상 갱신
+  □ 호스트의 심사 탭 정상 갱신 (resumed에서 invalidate 유지)
+
+리스크: 사용자가 진행중 리그에서 정보 stale — pull-to-refresh 가능하면 OK
+
+커밋: 1커밋
+시간: 30분
+
+------------------------------------------------------------------------------
+α-7. authStateProvider watch 정리   (E-5/H-2)
+------------------------------------------------------------------------------
+대상:
+  ① lib/features/profile/data/profile_repository.dart:406 (myProfile)
+  ② lib/features/my_league/data/my_league_repository.dart:192 (myLeagues)
+  ③ lib/features/my_league/data/my_league_repository.dart:198 (mySeasonStats)
+
+현재:
+  Future<UserProfile> myProfile(MyProfileRef ref) async {
+    ref.watch(authStateProvider);  // TOKEN_REFRESHED도 트리거
+    ...
+  }
+
+작업 옵션 A (간단 — 권장):
+  - ref.watch(authStateProvider) → ref.watch(currentUserProvider)?.id
+  - currentUserProvider는 동기 Provider라 user.id가 안 변하면 rebuild 안 함
+  - SIGNED_IN/SIGNED_OUT 시에만 user 객체 변경 → rebuild
+
+작업 옵션 B (별도 stream):
+  - 별도 signedAuthStateProvider 만들어 SIGNED_IN/SIGNED_OUT만 emit
+  - 코드량 ↑
+
+권장: 옵션 A.
+
+영향: 프로필/마이리그/시즌통계가 토큰 갱신(1시간 주기) 시 더 이상 자동 재페치 안 됨.
+      (signedOut 시 ProviderScope 재생성으로 어차피 리셋되므로 안전)
+
+검증:
+  □ 로그인 → 프로필 표시
+  □ 로그아웃 → 다시 로그인 → 프로필 정상 표시
+  □ 앱 1시간+ 켜놓고 추적 (선택)
+  □ flutter analyze 통과
+
+리스크: 로그인 직후 user 정보 변경(예: username 수정) 시 재페치 안 됨.
+       단 username 수정은 ref.invalidate 직접 호출 흐름이라 OK.
+
+커밋: 3 변경 한 커밋 (한 패턴)
+시간: 30분
+
+------------------------------------------------------------------------------
+GROUP α 완료 후
+------------------------------------------------------------------------------
+□ flutter analyze 전체 통과
+□ build_runner 재실행 (시그니처 변경 거의 없으나 안전)
+□ 실기기 회귀 (피드/프로필/리그/마이리그/검증 화면 한 번씩)
+□ Supabase 대시보드 측정값 기록 (24~48시간 추이)
+□ Group β 진행 결정
+
+==============================================================================
+GROUP β — 이미지 사이즈 변환 (예상: 1일 / 위험: 중)
+==============================================================================
+조건: 0.2 Image Transformation 가능. 불가 시 Group ε로 우회.
+
+해결 항목: B-2-1, B-2-2
+순효과: Critical 1, Medium 1
+영향: Storage Egress 75%+ 절감 가능 (가장 큰 단일 효과)
+
+------------------------------------------------------------------------------
+β-1. URL 변환 헬퍼 작성
+------------------------------------------------------------------------------
+대상: lib/core/utils/image_url.dart (신규 — 사용자 사전 동의 필요)
+
+작업 흐름:
+  - Supabase Storage public URL은
+      https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+    형태. Image transformation은
+      https://{project}.supabase.co/storage/v1/render/image/public/{bucket}/{path}?width=...&quality=...
+    경로로 호출.
+  - 헬퍼 함수: 원본 URL → render URL 변환 + width/quality 파라미터 부착
+  - 빈 URL/이미 render인 URL/외부 URL은 원본 반환 (안전)
+  - 디바이스 픽셀 비율 옵션도 고려 (선택, 단순화 위해 width 인자 1개로 시작)
+
+신규 파일이라 사용자 사전 동의 필요. CLAUDE.md "새 통합 위젯 추가 시 사용자에게
+먼저 확인" 규칙 준수.
+
+검증:
+  □ 단위 테스트 또는 디버그 출력으로 변환 결과 확인
+  □ 외부 URL(https://example.com/...) 통과 확인
+
+커밋: 1커밋 (헬퍼 추가)
+시간: 30분
+
+------------------------------------------------------------------------------
+β-2. UserAvatar 적용
+------------------------------------------------------------------------------
+대상: lib/core/widgets/user_avatar.dart:36
+
+작업:
+  - radius * 2 * devicePixelRatio 정도로 width 산출 (예: radius=24 → 144px)
+  - imageUrl: resizedUrl(url, width: 160) 형태 호출
+  - memCacheWidth/Height: 같은 값 지정
+
+영향: 모든 화면의 아바타 (피드/리그/프로필/DM 외)
+
+검증:
+  □ 각 화면 아바타 정상 표시 (흐림 없음)
+  □ 작은 아바타에서도 선명한지 (Retina 대응)
+  □ 외부 URL 아바타(있다면) 정상
+
+커밋: 1커밋
+시간: 20분
+
+------------------------------------------------------------------------------
+β-3. PostImageCarousel 적용
+------------------------------------------------------------------------------
+대상: lib/features/feed/presentation/widgets/post_image_carousel.dart:185 (_NetImage)
+
+작업:
+  - LayoutBuilder로 실제 너비 측정 또는 화면 너비 기준
+  - 피드 메인은 보통 화면 폭 (350~500px). 1.5배 마진 두고 width: 800 정도.
+  - resizedUrl(url, width: 800) + memCacheWidth: 800
+  - 단일 _NetImage 위젯 변경으로 PageView/단일 이미지 모두 적용
+
+영향: 피드 메인, 포스트 상세, 모든 게시물 이미지 카드
+
+검증:
+  □ 피드에서 이미지 선명도 (확대 시 흐림 없음)
+  □ 포스트 상세에서 줌 시 흐림 정도 (필요 시 상세는 별도 사이즈)
+  □ AspectRatio 영향 없음
+
+커밋: 1커밋
+시간: 30분
+
+------------------------------------------------------------------------------
+β-4. 나머지 위젯들 적용
+------------------------------------------------------------------------------
+대상 (12곳, 각각 사용 사이즈 다름):
+  ① league_detail_screen.dart:620 (intro 이미지 — 큼)
+  ② league_detail_screen.dart:699 (intro)
+  ③ catch_review_detail_screen.dart:103 (조과 상세 — 큼)
+  ④ league_participant_detail_screen.dart:427 (조과 카드)
+  ⑤ catch_review_item.dart:53 (썸네일 — 작음)
+  ⑥ album_bundle_share_screen.dart:181, 233 (썸네일)
+  ⑦ personal_record_detail_screen.dart:221 (상세 — 큼)
+  ⑧ my_league_screen.dart:754 (썸네일)
+  ⑨ verification_detail_screen.dart:84 (조과 상세 — 큼)
+  ⑩ verification_tab.dart:127 (썸네일)
+  ⑪ profile_screen.dart:426 (프로필 헤더 — 중간)
+  ⑫ profile_edit_screen.dart:250 (프로필 헤더)
+  ⑬ user_profile_screen.dart:397 (프로필 헤더)
+  ⑭ feed_video_player.dart:188 (썸네일 — 중간)
+  ⑮ upload_screen.dart:587 (편집 미리보기 — 작음)
+
+권장 사이즈:
+  - 작은 썸네일/아바타: 200
+  - 중간 (프로필 헤더, 비디오 썸네일): 400
+  - 큰 카드 (피드, 리그 인트로): 800
+  - 풀스크린 상세: 1200
+
+영향: 모든 이미지 표시 화면
+
+검증:
+  □ 각 화면 별 시각 확인 — 흐림 없는지
+  □ 위 사이즈 매트릭스가 화면별로 적정한지
+
+커밋: 화면별 또는 카테고리별 묶음 (3~5 커밋 권장)
+시간: 2~3시간
+
+------------------------------------------------------------------------------
+GROUP β 완료 후
+------------------------------------------------------------------------------
+□ flutter analyze 전체 통과
+□ 실기기 모든 이미지 표시 화면 회귀
+□ Supabase 대시보드 Storage Bandwidth 측정 — 큰 폭 감소 예상
+□ Group γ 진행 결정
+
+==============================================================================
+GROUP γ — 리그 목록 페이지네이션 (예상: 0.5일 / 위험: 중)
+==============================================================================
+A-3-1과 동일 패턴. 빠르게 처리.
+
+해결 항목: A-3-9
+순효과: High 1
+
+------------------------------------------------------------------------------
+γ-1. Repository 시그니처 변경
+------------------------------------------------------------------------------
+대상: lib/features/league/data/league_repository.dart:139 (getLeagues)
+
+작업 (A-3-1과 동일 패턴):
+  - getLeagues({int limit = 20, DateTime? before}) 시그니처
+  - before 있으면 .lt('created_at', ...) 필터
+  - .limit(limit) 추가
+  - kLeagueListPageSize 상수 (값 20)
+
+커밋: 1커밋
+시간: 20분
+
+------------------------------------------------------------------------------
+γ-2. leaguesProvider Notifier화
+------------------------------------------------------------------------------
+대상: lib/features/league/data/league_repository.dart:531
+
+작업 (feed FeedPosts와 동일 패턴):
+  - @riverpod class Leagues extends _$Leagues
+  - bool _hasMore, _loading, build, loadMore
+  - keepAlive 5분 유지
+
+커밋: 1커밋 (build_runner 결과 포함)
+시간: 30분
+
+------------------------------------------------------------------------------
+γ-3. league_screen.dart 무한스크롤
+------------------------------------------------------------------------------
+대상: lib/features/league/presentation/screens/league_screen.dart:135
+
+작업 (feed_screen.dart와 동일 패턴):
+  - ScrollController 추가
+  - 끝 도달 시 ref.read(leaguesProvider.notifier).loadMore()
+  - SliverList 아래 hasMore일 때 로딩 인디케이터
+
+영향 화면: 리그 목록
+
+검증:
+  □ 첫 진입 20개 표시
+  □ 스크롤 시 추가 20개 자동 로드
+  □ pull-to-refresh 정상
+  □ 리그 생성/수정/삭제 후 목록 갱신
+  □ 빈 상태 처리
+
+커밋: 1커밋
+시간: 30~60분
+
+------------------------------------------------------------------------------
+GROUP γ 완료 후
+------------------------------------------------------------------------------
+□ flutter analyze 통과
+□ 실기기: 리그 목록 무한스크롤 / refresh / 액션 후 갱신
+□ Group δ1 진행
+
+==============================================================================
+GROUP δ1 — 시즌 점수 랭킹 RPC (예상: 1~2일 / 위험: 중)
+==============================================================================
+SQL 함수 첫 도입. 가장 단순한 RPC부터.
+
+해결 항목: A-3-2, A-3-3
+순효과: Critical 1, High 1
+
+------------------------------------------------------------------------------
+δ1-1. SQL 함수 작성
+------------------------------------------------------------------------------
+도구: Supabase Studio → SQL Editor
+
+작성 함수 (개념만):
+  - get_league_score_ranking(top_n int default 10, season_year int default null)
+    반환 셋: user_id uuid, username text, avatar_url text, total_score int
+    내부:
+      WITH catch_scores AS (
+        SELECT user_id, COALESCE(SUM(score), 0) AS s FROM posts
+        WHERE league_id IS NOT NULL AND review_status='approved'
+              AND COALESCE(is_deleted, false) = false
+              AND (season_year IS NULL OR
+                   created_at >= ... AND created_at < ...)
+        GROUP BY user_id
+      ),
+      bonus_scores AS (
+        SELECT user_id, COALESCE(SUM(rank_bonus), 0) AS s
+        FROM league_participants
+        WHERE rank_bonus > 0 AND ... 시즌 필터 ...
+        GROUP BY user_id
+      )
+      SELECT u.id, u.username, u.avatar_url,
+             COALESCE(c.s, 0) + COALESCE(b.s, 0) AS total
+      FROM users u
+      LEFT JOIN catch_scores c ON c.user_id = u.id
+      LEFT JOIN bonus_scores b ON b.user_id = u.id
+      WHERE COALESCE(c.s, 0) + COALESCE(b.s, 0) > 0
+      ORDER BY total DESC
+      LIMIT top_n;
+
+  - get_personal_score_ranking(top_n int default 10, season_year int default null)
+    반환 셋: user_id, username, avatar_url, total_score
+    내부: posts where is_personal_record=true and approved → SUM(score) 그룹
+
+권한:
+  - SECURITY INVOKER (호출자 권한 — RLS 적용)
+  - 또는 SECURITY DEFINER + 내부 권한 검사 (단순화 시)
+  - GRANT EXECUTE TO authenticated, anon
+
+저장:
+  - supabase/migrations/ 폴더 있으면 마이그레이션 파일로
+  - 없으면 별도 .sql 파일 + 본 계획 파일에 적용 사실 명시
+
+테스트 (Supabase Studio):
+  □ 테스트 데이터로 select * from get_league_score_ranking(10) 실행
+  □ 기존 클라 결과(getLeagueScoreRanking)와 Top 10 비교
+  □ 동점자 처리, 0점 사용자 제외, 시즌 경계 정확
+
+시간: 2~4시간 (테스트 포함)
+
+------------------------------------------------------------------------------
+δ1-2. 동등성 비교 로깅 (임시)
+------------------------------------------------------------------------------
+대상: lib/features/ranking/data/ranking_repository.dart
+
+작업:
+  - getLeagueScoreRanking 안에 RPC 호출 추가, 기존 결과와 비교 후 debugPrint
+  - 임시 코드라 별도 PR 또는 같은 PR이지만 후속 PR에서 제거
+
+목적: 운영 데이터에서 새 RPC가 기존과 동일 결과인지 확인.
+
+검증:
+  □ 일반 사용자 / 호스트 / 운영자 케이스에서 결과 일치
+  □ 시즌 경계 (작년 12월 → 올해 1월) 데이터 일치
+
+시간: 30~60분
+
+------------------------------------------------------------------------------
+δ1-3. RPC 전환
+------------------------------------------------------------------------------
+대상: lib/features/ranking/data/ranking_repository.dart:62, 85
+
+작업:
+  - getLeagueScoreRanking → _supabase.rpc('get_league_score_ranking', params)
+  - getPersonalScoreRanking → _supabase.rpc('get_personal_score_ranking', params)
+  - _calcScore, _mergeRows, _buildEntries 등 클라 합산 함수 제거
+  - 응답 매핑만 단순하게
+
+영향 화면: lib/features/ranking/presentation/screens/ranking_screen.dart
+검증:
+  □ Top 10 결과 동등 (δ1-2 비교 로깅 결과 OK 후)
+  □ 응답 시간 측정 (RPC가 더 빠른지)
+  □ 빈 결과 / null 처리
+
+커밋: 2 변경 별도 커밋
+시간: 1시간
+
+------------------------------------------------------------------------------
+δ1-4. 비교 로깅 제거
+------------------------------------------------------------------------------
+대상: δ1-2에서 추가한 임시 코드
+작업: 제거. 별도 커밋.
+시간: 10분
+
+------------------------------------------------------------------------------
+GROUP δ1 완료 후
+------------------------------------------------------------------------------
+□ flutter analyze 통과
+□ 랭킹 화면 회귀 — 모든 탭
+□ Supabase 대시보드 → Database 응답 시간 측정
+□ Group δ2 진행
+
+==============================================================================
+GROUP δ2 — 리그 랭킹 RPC + 보너스 저장 (예상: 1~2일 / 위험: 중)
+==============================================================================
+해결 항목: A-3-10, A-3-12
+순효과: High 1, Medium 1
+
+------------------------------------------------------------------------------
+δ2-1. get_league_ranking SQL
+------------------------------------------------------------------------------
+도구: Supabase Studio
+함수 (개념): get_league_ranking(p_league_id uuid)
+  반환: user_id, username, avatar_url, best_length, total_length,
+        total_count, total_score, best_score, fish_type, is_lunker
+  내부:
+    - leagues에서 rule, catch_limit 가져옴
+    - league_participants에서 사용자 목록
+    - posts 중 league_id = p_league_id, approved, !deleted
+    - rule(최대어/무게/마릿수) + catch_limit 분기 SQL 작성
+    - 클라의 league_repository.dart:201~317 로직 이식
+    - 동점자 처리 (마릿수 → 최고점수)
+
+테스트:
+  □ 진행중/완료 리그 각 1개 이상으로 결과 비교
+  □ 룰별로 다른 리그 선택해 검증
+
+시간: 3~5시간
+
+------------------------------------------------------------------------------
+δ2-2. 클라 getLeagueRanking → RPC
+------------------------------------------------------------------------------
+대상: league_repository.dart:201~318
+작업:
+  - getLeagueRanking 본문을 _supabase.rpc('get_league_ranking', {...})로 교체
+  - LeagueRankEntry 매핑은 유지
+
+검증:
+  □ league_ranking_tab, league_detail_screen, league_manage_screen에서 결과 동일
+  □ 마릿수/최대어/무게 룰 각각 확인
+
+커밋: 1커밋
+시간: 1시간
+
+------------------------------------------------------------------------------
+δ2-3. save_league_rank_bonuses SQL
+------------------------------------------------------------------------------
+도구: Supabase Studio
+함수: save_league_rank_bonuses(p_league_id uuid)
+  내부:
+    - get_league_ranking 호출
+    - 클라의 _rankBonus(rank, participantCount) 산식(라인 457~473) SQL 이식
+    - league_participants WHERE league_id = p_league_id 일괄 UPDATE
+      (case when ... 으로 rank_bonus 계산)
+    - rank_bonus_earned_at NOW()
+
+테스트:
+  □ 테스트 리그에서 함수 호출 후 league_participants 확인
+  □ 참가자 수에 따른 base, rank multiplier 정확
+
+시간: 2시간
+
+------------------------------------------------------------------------------
+δ2-4. 클라 saveRankBonuses → RPC
+------------------------------------------------------------------------------
+대상: league_repository.dart:436~455
+작업:
+  - saveRankBonuses 함수를 _supabase.rpc('save_league_rank_bonuses', ...) 한 줄
+  - for 루프 + N+1 PATCH 제거
+  - getLeagueRanking + getLeague 사전 호출도 제거 (RPC가 알아서 함)
+  - _rankBonus 클라 함수는 제거 또는 deprecated 표시
+
+검증:
+  □ 리그 종료 처리 후 참가자 rank_bonus 정확
+  □ 사용자별 시즌 점수에 반영되는지
+
+커밋: 1커밋
+시간: 30~60분
+
+------------------------------------------------------------------------------
+GROUP δ2 완료 후
+------------------------------------------------------------------------------
+□ 리그 상세/관리/참가자 상세 회귀
+□ 리그 종료 → 보너스 저장 흐름 한 번 통합 테스트
+□ Group δ3 진행
+
+==============================================================================
+GROUP δ3 — 프로필/시즌 통계 RPC (예상: 2~3일 / 위험: 중~상)
+==============================================================================
+가장 복잡한 RPC. 우승 판정 SQL이 까다로움.
+
+해결 항목: A-3-4, A-3-5, A-3-6, A-3-11(부수), A-3-17
+순효과: Critical 1, High 1, Medium 3
+
+------------------------------------------------------------------------------
+δ3-1. get_user_profile_summary SQL
+------------------------------------------------------------------------------
+도구: Supabase Studio
+함수: get_user_profile_summary(p_user_id uuid)
+  반환 (1행):
+    id, email, username, user_key, avatar_url,
+    manner_temperature, is_lunker_club,
+    league_score, angler_score,
+    participation_count, win_count,
+    max_fish_id, max_fish_image_url, max_fish_length,
+    max_fish_fish_type, max_fish_location, max_fish_created_at
+  내부:
+    - users에서 프로필 정보
+    - posts SUM(score) 시즌 필터 — league 게시물 (league_score)
+    - posts SUM(score) — 개인기록 (angler_score)
+    - league_participants 참가했던 모든 리그 → status='completed' 필터
+    - 각 완료 리그에서 본인 우승 여부 판정 (룰 분기 SQL)
+      — 가장 까다로운 부분
+    - posts 최대어 1행
+
+  우승 판정 SQL (개념):
+    WITH user_leagues AS (
+      SELECT lp.league_id, l.rule, l.catch_limit
+      FROM league_participants lp
+      JOIN leagues l ON l.id = lp.league_id
+      WHERE lp.user_id = p_user_id AND l.status = 'completed'
+    ),
+    league_user_scores AS (
+      -- 각 리그의 모든 사용자 점수 계산
+      SELECT ul.league_id, p.user_id,
+             CASE WHEN ul.rule = '마릿수' THEN COUNT(*)
+                  ELSE -- top catch_limit 합산
+             END AS user_score
+      FROM user_leagues ul
+      JOIN posts p ON p.league_id = ul.league_id
+            AND p.review_status = 'approved'
+            AND COALESCE(p.is_deleted, false) = false
+      GROUP BY ul.league_id, p.user_id, ul.rule
+    ),
+    league_winners AS (
+      SELECT league_id, user_id,
+             RANK() OVER (PARTITION BY league_id ORDER BY user_score DESC) AS rk
+      FROM league_user_scores
+    )
+    SELECT COUNT(*) FILTER (WHERE rk = 1 AND user_id = p_user_id) AS win_count,
+           COUNT(DISTINCT league_id) AS participation_count
+    FROM league_winners;
+
+  ※ "마릿수" 외 룰의 top catch_limit 합산은 lateral join + DENSE_RANK + LIMIT
+    또는 CTE 분해. 실제 작성 시 클라 기존 로직과 결과 비교 필수.
+
+테스트:
+  □ 운영 사용자 5~10명 대상 RPC 결과 vs 기존 클라 결과 비교
+  □ 시즌 경계 데이터
+  □ 0개 리그 사용자 / 1리그만 참가 / 다리그 참가 케이스
+
+시간: 6~10시간 (가장 큰 작업)
+
+------------------------------------------------------------------------------
+δ3-2. 동등성 비교 로깅 (임시)
+------------------------------------------------------------------------------
+대상: profile_repository.dart 내부에서 RPC 호출 + 기존 결과 비교 debugPrint
+
+목적: 우승 판정 정확성 검증.
+시간: 1시간
+
+------------------------------------------------------------------------------
+δ3-3. 클라 buildMyProfileFromPosts / buildUserProfileFromPosts → RPC
+------------------------------------------------------------------------------
+대상: profile_repository.dart:207, 325
+
+작업:
+  - 두 함수를 _supabase.rpc('get_user_profile_summary', ...) 한 번 호출로 단순화
+  - _fetchLeagueScore, _fetchAnglerScore, _fetchLeagueStats, _fetchMaxFishPost
+    삭제 (또는 deprecated 표시 후 다음 PR에서 삭제)
+
+영향 화면:
+  - lib/features/profile/presentation/screens/profile_screen.dart
+  - lib/features/profile/presentation/screens/user_profile_screen.dart
+
+검증:
+  □ 내 프로필: 점수, 우승, 참가, 최대어 정상
+  □ 다른 사람 프로필: 같은 항목 정상
+  □ 시즌 경계 사용자
+
+커밋: 1~2커밋 (RPC 호출 추가 + 기존 함수 제거 분리)
+시간: 1~2시간
+
+------------------------------------------------------------------------------
+δ3-4. get_my_season_stats SQL
+------------------------------------------------------------------------------
+도구: Supabase Studio
+함수: get_my_season_stats(p_user_id uuid)
+  반환 (1행): best_rank, max_fish_length
+
+  내부: my_league_repository.dart:52~174 의 getSeasonStats 로직 이식.
+       δ3-1과 SQL 일부 공유 가능 (CTE).
+
+테스트:
+  □ 같은 사용자에서 기존 결과 == RPC 결과
+시간: 2~3시간
+
+------------------------------------------------------------------------------
+δ3-5. 클라 getSeasonStats → RPC
+------------------------------------------------------------------------------
+대상: my_league_repository.dart:52~174
+작업: 함수 본문을 RPC 호출 1줄로 단순화. 클라 집계 로직 모두 제거.
+검증: 마이리그 화면 시즌 통계 정상.
+커밋: 1커밋
+시간: 30~60분
+
+------------------------------------------------------------------------------
+δ3-6. 비교 로깅 제거
+------------------------------------------------------------------------------
+δ3-2 임시 코드 제거. 1커밋. 10분.
+
+------------------------------------------------------------------------------
+GROUP δ3 완료 후
+------------------------------------------------------------------------------
+□ 프로필/마이리그 회귀 (실기기)
+□ 운영 사용자 몇 명에게 테스트 부탁
+□ 일주일 모니터링 후 비교 로깅 제거 흐름이면 안전
+
+==============================================================================
+GROUP ε — 썸네일 분리 저장 (조건부, 예상: 1일 / 위험: 중)
+==============================================================================
+조건: Group β (Image Transformation) 사용 불가 시.
+
+해결 항목: B-2-3
+대안 시나리오: B-2-1 못 하는 무료 플랜.
+
+------------------------------------------------------------------------------
+ε-1. 스키마 변경
+------------------------------------------------------------------------------
+- posts 테이블에 thumb_url text 컬럼 추가
+- users 테이블에 avatar_thumb_url 컬럼 추가 (선택)
+- 마이그레이션 SQL 작성
+
+------------------------------------------------------------------------------
+ε-2. 업로드 시 썸네일 생성
+------------------------------------------------------------------------------
+대상:
+  - lib/features/feed/data/feed_repository.dart (createPost, updatePost)
+  - lib/features/profile/data/profile_repository.dart (uploadAvatar)
+  - lib/features/league/data/league_repository.dart (_uploadIntroImages)
+
+작업:
+  - compressForUpload 외에 별도 작은 사이즈(예: 400px) 생성 함수 추가
+  - 두 파일을 모두 Storage 업로드, 두 URL 모두 DB 저장
+
+------------------------------------------------------------------------------
+ε-3. 표시 위젯들에서 thumb_url 사용
+------------------------------------------------------------------------------
+- 작은 카드/아바타: thumb_url
+- 상세 화면: image_url (원본)
+
+------------------------------------------------------------------------------
+ε-4. 마이그레이션 (기존 데이터)
+------------------------------------------------------------------------------
+- 기존 게시물의 썸네일이 없는 경우 처리
+  옵션 A: thumb_url null 인 경우 image_url 사용 (단순)
+  옵션 B: 백필 스크립트로 일괄 생성
+
+권장: A. 새 게시물부터 썸네일 적용. 기존 데이터는 영향 작음.
+
+==============================================================================
+의존성 그래프
+==============================================================================
+
+  Group α  (반나절)
+    │
+    ├─ 0.2 결과 → β 또는 ε 분기
+    │
+  Group β  (1일) ──┐
+                   │
+  Group γ  (반나절) ┤  ← α/β/γ는 서로 독립. 순차 또는 병행 가능
+                   │
+  Group δ1 (1~2일) ┘  ← α 끝나면 가능
+    │
+  Group δ2 (1~2일)   ← δ1 후 (SQL 작성에 익숙해진 후)
+    │
+  Group δ3 (2~3일)   ← δ1, δ2 후 (가장 복잡한 RPC, 누적 경험 활용)
+
+  Group ε (조건부, 1일) ← Group β 불가 시 그 자리 대체
+
+==============================================================================
+일정표 (혼자 작업 기준)
+==============================================================================
+
+1주차:
+  Day 1 (오전): Phase 0 사전 점검 + Group α-1, α-2, α-3
+  Day 1 (오후): Group α-4, α-5, α-6, α-7 + α 종료 측정
+  Day 2:        Group β-1, β-2, β-3
+  Day 3:        Group β-4 (12곳) + 측정
+  Day 4 (오전): Group γ
+  Day 4 (오후): Group δ1-1 (SQL 작성 시작)
+  Day 5:        Group δ1-1 마무리 + δ1-2/3/4 클라 적용
+
+2주차:
+  Day 6:        Group δ2-1, δ2-2 (리그 랭킹 SQL + 클라)
+  Day 7:        Group δ2-3, δ2-4 (보너스 저장 SQL + 클라)
+  Day 8~9:      Group δ3-1, δ3-2 (가장 복잡한 SQL 작성 + 비교 로깅)
+  Day 10:       Group δ3-3, δ3-4, δ3-5, δ3-6
+  Day 11:       모니터링 / 비교 로깅 제거 / 회귀 / 친구 테스트
+
+3주차 (선택):
+  - 모니터링 결과로 추가 조정
+  - Group ε (조건부)
+  - 빌드 번호 +1 → main 배포
+
+==============================================================================
+측정 포인트 (Group 끝마다)
+==============================================================================
+
+매번 기록할 항목:
+  □ Supabase Reports → API Egress (24h 평균 MB)
+  □ Supabase Reports → Storage Bandwidth (24h 평균 MB)
+  □ 화면별 응답 시간 (체감)
+  □ 회귀 발견 사항
+
+기대 효과 (가설):
+  Group α  : DB Egress -10~20% (불필요 컬럼 제거 + 캐시 적중률 ↑)
+  Group β  : Storage Egress -75% (사이즈 변환)
+  Group γ  : 리그 목록 응답 크기 -90%
+  Group δ1 : 랭킹 화면 응답 크기 -95%
+  Group δ2 : 리그 랭킹 응답 크기 -80~90%
+  Group δ3 : 프로필 진입 응답 크기 -90%, 응답 시간 -70%
+
+==============================================================================
+회귀 테스트 체크리스트 (Group 종료마다)
+==============================================================================
+
+기본 흐름:
+  □ 로그인/로그아웃 정상
+  □ 피드 진입 / 무한스크롤 / pull-to-refresh / 검색
+  □ 게시물 상세 / 댓글 / 공유 / 삭제 / 편집
+  □ 업로드 (이미지/동영상)
+  □ 리그 목록 / 생성 / 참가 신청 / 취소 / 상세
+  □ 리그 진행 (호스트) / 심사 / 승인 / 거부
+  □ 리그 종료 (호스트) / 보너스 저장 / 랭킹 표시
+  □ 마이리그 / 시즌 통계
+  □ 프로필 (내/타인) / 통계 / 최대어 카드
+  □ 인증 화면 (검증자) / 운영자 화면
+  □ 검색 (피드)
+
+==============================================================================
+빌드 번호 / 배포
+==============================================================================
+- 본 작업 진행 중: develop 푸시만, 빌드 번호 변경 X
+- 모든 Group 완료 + 일주일 안정 확인 후:
+    pubspec.yaml version 1.0.0+13 → 1.0.0+14
+    git checkout main → merge develop → push origin main → checkout develop
+- 친구들에게 배포
+
+==============================================================================
+주의사항 (전체)
+==============================================================================
+- 각 sub-step 별 commit (롤백 단위 잘게 유지)
+- SQL 변경은 Supabase Studio에서 테스트 후 클라 코드 수정
+- RPC 첫 호출 시 SECURITY DEFINER vs INVOKER 일관성 결정
+- D-1-1 keepAlive 추가 후 invalidate 호출처 점검 (107회)
+- A-3-7 select 정리 시 Post.fromJson / League.fromJson NPE 검증 필수
+- B-2-1 헬퍼 함수는 외부 URL(http) 그대로 통과하도록
+- Group δ 시리즈는 비교 로깅 후 충분히 검증 (1주일 이상 권장)
+- 모든 변경은 develop에서. main 배포는 전체 완료 + 안정화 후
+
+==============================================================================
+사전 점검 결과 기록란 (작업 시작 시 채울 것)
+==============================================================================
+[ ] Supabase Plan: ___________________
+[ ] 일일 API Egress: ___________ MB
+[ ] 일일 Storage Bandwidth: ___________ MB
+[ ] Database Size: ___________ MB
+[ ] Image Transformation 사용 가능: □ 예  □ 아니오
+[ ] supabase/migrations/ 폴더 존재: □ 예  □ 아니오
+[ ] 작업 시작일: ____ / ____ / ____
+
+==============================================================================
