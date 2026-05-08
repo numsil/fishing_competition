@@ -153,7 +153,7 @@ class LeagueRepository {
   }) async {
     var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at, league_participants(count), users!host_id(username)');
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)');
 
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());
@@ -195,7 +195,7 @@ class LeagueRepository {
 
     final response = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, created_at)')
+        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at)')
         .eq('user_id', userId)
         .eq('status', 'approved');
 
