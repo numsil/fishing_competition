@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/data/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +92,8 @@ class _AppRootWidgetState extends State<AppRootWidget>
           row['status'] == 'banned' ||
           row['is_deleted'] == true;
       if (inactive) {
+        AuthRepository.pendingLoginMessage =
+            '이용이 정지된 계정입니다. 문의: support@nakstar.app';
         await supabase.auth.signOut();
       }
     } catch (_) {/* 네트워크 에러는 무시 (다음 resume 때 재시도) */}
