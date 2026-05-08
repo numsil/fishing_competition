@@ -455,8 +455,6 @@ class _ActiveLeagueCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                _VisibilityBadge(isPublic: league.isPublic, sub: sub),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1273,6 +1271,8 @@ class _MyLeagueCard extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  _VisibilityBadge(isPublic: league.isPublic, sub: sub),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
