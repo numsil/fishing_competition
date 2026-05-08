@@ -76,7 +76,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _maxKey = GlobalKey();
 
   bool get _isEditMode => widget.league != null;
-  bool get _isEnded => widget.league?.status == 'ended';
+  bool get _isEnded => widget.league?.status == 'completed';
 
   static const _rules = ['합산 길이', '마릿수', '최대어', '무게'];
 
@@ -135,6 +135,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     GlobalKey? firstKey;
     if (_nameCtrl.text.trim().isEmpty) {
       firstKey = _nameKey;
+    } else if (_dateRange == null) {
+      firstKey = _dateKey;
     } else if (_locationCtrl.text.trim().isEmpty) {
       firstKey = _locationKey;
     } else {
@@ -159,7 +161,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   Future<void> _submit() async {
     final formValid = _formKey.currentState?.validate() ?? false;
 
-    if (!formValid) {
+    if (!formValid || _dateRange == null) {
       await _scrollToFirstError();
       return;
     }
