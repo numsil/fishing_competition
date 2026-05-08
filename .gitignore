@@ -47,3 +47,8 @@ app.*.map.json
 # Environment variables
 .env
 upload-keystore.jks
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+supabase_old/
