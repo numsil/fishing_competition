@@ -176,13 +176,15 @@ class LeagueRepository {
   }
 
   // ── 참가 신청 ────────────────────────────────────────
-  Future<void> joinLeague(String leagueId) async {
+  /// 공개 리그(isPublic=true)는 즉시 'approved',
+  /// 비공개 리그(isPublic=false)는 'pending' 으로 INSERT → 호스트 승인 대기.
+  Future<void> joinLeague(String leagueId, {required bool isPublic}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
     await _supabase.from('league_participants').insert({
       'league_id': leagueId,
       'user_id': userId,
-      'status': 'approved',
+      'status': isPublic ? 'approved' : 'pending',
     });
   }
 
@@ -216,6 +218,19 @@ class LeagueRepository {
         .eq('user_id', userId)
         .maybeSingle();
     return res != null;
+  }
+
+  /// 내 참가 상태 반환: 'pending' | 'approved' | 'rejected' | null(미신청).
+  Future<String?> getMyParticipantStatus(String leagueId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return null;
+    final res = await _supabase
+        .from('league_participants')
+        .select('status')
+        .eq('league_id', leagueId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    return res?['status'] as String?;
   }
 
   // ── 순위표 조회 (리그 룰 + catch_limit 기반) ──────────
@@ -507,6 +522,13 @@ Future<bool> isJoined(IsJoinedRef ref, String leagueId) {
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 3), link.close);
   return ref.watch(leagueRepositoryProvider).isJoined(leagueId);
+}
+
+@riverpod
+Future<String?> myParticipantStatus(MyParticipantStatusRef ref, String leagueId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 3), link.close);
+  return ref.watch(leagueRepositoryProvider).getMyParticipantStatus(leagueId);
 }
 
 @riverpod
