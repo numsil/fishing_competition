@@ -18,6 +18,7 @@ import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../utils/feed_search_utils.dart';
+import '../../../report/presentation/widgets/report_reason_sheet.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.post});
@@ -404,8 +405,15 @@ class _MoreMenu extends StatelessWidget {
             ),
           ] else ...[
             Divider(height: 1, color: divColor),
-            AppMenuItem(icon: LucideIcons.flag, label: '신고하기', color: AppColors.error,
-                onTap: () => Navigator.pop(context)),
+            AppMenuItem(
+              icon: LucideIcons.flag,
+              label: '신고하기',
+              color: AppColors.error,
+              onTap: () {
+                Navigator.pop(context);
+                ReportReasonSheet.show(context, postId);
+              },
+            ),
           ],
           const SizedBox(height: 8),
         ],

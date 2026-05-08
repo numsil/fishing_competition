@@ -16,6 +16,7 @@ import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../utils/feed_search_utils.dart';
+import '../../../report/presentation/widgets/report_reason_sheet.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -597,6 +598,9 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
 
   void _openMoreMenu() {
     final isDark = widget.isDark;
+    final currentUserId = ref.read(currentUserProvider)?.id;
+    final isOwner =
+        currentUserId != null && currentUserId == widget.post.userId;
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
@@ -606,6 +610,7 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
       builder: (_) => _MoreMenu(
         isDark: isDark,
         postId: widget.post.id,
+        isOwner: isOwner,
       ),
     );
   }
@@ -839,9 +844,14 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
 
 // ── 더보기 메뉴 (••• 버튼) ────────────────────────────
 class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.isDark, required this.postId});
+  const _MoreMenu({
+    required this.isDark,
+    required this.postId,
+    required this.isOwner,
+  });
   final bool isDark;
   final String postId;
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -886,13 +896,18 @@ class _MoreMenu extends StatelessWidget {
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
-          Divider(height: 1, color: divColor),
-          AppMenuItem(
-            icon: LucideIcons.flag,
-            label: '신고하기',
-            color: AppColors.error,
-            onTap: () => Navigator.pop(context),
-          ),
+          if (!isOwner) ...[
+            Divider(height: 1, color: divColor),
+            AppMenuItem(
+              icon: LucideIcons.flag,
+              label: '신고하기',
+              color: AppColors.error,
+              onTap: () {
+                Navigator.pop(context);
+                ReportReasonSheet.show(context, postId);
+              },
+            ),
+          ],
           const SizedBox(height: 8),
         ],
       ),
