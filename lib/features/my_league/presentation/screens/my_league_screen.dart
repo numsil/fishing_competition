@@ -455,6 +455,8 @@ class _ActiveLeagueCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
+                _VisibilityBadge(isPublic: league.isPublic, sub: sub),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1366,6 +1368,41 @@ class _MyLeagueCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VisibilityBadge extends StatelessWidget {
+  const _VisibilityBadge({required this.isPublic, required this.sub});
+  final bool isPublic;
+  final Color sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPublic ? AppColors.success : sub;
+    final icon = isPublic ? LucideIcons.globe : LucideIcons.lock;
+    final label = isPublic ? '공개' : '비공개';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
