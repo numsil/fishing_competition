@@ -23,6 +23,12 @@ class RankingScreen extends ConsumerStatefulWidget {
 class _RankingScreenState extends ConsumerState<RankingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  int _selectedYear = DateTime.now().year;
+
+  static final _selectableYears = List.generate(
+    DateTime.now().year - 2024,
+    (i) => DateTime.now().year - i,
+  );
 
   @override
   void initState() {
@@ -85,8 +91,20 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
       body: TabBarView(
         controller: _tab,
         children: [
-          _LeagueScoreTab(isDark: context.isDark, accent: context.accentColor),
-          _PersonalScoreTab(isDark: context.isDark, accent: context.accentColor),
+          _LeagueScoreTab(
+            isDark: context.isDark,
+            accent: context.accentColor,
+            selectedYear: _selectedYear,
+            selectableYears: _selectableYears,
+            onYearChanged: (y) => setState(() => _selectedYear = y),
+          ),
+          _PersonalScoreTab(
+            isDark: context.isDark,
+            accent: context.accentColor,
+            selectedYear: _selectedYear,
+            selectableYears: _selectableYears,
+            onYearChanged: (y) => setState(() => _selectedYear = y),
+          ),
           const VerificationTab(),
         ],
       ),
@@ -96,26 +114,57 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
 
 // ── 리그 점수 탭 ─────────────────────────────────────────
 class _LeagueScoreTab extends ConsumerWidget {
-  const _LeagueScoreTab({required this.isDark, required this.accent});
+  const _LeagueScoreTab({
+    required this.isDark,
+    required this.accent,
+    required this.selectedYear,
+    required this.selectableYears,
+    required this.onYearChanged,
+  });
   final bool isDark;
   final Color accent;
+  final int selectedYear;
+  final List<int> selectableYears;
+  final ValueChanged<int> onYearChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final myId = ref.watch(currentUserProvider)?.id;
 
-    return ref.watch(leagueScoreRankingProvider).when(
+    return ref.watch(leagueScoreRankingProvider(selectedYear)).when(
       data: (entries) {
         if (entries.isEmpty) {
-          return Center(child: Text('아직 리그 점수 기록이 없습니다', style: TextStyle(color: sub)));
+          return Column(
+            children: [
+              const SizedBox(height: 16),
+              _SeasonDropdown(
+                selectedYear: selectedYear,
+                selectableYears: selectableYears,
+                accent: accent,
+                isDark: isDark,
+                onChanged: onYearChanged,
+              ),
+              Expanded(
+                child: Center(
+                  child: Text('$selectedYear 시즌 리그 점수 기록이 없습니다', style: TextStyle(color: sub)),
+                ),
+              ),
+            ],
+          );
         }
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(leagueScoreRankingProvider),
+          onRefresh: () async => ref.invalidate(leagueScoreRankingProvider(selectedYear)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              _SeasonBadge(year: DateTime.now().year, accent: accent, isDark: isDark),
+              _SeasonDropdown(
+                selectedYear: selectedYear,
+                selectableYears: selectableYears,
+                accent: accent,
+                isDark: isDark,
+                onChanged: onYearChanged,
+              ),
               const SizedBox(height: 20),
               _ScorePodium(entries: entries.take(3).toList(), isDark: isDark),
               const SizedBox(height: 16),
@@ -139,26 +188,57 @@ class _LeagueScoreTab extends ConsumerWidget {
 
 // ── 개인 점수 탭 ─────────────────────────────────────────
 class _PersonalScoreTab extends ConsumerWidget {
-  const _PersonalScoreTab({required this.isDark, required this.accent});
+  const _PersonalScoreTab({
+    required this.isDark,
+    required this.accent,
+    required this.selectedYear,
+    required this.selectableYears,
+    required this.onYearChanged,
+  });
   final bool isDark;
   final Color accent;
+  final int selectedYear;
+  final List<int> selectableYears;
+  final ValueChanged<int> onYearChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
     final myId = ref.watch(currentUserProvider)?.id;
 
-    return ref.watch(personalScoreRankingProvider).when(
+    return ref.watch(personalScoreRankingProvider(selectedYear)).when(
       data: (entries) {
         if (entries.isEmpty) {
-          return Center(child: Text('아직 개인 기록 점수가 없습니다', style: TextStyle(color: sub)));
+          return Column(
+            children: [
+              const SizedBox(height: 16),
+              _SeasonDropdown(
+                selectedYear: selectedYear,
+                selectableYears: selectableYears,
+                accent: accent,
+                isDark: isDark,
+                onChanged: onYearChanged,
+              ),
+              Expanded(
+                child: Center(
+                  child: Text('$selectedYear 시즌 개인 기록 점수가 없습니다', style: TextStyle(color: sub)),
+                ),
+              ),
+            ],
+          );
         }
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(personalScoreRankingProvider),
+          onRefresh: () async => ref.invalidate(personalScoreRankingProvider(selectedYear)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              _SeasonBadge(year: DateTime.now().year, accent: accent, isDark: isDark),
+              _SeasonDropdown(
+                selectedYear: selectedYear,
+                selectableYears: selectableYears,
+                accent: accent,
+                isDark: isDark,
+                onChanged: onYearChanged,
+              ),
               const SizedBox(height: 20),
               _ScorePodium(entries: entries.take(3).toList(), isDark: isDark),
               const SizedBox(height: 16),
@@ -180,28 +260,49 @@ class _PersonalScoreTab extends ConsumerWidget {
   }
 }
 
-// ── 시즌 배지 ────────────────────────────────────────────
-class _SeasonBadge extends StatelessWidget {
-  const _SeasonBadge({required this.year, required this.accent, required this.isDark});
-  final int year;
+// ── 시즌 드롭박스 ─────────────────────────────────────────
+class _SeasonDropdown extends StatelessWidget {
+  const _SeasonDropdown({
+    required this.selectedYear,
+    required this.selectableYears,
+    required this.accent,
+    required this.isDark,
+    required this.onChanged,
+  });
+  final int selectedYear;
+  final List<int> selectableYears;
   final Color accent;
   final bool isDark;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: accent.withValues(alpha: 0.3)),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(LucideIcons.calendar, size: 13, color: accent),
-          const SizedBox(width: 6),
-          Text('$year 시즌', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
-        ]),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: selectedYear,
+            isDense: true,
+            icon: Icon(LucideIcons.chevronDown, size: 14, color: accent),
+            dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent),
+            items: selectableYears.map((y) => DropdownMenuItem(
+              value: y,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(LucideIcons.calendar, size: 13, color: accent),
+                const SizedBox(width: 6),
+                Text('$y 시즌'),
+              ]),
+            )).toList(),
+            onChanged: (y) { if (y != null) onChanged(y); },
+          ),
+        ),
       ),
     );
   }

@@ -59,8 +59,8 @@ class RankingRepository {
     }).toList();
   }
 
-  Future<List<ScoreRankingEntry>> getLeagueScoreRanking() async {
-    final res = await _supabase.rpc('get_league_score_ranking');
+  Future<List<ScoreRankingEntry>> getLeagueScoreRanking(int year) async {
+    final res = await _supabase.rpc('get_league_score_ranking', params: {'season_year': year});
     return (res as List).map((row) => ScoreRankingEntry(
       userId: row['user_id'] as String,
       username: row['username'] as String,
@@ -69,8 +69,8 @@ class RankingRepository {
     )).toList();
   }
 
-  Future<List<ScoreRankingEntry>> getPersonalScoreRanking() async {
-    final res = await _supabase.rpc('get_personal_score_ranking');
+  Future<List<ScoreRankingEntry>> getPersonalScoreRanking(int year) async {
+    final res = await _supabase.rpc('get_personal_score_ranking', params: {'season_year': year});
     return (res as List).map((row) => ScoreRankingEntry(
       userId: row['user_id'] as String,
       username: row['username'] as String,
@@ -93,15 +93,15 @@ Future<List<RankingEntry>> topRankings(TopRankingsRef ref) {
 }
 
 @riverpod
-Future<List<ScoreRankingEntry>> leagueScoreRanking(LeagueScoreRankingRef ref) {
+Future<List<ScoreRankingEntry>> leagueScoreRanking(LeagueScoreRankingRef ref, int year) {
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
-  return ref.watch(rankingRepositoryProvider).getLeagueScoreRanking();
+  return ref.watch(rankingRepositoryProvider).getLeagueScoreRanking(year);
 }
 
 @riverpod
-Future<List<ScoreRankingEntry>> personalScoreRanking(PersonalScoreRankingRef ref) {
+Future<List<ScoreRankingEntry>> personalScoreRanking(PersonalScoreRankingRef ref, int year) {
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
-  return ref.watch(rankingRepositoryProvider).getPersonalScoreRanking();
+  return ref.watch(rankingRepositoryProvider).getPersonalScoreRanking(year);
 }
