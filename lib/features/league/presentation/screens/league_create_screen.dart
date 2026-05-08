@@ -68,7 +68,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _imagePicker = ImagePicker();
 
   bool _submitting = false;
-  bool _showDateError = false;
 
   // 필수 항목 스크롤 앵커
   final _nameKey = GlobalKey();
@@ -131,12 +130,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   }
 
   // ── 첫 번째 미입력 필수 항목으로 스크롤 ──
-  Future<void> _scrollToFirstError({required bool dateValid}) async {
+  Future<void> _scrollToFirstError() async {
     GlobalKey? firstKey;
     if (_nameCtrl.text.trim().isEmpty) {
       firstKey = _nameKey;
-    } else if (!dateValid) {
-      firstKey = _dateKey;
     } else if (_locationCtrl.text.trim().isEmpty) {
       firstKey = _locationKey;
     } else {
@@ -158,14 +155,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   // ── 개설 / 수정 공통 제출 ──
   Future<void> _submit() async {
-    setState(() => _showDateError = false);
-
     final formValid = _formKey.currentState?.validate() ?? false;
-    final dateValid = _dateRange != null;
-    if (!dateValid) setState(() => _showDateError = true);
 
-    if (!formValid || !dateValid) {
-      await _scrollToFirstError(dateValid: dateValid);
+    if (!formValid) {
+      await _scrollToFirstError();
       return;
     }
 
@@ -181,8 +174,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
-          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
+          startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
+          endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
           entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
           maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
           rule: _rule,
@@ -215,8 +208,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           location: _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
-          startTime: _applyTime(_dateRange!.start, _startTimeCtrl.text),
-          endTime: _applyTime(_dateRange!.end, _endTimeCtrl.text),
+          startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
+          endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
           entryFee: int.tryParse(_feeCtrl.text) ?? 0,
           maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
@@ -742,10 +735,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                 GestureDetector(
-                onTap: () {
-                  setState(() => _showDateError = false);
-                  _pickDateRange();
-                },
+                onTap: _pickDateRange,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -753,9 +743,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     color: context.isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8F8F8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _showDateError
-                          ? AppColors.error
-                          : (_dateRange != null ? context.accentColor : divColor),
+                      color: _dateRange != null ? context.accentColor : divColor,
                     ),
                   ),
                   child: Row(
@@ -784,14 +772,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                   ),
                 ),
               ),
-                if (_showDateError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 12),
-                    child: Text(
-                      '일정을 선택해주세요',
-                      style: TextStyle(fontSize: 12, color: AppColors.error),
-                    ),
-                  ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
