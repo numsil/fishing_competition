@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../feed/data/post_model.dart';
 import '../../data/league_repository.dart';
@@ -50,6 +51,7 @@ class _CatchReviewDetailScreenState
       ref.invalidate(leagueCatchesForReviewProvider(widget.leagueId));
       ref.invalidate(leagueRankingProvider(widget.leagueId));
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '처리 실패: $e');
     } finally {
       if (mounted) setState(() => _loading = false);

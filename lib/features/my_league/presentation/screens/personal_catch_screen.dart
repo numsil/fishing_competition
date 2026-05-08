@@ -14,6 +14,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class PersonalCatchScreen extends ConsumerStatefulWidget {
@@ -193,6 +194,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
                 AppSnackBar.error(context, '등록 실패: $e');
       }

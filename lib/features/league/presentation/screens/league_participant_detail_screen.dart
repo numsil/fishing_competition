@@ -11,6 +11,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/stat_widgets.dart';
@@ -655,6 +656,7 @@ class _CatchMemoEditSheetState extends ConsumerState<_CatchMemoEditSheet> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '수정 실패: $e');
     } finally {
       if (mounted) setState(() => _saving = false);

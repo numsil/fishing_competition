@@ -15,6 +15,7 @@ import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../widgets/post_image_carousel.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../utils/feed_search_utils.dart';
@@ -45,6 +46,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 AppSnackBar.success(context, '내 피드에 공유되었습니다.');
       }
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
                 AppSnackBar.error(context, '공유 실패: $e');
       }
@@ -503,7 +505,9 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
         await ref.read(feedRepositoryProvider).addComment(widget.post.id, user.id, text);
         ref.invalidate(feedPostsProvider);
         await _loadComments();
-      } catch (_) {}
+      } catch (e) {
+        if (await handleIfBanned(e)) return;
+      }
     }
   }
 

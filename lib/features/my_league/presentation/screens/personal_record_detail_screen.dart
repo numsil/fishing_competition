@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/menu_item.dart';
@@ -168,6 +169,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
       ref.invalidate(myProfileProvider);
       if (mounted) AppSnackBar.success(context, '내 피드에 공유되었습니다');
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '공유 실패: $e');
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -520,6 +522,7 @@ class _PersonalRecordEditSheetState extends ConsumerState<_PersonalRecordEditShe
       widget.onSaved(updated);
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '수정 실패: $e');
     } finally {
       if (mounted) setState(() => _saving = false);

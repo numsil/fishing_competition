@@ -18,6 +18,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import 'league_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueCreateScreen extends ConsumerStatefulWidget {
@@ -227,6 +228,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
         if (mounted) context.pop();
       }
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
         setState(() => _submitting = false);
                 AppSnackBar.error(context, _isEditMode ? '수정 실패: $e' : '개설 실패: $e');

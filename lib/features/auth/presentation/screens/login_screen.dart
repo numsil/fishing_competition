@@ -24,6 +24,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _loading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // ProviderScope 재생성으로 사라진 안내문(예: 정지 안내)을 화면이 뜨면 표시
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final msg = AuthRepository.pendingLoginMessage;
+      if (msg != null && mounted) {
+        AuthRepository.pendingLoginMessage = null;
+        AppSnackBar.error(context, msg);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _emailCtrl.dispose();
     _pwCtrl.dispose();
