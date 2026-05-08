@@ -14,6 +14,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class LeagueCatchScreen extends ConsumerStatefulWidget {
@@ -119,6 +120,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
                 AppSnackBar.error(context, '등록 실패: $e');
       }

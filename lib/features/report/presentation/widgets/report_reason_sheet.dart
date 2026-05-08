@@ -4,6 +4,7 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../data/report_repository.dart';
 
 const _reasons = <String>[
@@ -56,6 +57,7 @@ class _ReportReasonSheetState extends ConsumerState<ReportReasonSheet> {
       AppSnackBar.error(context, '로그인이 필요합니다');
       setState(() => _submitting = false);
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (!mounted) return;
       AppSnackBar.error(context, '신고 접수 실패: $e');
       setState(() => _submitting = false);

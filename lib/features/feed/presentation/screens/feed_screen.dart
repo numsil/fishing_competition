@@ -12,6 +12,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
@@ -1022,7 +1023,8 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
         );
         ref.invalidate(feedPostsProvider);
         await _loadComments();
-      } catch (_) {
+      } catch (e) {
+        if (await handleIfBanned(e)) return;
         // 로컬 UI는 유지, 서버 저장 실패 무시
       }
     }

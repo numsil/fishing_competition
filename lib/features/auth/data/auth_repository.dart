@@ -8,12 +8,18 @@ class AuthRepository {
 
   AuthRepository(this._supabase);
 
+  /// signOut 직후 ProviderScope가 재생성되면서 호출자의 SnackBar가 사라지므로,
+  /// 다음에 로그인 화면이 떴을 때 보여줄 안내문을 여기에 보관한다.
+  /// 표시 후 login_screen 쪽에서 null로 초기화.
+  static String? pendingLoginMessage;
+
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
   User? get currentUser => _supabase.auth.currentUser;
 
   Future<AuthResponse> signInWithEmail(String email, String password) async {
     final response = await _supabase.auth.signInWithPassword(email: email, password: password);
     if (response.user != null && await isCurrentUserBanned()) {
+      pendingLoginMessage = '이용이 정지된 계정입니다. 문의: support@nakstar.app';
       await _supabase.auth.signOut();
       throw Exception('banned');
     }

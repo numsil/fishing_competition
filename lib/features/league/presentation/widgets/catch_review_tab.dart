@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../data/league_repository.dart';
 import '../screens/catch_review_detail_screen.dart';
@@ -72,6 +73,7 @@ class CatchReviewTab extends ConsumerWidget {
                     ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                     ref.invalidate(leagueRankingProvider(leagueId));
                   } catch (e) {
+                    if (await handleIfBanned(e)) return;
                     if (context.mounted) {
                       AppSnackBar.error(context, '보류 처리 실패: $e');
                     }
@@ -83,6 +85,7 @@ class CatchReviewTab extends ConsumerWidget {
                     ref.invalidate(leagueCatchesForReviewProvider(leagueId));
                     ref.invalidate(leagueRankingProvider(leagueId));
                   } catch (e) {
+                    if (await handleIfBanned(e)) return;
                     if (context.mounted) {
                       AppSnackBar.error(context, '보류 해지 실패: $e');
                     }

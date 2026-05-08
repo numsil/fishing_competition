@@ -10,6 +10,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class DmChatScreen extends ConsumerStatefulWidget {
@@ -95,6 +96,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
           .read(dmRepositoryProvider)
           .sendMessage(widget.conversation.id, text);
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
                 AppSnackBar.error(context, '메시지 전송에 실패했습니다');
         _ctrl.text = text;

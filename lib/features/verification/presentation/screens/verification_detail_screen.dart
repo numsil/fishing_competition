@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -54,6 +55,7 @@ class _VerificationDetailScreenState
       ref.invalidate(feedPostsProvider);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) AppSnackBar.error(context, '처리 실패: $e');
     } finally {
       if (mounted) setState(() => _loading = false);

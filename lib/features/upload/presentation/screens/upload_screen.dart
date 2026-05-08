@@ -13,6 +13,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/utils/image_compress.dart';
+import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -482,6 +483,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       ref.invalidate(myPostsProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      if (await handleIfBanned(e)) return;
       if (mounted) {
         setState(() => _sharing = false);
         AppSnackBar.error(context, '수정 실패: $e');
@@ -568,6 +570,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     } catch (e) {
       _compressSub?.unsubscribe();
       _compressSub = null;
+      if (await handleIfBanned(e)) return; // 정지된 계정 → 강제 로그아웃, login에서 안내
       if (mounted) {
         setState(() => _sharing = false);
         final msg = e.toString().contains('413')
