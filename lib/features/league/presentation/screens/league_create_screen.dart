@@ -43,7 +43,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   DateTimeRange? _dateRange;
   final _startTimeCtrl = TextEditingController();
   final _endTimeCtrl = TextEditingController();
-  String _rule = '최대어';
+  String _rule = '합산 길이';
   int _catchLimit = 1; // 0=전체, 1,3,5,10, 그 외=직접입력
   bool _customLimitMode = false;
   final _customLimitCtrl = TextEditingController();
@@ -78,7 +78,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   bool get _isEditMode => widget.league != null;
 
-  static const _rules = ['최대어', '합산 길이', '마릿수', '무게'];
+  static const _rules = ['합산 길이', '마릿수', '최대어', '무게'];
 
   @override
   void initState() {
