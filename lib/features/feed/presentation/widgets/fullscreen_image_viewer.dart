@@ -24,10 +24,10 @@ class FullscreenImageViewer extends StatefulWidget {
   }) {
     return Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.transparent,
-        transitionDuration: const Duration(milliseconds: 220),
-        reverseTransitionDuration: const Duration(milliseconds: 200),
+        opaque: true,
+        fullscreenDialog: true,
+        transitionDuration: const Duration(milliseconds: 200),
+        reverseTransitionDuration: const Duration(milliseconds: 180),
         pageBuilder: (_, __, ___) => FullscreenImageViewer(
           urls: urls,
           initialIndex: initialIndex,
@@ -99,8 +99,9 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
     final scale = (1.0 - progress * 0.15).clamp(0.85, 1.0);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           // 배경 (드래그에 따라 투명도 변화)
           Positioned.fill(
