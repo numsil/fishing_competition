@@ -43,8 +43,6 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
 
   bool get _isMulti => _urls.length > 1;
 
-  String _heroTag(int index) => 'post-${widget.post.id}-img-$index';
-
   void _openViewer(int index) {
     if (widget.post.videoUrl != null) return;
     final urls = _urls;
@@ -53,7 +51,6 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
       context,
       urls: urls,
       initialIndex: index,
-      heroTagBuilder: _heroTag,
     );
   }
 
@@ -97,23 +94,17 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                       controller: _ctrl,
                       itemCount: urls.length,
                       onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (_, i) => Hero(
-                        tag: _heroTag(i),
-                        child: _NetImage(
-                          url: urls[i],
-                          isDark: widget.isDark,
-                          accent: widget.accent,
-                        ),
-                      ),
-                    )
-                  else if (urls.isNotEmpty)
-                    Hero(
-                      tag: _heroTag(0),
-                      child: _NetImage(
-                        url: urls.first,
+                      itemBuilder: (_, i) => _NetImage(
+                        url: urls[i],
                         isDark: widget.isDark,
                         accent: widget.accent,
                       ),
+                    )
+                  else if (urls.isNotEmpty)
+                    _NetImage(
+                      url: urls.first,
+                      isDark: widget.isDark,
+                      accent: widget.accent,
                     )
                   else
                     Center(

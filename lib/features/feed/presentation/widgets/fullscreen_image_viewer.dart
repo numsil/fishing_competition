@@ -12,18 +12,15 @@ class FullscreenImageViewer extends StatefulWidget {
     super.key,
     required this.urls,
     required this.initialIndex,
-    required this.heroTagBuilder,
   });
 
   final List<String> urls;
   final int initialIndex;
-  final String Function(int index) heroTagBuilder;
 
   static Future<void> open(
     BuildContext context, {
     required List<String> urls,
     required int initialIndex,
-    required String Function(int index) heroTagBuilder,
   }) {
     return Navigator.of(context).push(
       PageRouteBuilder(
@@ -34,7 +31,6 @@ class FullscreenImageViewer extends StatefulWidget {
         pageBuilder: (_, __, ___) => FullscreenImageViewer(
           urls: urls,
           initialIndex: initialIndex,
-          heroTagBuilder: heroTagBuilder,
         ),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
@@ -134,7 +130,6 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
                     onPageChanged: (i) => setState(() => _page = i),
                     itemBuilder: (_, i) => _ZoomableImage(
                       url: widget.urls[i],
-                      heroTag: widget.heroTagBuilder(i),
                       onZoomChanged: (z) {
                         if (z != _zoomed) setState(() => _zoomed = z);
                       },
@@ -212,12 +207,10 @@ class _CircleIconBtn extends StatelessWidget {
 class _ZoomableImage extends StatefulWidget {
   const _ZoomableImage({
     required this.url,
-    required this.heroTag,
     required this.onZoomChanged,
   });
 
   final String url;
-  final String heroTag;
   final ValueChanged<bool> onZoomChanged;
 
   @override
@@ -285,31 +278,28 @@ class _ZoomableImageState extends State<_ZoomableImage>
     return GestureDetector(
       onDoubleTapDown: (d) => _doubleTapDetails = d,
       onDoubleTap: _onDoubleTap,
-      child: Center(
-        child: Hero(
-          tag: widget.heroTag,
-          child: InteractiveViewer(
-            transformationController: _ctrl,
-            minScale: 1.0,
-            maxScale: 5.0,
-            clipBehavior: Clip.none,
-            child: CachedNetworkImage(
-              imageUrl: widget.url,
-              fit: BoxFit.contain,
-              placeholder: (_, __) => const Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white70,
-                  ),
+      child: InteractiveViewer(
+        transformationController: _ctrl,
+        minScale: 1.0,
+        maxScale: 5.0,
+        clipBehavior: Clip.none,
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: widget.url,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => const Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white70,
                 ),
               ),
-              errorWidget: (_, __, ___) => const Center(
-                child: Icon(LucideIcons.image,
-                    size: 60, color: Color(0xFF3F3F46)),
-              ),
+            ),
+            errorWidget: (_, __, ___) => const Center(
+              child: Icon(LucideIcons.image,
+                  size: 60, color: Color(0xFF3F3F46)),
             ),
           ),
         ),
