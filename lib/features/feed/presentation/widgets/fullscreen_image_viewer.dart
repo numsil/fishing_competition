@@ -22,7 +22,7 @@ class FullscreenImageViewer extends StatefulWidget {
     required List<String> urls,
     required int initialIndex,
   }) {
-    return Navigator.of(context).push(
+    return Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.transparent,
