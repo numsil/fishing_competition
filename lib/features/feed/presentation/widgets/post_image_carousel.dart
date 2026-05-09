@@ -111,13 +111,25 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
             width: double.infinity,
             color: widget.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
             child: AspectRatio(
-              // 영상은 9:16(0.5625)까지 허용해 세로 영상이 잘리지 않게,
-              // 이미지는 4:5(0.8) 까지로 피드 레이아웃 일관성 유지.
               // 영상이고 DB 비율이 없으면 썸네일에서 검출한 비율 사용.
-              aspectRatio: (widget.post.aspectRatio ??
-                      (p.videoUrl != null ? _detectedVideoAspect : null) ??
-                      (4 / 3))
-                  .clamp(p.videoUrl != null ? 0.5625 : 0.8, 1.91),
+              // 영상은 화면을 넘지 않게 viewport 기반으로 최소 비율 계산.
+              // 이미지는 4:5(0.8)~1.91 클램프로 피드 레이아웃 일관성 유지.
+              aspectRatio: () {
+                final natural = widget.post.aspectRatio ??
+                    (p.videoUrl != null ? _detectedVideoAspect : null) ??
+                    (4 / 3);
+                if (p.videoUrl != null) {
+                  // 미디어 영역에 쓸 수 있는 최대 높이 (헤더/푸터/네비 제외)
+                  final media = MediaQuery.of(context);
+                  final maxMediaHeight =
+                      media.size.height - media.padding.top - 200;
+                  final minAspect = maxMediaHeight > 0
+                      ? media.size.width / maxMediaHeight
+                      : 0.5625;
+                  return natural.clamp(minAspect, 1.91);
+                }
+                return natural.clamp(0.8, 1.91);
+              }(),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
