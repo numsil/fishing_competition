@@ -34,6 +34,11 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
   late final PageController _ctrl;
   int _page = 0;
 
+  // 영상 게시물에 aspect_ratio가 비어있을 때 썸네일에서 추출한 비율
+  double? _detectedVideoAspect;
+  ImageStream? _aspectStream;
+  ImageStreamListener? _aspectListener;
+
   List<String> get _urls {
     final p = widget.post;
     if (p.imageUrls != null && p.imageUrls!.isNotEmpty) return p.imageUrls!;
@@ -58,12 +63,36 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
   void initState() {
     super.initState();
     _ctrl = PageController();
+    _maybeDetectVideoAspect();
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    if (_aspectStream != null && _aspectListener != null) {
+      _aspectStream!.removeListener(_aspectListener!);
+    }
     super.dispose();
+  }
+
+  /// 영상 게시물인데 DB에 비율이 없는 경우, 썸네일 이미지에서 비율을 추출.
+  /// 썸네일은 영상 프레임에서 캡처한 것이라 비율이 동일.
+  void _maybeDetectVideoAspect() {
+    final p = widget.post;
+    if (p.videoUrl == null) return;
+    if (p.aspectRatio != null) return;
+    if (p.imageUrl.isEmpty) return;
+
+    final provider = CachedNetworkImageProvider(p.imageUrl);
+    _aspectStream = provider.resolve(ImageConfiguration.empty);
+    _aspectListener = ImageStreamListener((info, _) {
+      if (!mounted) return;
+      final aspect = info.image.width / info.image.height;
+      if (aspect.isFinite && aspect > 0) {
+        setState(() => _detectedVideoAspect = aspect);
+      }
+    });
+    _aspectStream!.addListener(_aspectListener!);
   }
 
   @override
@@ -83,8 +112,11 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
             color: widget.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
             child: AspectRatio(
               // 영상은 9:16(0.5625)까지 허용해 세로 영상이 잘리지 않게,
-              // 이미지는 4:5(0.8) 까지로 피드 레이아웃 일관성 유지
-              aspectRatio: (widget.post.aspectRatio ?? (4 / 3))
+              // 이미지는 4:5(0.8) 까지로 피드 레이아웃 일관성 유지.
+              // 영상이고 DB 비율이 없으면 썸네일에서 검출한 비율 사용.
+              aspectRatio: (widget.post.aspectRatio ??
+                      (p.videoUrl != null ? _detectedVideoAspect : null) ??
+                      (4 / 3))
                   .clamp(p.videoUrl != null ? 0.5625 : 0.8, 1.91),
               child: Stack(
                 fit: StackFit.expand,

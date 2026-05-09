@@ -543,6 +543,10 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       double? aspectRatio;
       if (!widget.isVideo && _images.isNotEmpty) {
         aspectRatio = await getAspectRatioForUpload(File(_images.first.path));
+      } else if (widget.isVideo && widget.thumbnailBytes != null) {
+        // 영상은 썸네일에서 비율 측정 (영상 프레임에서 캡처한 이미지라 비율 동일)
+        final info = await decodeImageFromList(widget.thumbnailBytes!);
+        aspectRatio = info.width / info.height;
       }
 
       final rawCaption = _captionCtrl.text.trim();
