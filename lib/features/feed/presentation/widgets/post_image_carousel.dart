@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/post_model.dart';
 import 'feed_video_player.dart';
+import 'fullscreen_image_viewer.dart';
 
 /// image_urls (다중) 또는 image_url (단일)을 PageView로 보여주는 공용 위젯.
 /// - 단일 이미지 or 동영상: 기존과 동일한 단순 뷰
@@ -42,6 +43,20 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
 
   bool get _isMulti => _urls.length > 1;
 
+  String _heroTag(int index) => 'post-${widget.post.id}-img-$index';
+
+  void _openViewer(int index) {
+    if (widget.post.videoUrl != null) return;
+    final urls = _urls;
+    if (urls.isEmpty) return;
+    FullscreenImageViewer.open(
+      context,
+      urls: urls,
+      initialIndex: index,
+      heroTagBuilder: _heroTag,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +79,7 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
       children: [
         // ── 이미지 / 동영상 영역 ──────────────────────────
         GestureDetector(
+          onTap: p.videoUrl != null ? null : () => _openViewer(_page),
           onDoubleTap: p.videoUrl != null ? null : widget.onDoubleTap,
           child: Container(
             width: double.infinity,
@@ -81,17 +97,23 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                       controller: _ctrl,
                       itemCount: urls.length,
                       onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (_, i) => _NetImage(
-                        url: urls[i],
-                        isDark: widget.isDark,
-                        accent: widget.accent,
+                      itemBuilder: (_, i) => Hero(
+                        tag: _heroTag(i),
+                        child: _NetImage(
+                          url: urls[i],
+                          isDark: widget.isDark,
+                          accent: widget.accent,
+                        ),
                       ),
                     )
                   else if (urls.isNotEmpty)
-                    _NetImage(
-                      url: urls.first,
-                      isDark: widget.isDark,
-                      accent: widget.accent,
+                    Hero(
+                      tag: _heroTag(0),
+                      child: _NetImage(
+                        url: urls.first,
+                        isDark: widget.isDark,
+                        accent: widget.accent,
+                      ),
                     )
                   else
                     Center(
