@@ -66,11 +66,6 @@ class ProfileRepository {
       });
     }
 
-    int lunkerCount = 0;
-    for (final p in posts) {
-      if (p.isLunker) lunkerCount++;
-    }
-
     return UserProfile(
       id: data['id'] as String,
       email: (data['email'] as String?) ?? '',
@@ -80,7 +75,7 @@ class ProfileRepository {
       mannerTemperature: (data['manner_temperature'] as num).toDouble(),
       isLunkerClub: (data['is_lunker_club'] as bool?) ?? false,
       postCount: posts.length,
-      lunkerCount: lunkerCount,
+      lunkerCount: (data['lunker_count'] as num?)?.toInt() ?? 0,
       maxFishLength: maxFishPost?.length,
       maxFishPost: maxFishPost,
       leagueScore: (data['league_score'] as num?)?.toInt() ?? 0,
