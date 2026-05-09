@@ -271,9 +271,11 @@ class _ZoomableImageState extends State<_ZoomableImage>
       const scale = 2.5;
       final x = -pos.dx * (scale - 1);
       final y = -pos.dy * (scale - 1);
+      // ignore: deprecated_member_use
       final target = Matrix4.identity()
-        ..translateByDouble(x, y, 0, 1)
-        ..scaleByDouble(scale, scale, scale, 1);
+        ..translate(x, y)
+        // ignore: deprecated_member_use
+        ..scale(scale);
       _animateTo(target);
     }
   }
