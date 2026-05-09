@@ -32,6 +32,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   late final TextEditingController _searchCtrl;
   late final ScrollController _scrollCtrl;
 
+  // 영상 게시물용 GlobalKey 저장소 (post.id → key). 스크롤 종료 시
+  // 가까운 영상 카드를 viewport 상단에 정렬하기 위해 사용.
+  final Map<String, GlobalKey> _videoPostKeys = {};
+  bool _isSnapping = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +60,66 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     if (pos.pixels >= pos.maxScrollExtent - 300) {
       ref.read(feedPostsProvider.notifier).loadMore();
     }
+  }
+
+  bool _onScrollNotification(ScrollNotification notif) {
+    // 자식 스크롤(즐겨찾기 가로 리스트 등)의 알림은 무시
+    if (notif.depth != 0) return false;
+    if (notif.metrics.axis != Axis.vertical) return false;
+    if (notif is ScrollEndNotification) {
+      if (_isSnapping) {
+        _isSnapping = false;
+        return false;
+      }
+      _maybeSnapToVideo();
+    }
+    return false;
+  }
+
+  /// 영상 게시물 중 viewport 상단 근처에 있는 것을 찾아 정렬.
+  void _maybeSnapToVideo() {
+    if (_isSearching) return;
+    if (!_scrollCtrl.hasClients) return;
+    if (!mounted) return;
+
+    final scrollableCtx = _scrollCtrl.position.context.notificationContext;
+    if (scrollableCtx == null) return;
+    final scrollableBox = scrollableCtx.findRenderObject() as RenderBox?;
+    if (scrollableBox == null || !scrollableBox.attached) return;
+    final viewportH = scrollableBox.size.height;
+
+    BuildContext? bestCtx;
+    double bestDist = double.infinity;
+
+    for (final key in _videoPostKeys.values) {
+      final ctx = key.currentContext;
+      if (ctx == null) continue;
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) continue;
+
+      final dy = box.localToGlobal(Offset.zero, ancestor: scrollableBox).dy;
+      // 카드 상단이 화면 위로 자기 높이 이상 벗어났거나, 화면 절반 아래로
+      // 내려가 있으면 후보 제외.
+      if (dy < -box.size.height) continue;
+      if (dy > viewportH * 0.5) continue;
+
+      final dist = dy.abs();
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestCtx = ctx;
+      }
+    }
+
+    if (bestCtx == null) return;
+    if (bestDist < 8) return; // 이미 정렬돼 있으면 스킵
+
+    _isSnapping = true;
+    Scrollable.ensureVisible(
+      bestCtx,
+      alignment: 0.0,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _onSearchToggle() => setState(() => _isSearching = true);
@@ -90,6 +155,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(feedPostsProvider),
+        child: NotificationListener<ScrollNotification>(
+        onNotification: _onScrollNotification,
         child: CustomScrollView(
           controller: _scrollCtrl,
           slivers: [
@@ -133,11 +200,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   else
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) => _InstaPost(
-                          post: filtered[i],
-                          isDark: context.isDark,
-                          accent: context.accentColor,
-                        ),
+                        (context, i) {
+                          final post = filtered[i];
+                          final isVideo = post.videoUrl != null;
+                          final key = isVideo
+                              ? (_videoPostKeys[post.id] ??= GlobalKey())
+                              : null;
+                          return KeyedSubtree(
+                            key: key,
+                            child: _InstaPost(
+                              post: post,
+                              isDark: context.isDark,
+                              accent: context.accentColor,
+                            ),
+                          );
+                        },
                         childCount: filtered.length,
                       ),
                     ),
@@ -162,6 +239,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               ],
             ),
           ],
+        ),
         ),
       ),
     );
