@@ -87,17 +87,22 @@ class _VerificationDetailScreenState
               ),
               child: Container(
                 color: isDark ? Colors.black : const Color(0xFFF5F5F5),
-                child: CachedNetworkImage(
-                  imageUrl: req.imageUrl,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => SizedBox(
-                    height: 320,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (_, __, ___) => SizedBox(
-                    height: 320,
-                    child: Center(
-                      child: Icon(LucideIcons.imageOff, color: sub),
+                child: InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 5.0,
+                  clipBehavior: Clip.hardEdge,
+                  child: CachedNetworkImage(
+                    imageUrl: req.imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => SizedBox(
+                      height: 320,
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (_, __, ___) => SizedBox(
+                      height: 320,
+                      child: Center(
+                        child: Icon(LucideIcons.imageOff, color: sub),
+                      ),
                     ),
                   ),
                 ),
