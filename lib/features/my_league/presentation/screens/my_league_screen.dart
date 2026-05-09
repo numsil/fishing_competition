@@ -439,7 +439,7 @@ class _ActiveLeagueCard extends StatelessWidget {
                         ? AppColors.liveRed.withValues(alpha: 0.12)
                         : isUpcoming
                             ? accent.withValues(alpha: 0.1)
-                            : Colors.transparent,
+                            : sub.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -459,12 +459,18 @@ class _ActiveLeagueCard extends StatelessWidget {
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.liveRed)),
-                      ] else ...[
+                      ] else if (isUpcoming) ...[
                         Text('모집중',
                             style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 color: accent)),
+                      ] else ...[
+                        Text('종료',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: sub)),
                       ],
                     ],
                   ),

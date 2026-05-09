@@ -81,22 +81,25 @@ class _VerificationDetailScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(
-              aspectRatio: 1.0,
-              child: CachedNetworkImage(
-                imageUrl: req.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  color: isDark
-                      ? const Color(0xFF1A1A1A)
-                      : const Color(0xFFF5F5F5),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  color: isDark
-                      ? const Color(0xFF1A1A1A)
-                      : const Color(0xFFF5F5F5),
-                  child: Icon(LucideIcons.imageOff, color: sub),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              child: Container(
+                color: isDark ? Colors.black : const Color(0xFFF5F5F5),
+                child: CachedNetworkImage(
+                  imageUrl: req.imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => SizedBox(
+                    height: 320,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (_, __, ___) => SizedBox(
+                    height: 320,
+                    child: Center(
+                      child: Icon(LucideIcons.imageOff, color: sub),
+                    ),
+                  ),
                 ),
               ),
             ),
