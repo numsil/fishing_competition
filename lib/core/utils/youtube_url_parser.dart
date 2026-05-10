@@ -53,3 +53,14 @@ String? extractYoutubeId(String input) {
 
 String youtubeThumbnailUrl(String videoId) =>
     'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+
+/// URL 이 YouTube Shorts (`/shorts/{id}`) 형식인지.
+/// 쇼츠는 9:16 세로 비율로 렌더해야 잘리지 않는다.
+bool isYoutubeShortsUrl(String url) {
+  try {
+    final uri = Uri.parse(url.contains('://') ? url : 'https://$url');
+    return uri.pathSegments.contains('shorts');
+  } catch (_) {
+    return false;
+  }
+}

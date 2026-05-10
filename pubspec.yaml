@@ -43,7 +43,7 @@ dependencies:
   video_player: ^2.9.2
 
   # YouTube 임베드 (피드 링크 게시물)
-  youtube_player_iframe: ^5.2.1
+  youtube_player_flutter: ^9.1.1
 
   # 갤러리 저장
   gal: ^1.3.0
