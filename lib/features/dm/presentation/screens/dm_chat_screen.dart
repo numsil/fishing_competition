@@ -123,24 +123,28 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
               color: context.isDark ? Colors.white : Colors.black),
           onPressed: () => context.pop(),
         ),
-        title: Row(
-          children: [
-            UserAvatar(
-              username: widget.conversation.otherUsername,
-              avatarUrl: widget.conversation.otherAvatarUrl,
-              radius: 18,
-              isDark: context.isDark,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              widget.conversation.otherUsername,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: context.isDark ? Colors.white : Colors.black,
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => context.push('/user/${widget.conversation.otherUserId}'),
+          child: Row(
+            children: [
+              UserAvatar(
+                username: widget.conversation.otherUsername,
+                avatarUrl: widget.conversation.otherAvatarUrl,
+                radius: 18,
+                isDark: context.isDark,
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Text(
+                widget.conversation.otherUsername,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(
@@ -359,11 +363,16 @@ class _MessageBubble extends StatelessWidget {
             SizedBox(
               width: 32,
               child: showAvatar
-                  ? UserAvatar(
-                      username: conversation.otherUsername,
-                      avatarUrl: conversation.otherAvatarUrl,
-                      radius: 14,
-                      isDark: isDark,
+                  ? GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => context
+                          .push('/user/${conversation.otherUserId}'),
+                      child: UserAvatar(
+                        username: conversation.otherUsername,
+                        avatarUrl: conversation.otherAvatarUrl,
+                        radius: 14,
+                        isDark: isDark,
+                      ),
                     )
                   : null,
             ),
