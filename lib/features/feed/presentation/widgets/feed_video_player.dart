@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,10 +25,34 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
   bool _hasEnded = false;
   bool _isLoading = false;
 
+  // 더블탭 스킵 시 화면 좌/우에 잠깐 뜨는 오버레이
+  int? _skipIndicator; // -10 / +10
+  Timer? _skipIndicatorTimer;
+
   @override
   void dispose() {
+    _skipIndicatorTimer?.cancel();
     _controller?.dispose();
     super.dispose();
+  }
+
+  void _seekRelative(int seconds) {
+    final c = _controller;
+    if (c == null || !_initialized) return;
+    final pos = c.value.position;
+    final dur = c.value.duration;
+    var target = pos + Duration(seconds: seconds);
+    if (target.isNegative) target = Duration.zero;
+    if (target > dur) target = dur;
+    c.seekTo(target);
+    setState(() {
+      _hasEnded = false;
+      _skipIndicator = seconds;
+    });
+    _skipIndicatorTimer?.cancel();
+    _skipIndicatorTimer = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _skipIndicator = null);
+    });
   }
 
   void _onVisibilityChanged(VisibilityInfo info) {
@@ -193,11 +218,54 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
           else
             Container(color: const Color(0xFF1A1A1A)),
 
-          // 전체 탭 영역 (재생/일시정지)
-          GestureDetector(
-            onTap: _hasEnded ? null : _togglePlay,
-            child: Container(color: Colors.transparent),
+          // 좌/우 탭 영역
+          //  - 단일 탭: 재생/일시정지
+          //  - 더블탭: -10초 / +10초 (YouTube 스타일)
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _hasEnded ? null : _togglePlay,
+                  onDoubleTap: () => _seekRelative(-5),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _hasEnded ? null : _togglePlay,
+                  onDoubleTap: () => _seekRelative(5),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ],
           ),
+
+          // 더블탭 스킵 인디케이터 (잠깐 뜨고 사라짐)
+          if (_skipIndicator != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: _skipIndicator! < 0
+                            ? _SkipIndicator(seconds: -_skipIndicator!, forward: false)
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: _skipIndicator! > 0
+                            ? _SkipIndicator(seconds: _skipIndicator!, forward: true)
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // 재생 버튼
           if (!isPlaying && !_hasEnded)
@@ -249,24 +317,33 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
               ]),
             ),
 
-          // 음소거 토글 (초기화 후 우하단, 시크바 위)
+          // 시크바 옆 보조 컨트롤 (좌: ±10초, 우: 음소거)
           if (_initialized)
             Positioned(
-              bottom: 38, right: 10,
-              child: GestureDetector(
-                onTap: _toggleMute,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
+              bottom: 36, left: 10, right: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      _CtrlIconButton(
+                        icon: Icons.replay_5,
+                        onTap: () => _seekRelative(-5),
+                      ),
+                      const SizedBox(width: 6),
+                      _CtrlIconButton(
+                        icon: Icons.forward_5,
+                        onTap: () => _seekRelative(5),
+                      ),
+                    ],
                   ),
-                  child: Icon(
-                    isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                    color: Colors.white,
-                    size: 16,
+                  _CtrlIconButton(
+                    icon: isMuted
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    onTap: _toggleMute,
                   ),
-                ),
+                ],
               ),
             ),
 
@@ -310,6 +387,63 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CtrlIconButton extends StatelessWidget {
+  const _CtrlIconButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 16),
+      ),
+    );
+  }
+}
+
+class _SkipIndicator extends StatelessWidget {
+  const _SkipIndicator({required this.seconds, required this.forward});
+  final int seconds;
+  final bool forward;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            forward ? Icons.forward_5 : Icons.replay_5,
+            color: Colors.white,
+            size: 22,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$seconds초',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
