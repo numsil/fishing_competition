@@ -16,6 +16,7 @@ import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../auth/presentation/utils/withdraw_flow.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import '../../../verification/data/verification_repository.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
@@ -157,7 +158,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   style: TextStyle(color: AppColors.error)),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                _confirmWithdraw();
+                showWithdrawFlow(context, ref);
               },
             ),
             const SizedBox(height: 8),
@@ -165,63 +166,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ),
       ),
     );
-  }
-
-  Future<void> _confirmWithdraw() async {
-    final controller = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('회원 탈퇴'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '탈퇴 시 다음 사항을 확인해주세요.\n\n'
-              '• 작성하신 게시물·조과 기록은 즉시 비공개 처리됩니다\n'
-              '• 동일 이메일로 재가입할 수 없습니다\n'
-              '• 탈퇴 후 30일간 복구 문의가 가능합니다 (support@nakstar.app)\n\n'
-              '계속하려면 아래에 "탈퇴"를 입력해주세요.',
-              style: TextStyle(fontSize: 13, height: 1.5),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: '탈퇴',
-                isDense: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (_, value, __) => TextButton(
-              onPressed: value.text.trim() == '탈퇴'
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              child: const Text('탈퇴', style: TextStyle(color: AppColors.error)),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      // navigate 먼저: signOut으로 myProfile 재빌드 시 에러 화면 회피 (로그아웃과 동일 패턴)
-      if (mounted) context.go(AppRoutes.login);
-      await ref.read(authRepositoryProvider).withdraw();
-    } catch (e) {
-      if (mounted) AppSnackBar.error(context, '탈퇴 처리에 실패했습니다');
-    }
   }
 
   @override
