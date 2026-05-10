@@ -71,6 +71,7 @@ class LeagueRepository {
         fileOptions: FileOptions(
           contentType: 'image/$ext',
           upsert: false,
+          cacheControl: '31536000',
         ),
       );
       return _supabase.storage.from('league_images').getPublicUrl(path);

@@ -130,7 +130,11 @@ class FeedRepository {
         await _supabase.storage.from('post_images').upload(
           storagePath,
           compressed,
-          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
       }
@@ -227,7 +231,11 @@ class FeedRepository {
         await _supabase.storage.from('post_images').uploadBinary(
           thumbPath,
           videoThumbnailBytes,
-          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          ),
         );
         imageUrl = _supabase.storage.from('post_images').getPublicUrl(thumbPath);
       } else {
@@ -238,7 +246,11 @@ class FeedRepository {
       await _supabase.storage.from('post_videos').upload(
         videoPath,
         videoFile,
-        fileOptions: const FileOptions(contentType: 'video/mp4', upsert: false),
+        fileOptions: const FileOptions(
+          contentType: 'video/mp4',
+          upsert: false,
+          cacheControl: '31536000',
+        ),
       );
       videoUrl = _supabase.storage.from('post_videos').getPublicUrl(videoPath);
     } else if (imageFiles != null && imageFiles.isNotEmpty) {
@@ -249,7 +261,11 @@ class FeedRepository {
         await _supabase.storage.from('post_images').upload(
           storagePath,
           compressed,
-          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
       }
@@ -261,7 +277,11 @@ class FeedRepository {
       await _supabase.storage.from('post_images').upload(
         storagePath,
         compressed,
-        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: false),
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: false,
+          cacheControl: '31536000',
+        ),
       );
       imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
     } else {
