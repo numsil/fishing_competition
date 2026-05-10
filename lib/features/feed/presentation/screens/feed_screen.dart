@@ -86,7 +86,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     if (scrollableCtx == null) return;
     final scrollableBox = scrollableCtx.findRenderObject() as RenderBox?;
     if (scrollableBox == null || !scrollableBox.attached) return;
-    final viewportH = scrollableBox.size.height;
+
+    // 절대 좌표 기준으로 viewport 상단 위치 계산 (ancestor 인자 없이 사용해 안정성 확보)
+    final viewportTop = scrollableBox.localToGlobal(Offset.zero).dy;
+    final viewportH = _scrollCtrl.position.viewportDimension;
 
     BuildContext? bestCtx;
     double bestDist = double.infinity;
@@ -97,7 +100,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       final box = ctx.findRenderObject() as RenderBox?;
       if (box == null || !box.attached) continue;
 
-      final dy = box.localToGlobal(Offset.zero, ancestor: scrollableBox).dy;
+      final postTop = box.localToGlobal(Offset.zero).dy;
+      final dy = postTop - viewportTop;
       // 카드 상단이 화면 위로 자기 높이 이상 벗어났거나, 화면 절반 아래로
       // 내려가 있으면 후보 제외.
       if (dy < -box.size.height) continue;
@@ -119,7 +123,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       alignment: 0.0,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
-    );
+    ).whenComplete(() {
+      if (mounted) _isSnapping = false;
+    });
   }
 
   void _onSearchToggle() => setState(() => _isSearching = true);
