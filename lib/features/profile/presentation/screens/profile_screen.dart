@@ -8,8 +8,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../dm/data/dm_repository.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/score_card.dart';
@@ -109,6 +111,127 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
+  Future<void> _openAdminDm() async {
+    try {
+      final conversationId = await ref
+          .read(dmRepositoryProvider)
+          .getOrCreateConversation(AppConstants.adminUserId);
+      if (!mounted) return;
+      context.push(
+        AppRoutes.dmChat,
+        extra: DmConversation(
+          id: conversationId,
+          otherUserId: AppConstants.adminUserId,
+          otherUsername: AppConstants.adminUsername,
+          otherAvatarUrl: null,
+          lastMessageAt: DateTime.now(),
+          hasUnread: false,
+        ),
+      );
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '문의 화면을 열 수 없습니다');
+    }
+  }
+
+  Future<void> _logout() async {
+    final confirm = await showConfirmDialog(
+      context,
+      title: '로그아웃',
+      content: '정말 로그아웃 하시겠어요?',
+      confirmText: '로그아웃',
+      confirmColor: AppColors.error,
+      icon: Icons.logout_rounded,
+    );
+    if (!confirm) return;
+    // navigate 먼저: signOut() 호출 시 authState 변화로
+    // myProfile이 재빌드되어 에러 화면이 보이는 문제 방지
+    if (mounted) context.go(AppRoutes.login);
+    await ref.read(authRepositoryProvider).signOut();
+  }
+
+  Future<void> _showSettingsSheet(BuildContext rootContext, UserProfile profile) async {
+    final isDark = context.isDark;
+    await showModalBottomSheet<void>(
+      context: rootContext,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF444444)
+                    : const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('프로필 수정'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.profileEdit, extra: profile);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: const Text('비밀번호 변경'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.passwordChange);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.headset_mic_outlined),
+              title: const Text('관리자에게 문의'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _openAdminDm();
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('서비스 이용약관'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.terms);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('개인정보처리방침'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.privacy);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.logout_rounded,
+                  color: AppColors.error),
+              title: const Text('로그아웃',
+                  style: TextStyle(color: AppColors.error)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _logout();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -120,24 +243,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           appBar: AppBar(
             title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
             actions: [
-              IconButton(icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black), onPressed: () {}),
               IconButton(
-                icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
-                onPressed: () async {
-                  final confirm = await showConfirmDialog(
-                    context,
-                    title: '로그아웃',
-                    content: '정말 로그아웃 하시겠어요?',
-                    confirmText: '로그아웃',
-                    confirmColor: AppColors.error,
-                    icon: Icons.logout_rounded,
-                  );
-                  if (!confirm) return;
-                  // navigate 먼저: signOut() 호출 시 authState 변화로
-                  // myProfile이 재빌드되어 에러 화면이 보이는 문제 방지
-                  if (context.mounted) context.go(AppRoutes.login);
-                  await ref.read(authRepositoryProvider).signOut();
-                },
+                icon: Icon(LucideIcons.menu,
+                    color: context.isDark ? Colors.white : Colors.black),
+                onPressed: () => _showSettingsSheet(context, profile),
               ),
             ],
           ),
@@ -208,8 +317,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             StatNumber(value: '${profile.postCount}', label: '게시물', subColor: sub),
-                            StatNumber(value: '0', label: '팔로워', subColor: sub),
-                            StatNumber(value: '0', label: '팔로잉', subColor: sub),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => context.push(
+                                '${AppRoutes.userProfile}/${profile.id}/followers',
+                                extra: profile.username,
+                              ),
+                              child: StatNumber(value: '${profile.followerCount}', label: '팔로워', subColor: sub),
+                            ),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => context.push(
+                                '${AppRoutes.userProfile}/${profile.id}/following',
+                                extra: profile.username,
+                              ),
+                              child: StatNumber(value: '${profile.followingCount}', label: '팔로잉', subColor: sub),
+                            ),
                           ],
                         ),
                       ),

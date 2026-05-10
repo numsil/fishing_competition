@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
+import 'core/services/last_seen_tracker.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_repository.dart';
 
@@ -53,9 +54,14 @@ class _AppRootWidgetState extends State<AppRootWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 콜드 스타트 시 1회 (이미 로그인 상태면)
+    LastSeenTracker.ping();
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.signedOut) {
+        LastSeenTracker.reset();
         setState(() => _scopeKey++);
+      } else if (data.event == AuthChangeEvent.signedIn) {
+        LastSeenTracker.ping();
       }
     });
   }
@@ -71,6 +77,7 @@ class _AppRootWidgetState extends State<AppRootWidget>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _verifyNotBanned();
+      LastSeenTracker.ping();
     }
   }
 

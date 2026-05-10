@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
+import '../../features/auth/presentation/screens/password_change_email_screen.dart';
+import '../../features/auth/presentation/screens/password_change_otp_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/league/presentation/screens/league_screen.dart';
 import '../../features/league/presentation/screens/league_detail_screen.dart';
@@ -28,6 +30,8 @@ import '../../features/league/presentation/screens/league_participant_detail_scr
 import '../../features/profile/presentation/screens/user_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_edit_screen.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../features/follow/presentation/screens/follow_list_screen.dart';
+import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/dm/data/dm_repository.dart';
 import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
@@ -61,6 +65,25 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.signup,
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.passwordChange,
+        builder: (context, state) => const PasswordChangeEmailScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.passwordChangeOtp,
+        builder: (context, state) =>
+            PasswordChangeOtpScreen(email: state.extra as String),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) =>
+            const LegalDocumentScreen(type: LegalDocType.terms),
+      ),
+      GoRoute(
+        path: AppRoutes.privacy,
+        builder: (context, state) =>
+            const LegalDocumentScreen(type: LegalDocType.privacy),
       ),
       // 피드 상세: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -135,6 +158,28 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) => MaterialPage(
           child: UserProfileScreen(
             userId: state.pathParameters['userId']!,
+          ),
+        ),
+      ),
+      // 팔로워 목록
+      GoRoute(
+        path: '/user/:userId/followers',
+        pageBuilder: (context, state) => MaterialPage(
+          child: FollowListScreen(
+            userId: state.pathParameters['userId']!,
+            type: FollowListType.followers,
+            username: state.extra is String ? state.extra as String : null,
+          ),
+        ),
+      ),
+      // 팔로잉 목록
+      GoRoute(
+        path: '/user/:userId/following',
+        pageBuilder: (context, state) => MaterialPage(
+          child: FollowListScreen(
+            userId: state.pathParameters['userId']!,
+            type: FollowListType.following,
+            username: state.extra is String ? state.extra as String : null,
           ),
         ),
       ),
@@ -238,4 +283,8 @@ class AppRoutes {
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
   static const String widgetCatalog = '/widget-catalog';
+  static const String terms = '/legal/terms';
+  static const String privacy = '/legal/privacy';
+  static const String passwordChange = '/password-change';
+  static const String passwordChangeOtp = '/password-change/otp';
 }

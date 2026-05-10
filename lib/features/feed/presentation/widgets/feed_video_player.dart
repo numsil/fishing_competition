@@ -176,7 +176,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
           if (_initialized && _controller != null)
             ClipRect(
               child: FittedBox(
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 child: SizedBox(
                   width: _controller!.value.size.width,
                   height: _controller!.value.size.height,
@@ -187,7 +187,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
           else if (p.imageUrl.isNotEmpty)
             CachedNetworkImage(
               imageUrl: p.imageUrl,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               errorWidget: (_, __, ___) => Container(color: const Color(0xFF1A1A1A)),
             )
           else

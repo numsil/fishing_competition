@@ -8,8 +8,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
+import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -27,6 +29,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
   bool _dmLoading = false;
+  bool _followLoading = false;
 
   @override
   void initState() {
@@ -69,6 +72,50 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     }
   }
 
+  Future<void> _toggleFollow(UserProfile profile) async {
+    if (_followLoading) return;
+    final repo = ref.read(followRepositoryProvider);
+
+    if (profile.isFollowing) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('언팔로우'),
+          content: Text('${profile.username}님을 언팔로우 하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('언팔로우'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
+    setState(() => _followLoading = true);
+    try {
+      if (profile.isFollowing) {
+        await repo.unfollow(profile.id);
+      } else {
+        await repo.follow(profile.id);
+      }
+      ref.invalidate(userProfileProvider(profile.id));
+      final me = ref.read(currentUserProvider)?.id;
+      if (me != null) {
+        ref.invalidate(myProfileProvider);
+      }
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '요청에 실패했습니다');
+    } finally {
+      if (mounted) setState(() => _followLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -82,6 +129,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         if (mounted) context.go(AppRoutes.profile);
       });
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // 관리자 계정 프로필 진입 차단 — 안내 페이지 표시
+    if (widget.userId == AppConstants.adminUserId) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(LucideIcons.chevronLeft,
+                color: context.isDark ? Colors.white : Colors.black),
+            onPressed: () => context.pop(),
+          ),
+          backgroundColor: context.isDark ? AppColors.darkBg : Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.shield,
+                    size: 64, color: context.accentColor),
+                const SizedBox(height: 16),
+                const Text(
+                  '공식 계정',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${AppConstants.adminUsername}는 NAKSTAR 공식 계정입니다.\n문의는 프로필 → 햄버거 → "관리자에게 문의" 를 이용해주세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: sub, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return ref.watch(userProfileProvider(widget.userId)).when(
@@ -135,8 +221,28 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                                   value: '${profile.postCount}',
                                   label: '게시물',
                                   subColor: sub),
-                              StatNumber(value: '0', label: '팔로워', subColor: sub),
-                              StatNumber(value: '0', label: '팔로잉', subColor: sub),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push(
+                                  '${AppRoutes.userProfile}/${profile.id}/followers',
+                                  extra: profile.username,
+                                ),
+                                child: StatNumber(
+                                    value: '${profile.followerCount}',
+                                    label: '팔로워',
+                                    subColor: sub),
+                              ),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push(
+                                  '${AppRoutes.userProfile}/${profile.id}/following',
+                                  extra: profile.username,
+                                ),
+                                child: StatNumber(
+                                    value: '${profile.followingCount}',
+                                    label: '팔로잉',
+                                    subColor: sub),
+                              ),
                             ],
                           ),
                         ),
@@ -158,23 +264,72 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     // 팔로우 / 메시지 버튼
                     Row(children: [
                       Expanded(
-                        child: FilledButton(
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            backgroundColor: context.accentColor,
-                            minimumSize: const Size(0, 36),
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: Text(
-                            '팔로우',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: context.isDark ? Colors.black : Colors.white),
-                          ),
-                        ),
+                        child: profile.isFollowing
+                            ? OutlinedButton(
+                                onPressed: _followLoading
+                                    ? null
+                                    : () => _toggleFollow(profile),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(0, 36),
+                                  padding: EdgeInsets.zero,
+                                  side: BorderSide(
+                                      color: context.isDark
+                                          ? AppColors.darkSurface2
+                                          : AppColors.lightDivider),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: _followLoading
+                                    ? SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: context.accentColor,
+                                        ),
+                                      )
+                                    : Text(
+                                        '팔로잉',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: context.isDark
+                                                ? Colors.white
+                                                : Colors.black),
+                                      ),
+                              )
+                            : FilledButton(
+                                onPressed: _followLoading
+                                    ? null
+                                    : () => _toggleFollow(profile),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: context.accentColor,
+                                  minimumSize: const Size(0, 36),
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: _followLoading
+                                    ? SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: context.isDark
+                                              ? Colors.black
+                                              : Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        '팔로우',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: context.isDark
+                                                ? Colors.black
+                                                : Colors.white),
+                                      ),
+                              ),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(

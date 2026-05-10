@@ -8,9 +8,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../auth/presentation/utils/withdraw_flow.dart';
 import '../../data/profile_repository.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key, required this.profile});
@@ -332,6 +335,48 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             const SizedBox(height: 4),
             _buildUserKeyStatus(sub),
+
+            const SizedBox(height: 40),
+            Divider(
+              height: 1,
+              color: context.isDark
+                  ? AppColors.darkSurface2
+                  : AppColors.lightDivider,
+            ),
+            const SizedBox(height: 8),
+            _BottomMenuItem(
+              icon: Icons.description_outlined,
+              label: '서비스 이용약관',
+              onTap: () => context.push(AppRoutes.terms),
+            ),
+            _BottomMenuItem(
+              icon: Icons.privacy_tip_outlined,
+              label: '개인정보처리방침',
+              onTap: () => context.push(AppRoutes.privacy),
+            ),
+
+            // 위험 영역: 약관·개인정보와 충분히 분리
+            const SizedBox(height: 56),
+            Center(
+              child: TextButton(
+                onPressed: () => showWithdrawFlow(context, ref),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: Text(
+                  '회원 탈퇴',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: sub,
+                    decoration: TextDecoration.underline,
+                    decorationColor: sub,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -383,6 +428,48 @@ class _Label extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    );
+  }
+}
+
+class _BottomMenuItem extends StatelessWidget {
+  const _BottomMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.isDark ? Colors.white70 : Colors.black87;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
+            Icon(LucideIcons.chevronRight,
+                size: 16,
+                color: context.isDark ? Colors.white38 : Colors.black38),
+          ],
+        ),
+      ),
     );
   }
 }

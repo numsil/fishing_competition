@@ -23,6 +23,9 @@ class UserProfile {
   final int anglerScore;
   final int participationCount; // 완료된 리그 참가 수
   final int winCount;           // 우승 횟수 (rank == 1)
+  final int followerCount;
+  final int followingCount;
+  final bool isFollowing; // 현재 로그인 유저가 이 프로필을 팔로우 중인지
 
   UserProfile({
     required this.id,
@@ -40,6 +43,9 @@ class UserProfile {
     this.anglerScore = 0,
     this.participationCount = 0,
     this.winCount = 0,
+    this.followerCount = 0,
+    this.followingCount = 0,
+    this.isFollowing = false,
   });
 }
 
@@ -66,11 +72,6 @@ class ProfileRepository {
       });
     }
 
-    int lunkerCount = 0;
-    for (final p in posts) {
-      if (p.isLunker) lunkerCount++;
-    }
-
     return UserProfile(
       id: data['id'] as String,
       email: (data['email'] as String?) ?? '',
@@ -80,13 +81,16 @@ class ProfileRepository {
       mannerTemperature: (data['manner_temperature'] as num).toDouble(),
       isLunkerClub: (data['is_lunker_club'] as bool?) ?? false,
       postCount: posts.length,
-      lunkerCount: lunkerCount,
+      lunkerCount: (data['lunker_count'] as num?)?.toInt() ?? 0,
       maxFishLength: maxFishPost?.length,
       maxFishPost: maxFishPost,
       leagueScore: (data['league_score'] as num?)?.toInt() ?? 0,
       anglerScore: (data['angler_score'] as num?)?.toInt() ?? 0,
       participationCount: (data['participation_count'] as num?)?.toInt() ?? 0,
       winCount: (data['win_count'] as num?)?.toInt() ?? 0,
+      followerCount: (data['follower_count'] as num?)?.toInt() ?? 0,
+      followingCount: (data['following_count'] as num?)?.toInt() ?? 0,
+      isFollowing: (data['is_following'] as bool?) ?? false,
     );
   }
 
