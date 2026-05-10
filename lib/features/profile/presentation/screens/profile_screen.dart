@@ -16,7 +16,6 @@ import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
-import '../../../auth/presentation/utils/withdraw_flow.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import '../../../verification/data/verification_repository.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
@@ -110,7 +109,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
-  Future<void> _showSettingsSheet(BuildContext rootContext) async {
+  Future<void> _logout() async {
+    final confirm = await showConfirmDialog(
+      context,
+      title: '로그아웃',
+      content: '정말 로그아웃 하시겠어요?',
+      confirmText: '로그아웃',
+      confirmColor: AppColors.error,
+      icon: Icons.logout_rounded,
+    );
+    if (!confirm) return;
+    // navigate 먼저: signOut() 호출 시 authState 변화로
+    // myProfile이 재빌드되어 에러 화면이 보이는 문제 방지
+    if (mounted) context.go(AppRoutes.login);
+    await ref.read(authRepositoryProvider).signOut();
+  }
+
+  Future<void> _showSettingsSheet(BuildContext rootContext, UserProfile profile) async {
     final isDark = context.isDark;
     await showModalBottomSheet<void>(
       context: rootContext,
@@ -135,6 +150,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
             const SizedBox(height: 12),
             ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('프로필 수정'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.profileEdit, extra: profile);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
               leading: const Icon(Icons.description_outlined),
               title: const Text('서비스 이용약관'),
               onTap: () {
@@ -152,13 +176,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.person_remove_outlined,
+              leading: const Icon(Icons.logout_rounded,
                   color: AppColors.error),
-              title: const Text('회원 탈퇴',
+              title: const Text('로그아웃',
                   style: TextStyle(color: AppColors.error)),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                showWithdrawFlow(context, ref);
+                _logout();
               },
             ),
             const SizedBox(height: 8),
@@ -180,26 +204,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
             actions: [
               IconButton(
-                icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black),
-                onPressed: () => _showSettingsSheet(context),
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
-                onPressed: () async {
-                  final confirm = await showConfirmDialog(
-                    context,
-                    title: '로그아웃',
-                    content: '정말 로그아웃 하시겠어요?',
-                    confirmText: '로그아웃',
-                    confirmColor: AppColors.error,
-                    icon: Icons.logout_rounded,
-                  );
-                  if (!confirm) return;
-                  // navigate 먼저: signOut() 호출 시 authState 변화로
-                  // myProfile이 재빌드되어 에러 화면이 보이는 문제 방지
-                  if (context.mounted) context.go(AppRoutes.login);
-                  await ref.read(authRepositoryProvider).signOut();
-                },
+                icon: Icon(LucideIcons.menu,
+                    color: context.isDark ? Colors.white : Colors.black),
+                onPressed: () => _showSettingsSheet(context, profile),
               ),
             ],
           ),

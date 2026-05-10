@@ -53,15 +53,12 @@ class AuthRepository {
     return (await _checkLoginBlock()) != null;
   }
 
-  /// 회원 탈퇴 (soft-delete). users 행에 is_deleted/deleted_at 마킹 후 signOut.
+  /// 회원 탈퇴 (soft-delete). RPC가 users + posts 를 한 트랜잭션으로 처리.
   /// auth.users 의 hard-delete 는 service_role 필요하므로 여기서는 미수행.
   Future<void> withdraw() async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not logged in');
-    await _supabase.from('users').update({
-      'is_deleted': true,
-      'deleted_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', user.id);
+    await _supabase.rpc('withdraw_user');
     await _supabase.auth.signOut();
   }
 
@@ -85,6 +82,7 @@ class AuthRepository {
     String password,
     String username, {
     required DateTime birthDate,
+    required String gender, // 'M' or 'F'
     required bool marketingAgreed,
   }) async {
     final response = await _supabase.auth.signUp(
@@ -102,6 +100,7 @@ class AuthRepository {
         'user_key': userKey,
         'birth_date':
             '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+        'gender': gender,
         'terms_agreed_at': now,
         'privacy_agreed_at': now,
         if (marketingAgreed) 'marketing_agreed_at': now,

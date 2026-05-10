@@ -354,11 +354,27 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               label: '개인정보처리방침',
               onTap: () => context.push(AppRoutes.privacy),
             ),
-            _BottomMenuItem(
-              icon: Icons.person_remove_outlined,
-              label: '회원 탈퇴',
-              danger: true,
-              onTap: () => showWithdrawFlow(context, ref),
+
+            // 위험 영역: 약관·개인정보와 충분히 분리
+            const SizedBox(height: 56),
+            Center(
+              child: TextButton(
+                onPressed: () => showWithdrawFlow(context, ref),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: Text(
+                  '회원 탈퇴',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: sub,
+                    decoration: TextDecoration.underline,
+                    decorationColor: sub,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 32),
           ],
@@ -421,19 +437,15 @@ class _BottomMenuItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.danger = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final bool danger;
 
   @override
   Widget build(BuildContext context) {
-    final color = danger
-        ? AppColors.error
-        : (context.isDark ? Colors.white70 : Colors.black87);
+    final color = context.isDark ? Colors.white70 : Colors.black87;
     return InkWell(
       onTap: onTap,
       child: Padding(
