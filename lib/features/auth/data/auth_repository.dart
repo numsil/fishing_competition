@@ -62,21 +62,8 @@ class AuthRepository {
     await _supabase.auth.signOut();
   }
 
-  Future<String> _generateUniqueUserKey(String username) async {
-    String candidate = username;
-    int suffix = 2;
-    while (true) {
-      final existing = await _supabase
-          .from('users')
-          .select('id')
-          .eq('user_key', candidate)
-          .maybeSingle();
-      if (existing == null) return candidate;
-      candidate = '$username$suffix';
-      suffix++;
-    }
-  }
-
+  /// 가입. raw_user_meta_data 에 모든 정보 담아 보내면 DB 트리거 handle_new_user 가
+  /// public.users 행을 자동 생성한다 (Email Confirm ON 환경에서도 작동).
   Future<AuthResponse> signUpWithEmail(
     String email,
     String password,
@@ -85,28 +72,18 @@ class AuthRepository {
     required String gender, // 'M' or 'F'
     required bool marketingAgreed,
   }) async {
-    final response = await _supabase.auth.signUp(
+    final birthStr =
+        '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
+    return await _supabase.auth.signUp(
       email: email,
       password: password,
-      data: {'username': username},
-    );
-    if (response.user != null) {
-      final userKey = await _generateUniqueUserKey(username);
-      final now = DateTime.now().toUtc().toIso8601String();
-      await _supabase.from('users').insert({
-        'id': response.user!.id,
-        'email': email,
+      data: {
         'username': username,
-        'user_key': userKey,
-        'birth_date':
-            '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+        'birth_date': birthStr,
         'gender': gender,
-        'terms_agreed_at': now,
-        'privacy_agreed_at': now,
-        if (marketingAgreed) 'marketing_agreed_at': now,
-      });
-    }
-    return response;
+        'marketing_agreed': marketingAgreed,
+      },
+    );
   }
 
   Future<void> signOut() async {
