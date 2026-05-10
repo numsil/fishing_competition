@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
+import '../../features/auth/presentation/screens/password_change_email_screen.dart';
+import '../../features/auth/presentation/screens/password_change_otp_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/league/presentation/screens/league_screen.dart';
 import '../../features/league/presentation/screens/league_detail_screen.dart';
@@ -63,6 +65,15 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.signup,
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.passwordChange,
+        builder: (context, state) => const PasswordChangeEmailScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.passwordChangeOtp,
+        builder: (context, state) =>
+            PasswordChangeOtpScreen(email: state.extra as String),
       ),
       GoRoute(
         path: AppRoutes.terms,
@@ -274,4 +285,6 @@ class AppRoutes {
   static const String widgetCatalog = '/widget-catalog';
   static const String terms = '/legal/terms';
   static const String privacy = '/legal/privacy';
+  static const String passwordChange = '/password-change';
+  static const String passwordChangeOtp = '/password-change/otp';
 }

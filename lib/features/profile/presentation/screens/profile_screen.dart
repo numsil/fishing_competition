@@ -157,6 +157,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 rootContext.push(AppRoutes.profileEdit, extra: profile);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: const Text('비밀번호 변경'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.passwordChange);
+              },
+            ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.description_outlined),

@@ -112,6 +112,45 @@ class AuthRepository {
   Future<void> signOut() async {
     await _supabase.auth.signOut();
   }
+
+  // ─────────────────────────────────────────
+  // 비밀번호 변경 (이메일 OTP 방식)
+  // ─────────────────────────────────────────
+
+  /// 1단계: 이메일로 6자리 OTP 발송.
+  /// Supabase 기본은 magic link + token 둘 다 보내지만 우리는 token만 사용.
+  /// 이메일 존재 여부는 응답에 노출되지 않음 (privacy).
+  Future<void> requestPasswordOtp(String email) async {
+    await _supabase.auth.resetPasswordForEmail(email);
+  }
+
+  /// 2단계: OTP 검증 + 새 비번 저장.
+  /// verifyOTP(recovery) 가 성공하면 해당 유저의 세션이 만들어짐.
+  /// 이후 updateUser 로 비번 변경. 변경 후 banned/탈퇴 검사도 함께 수행.
+  Future<void> verifyPasswordOtpAndChange({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    final res = await _supabase.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: token,
+    );
+    if (res.user == null) {
+      throw Exception('OTP 검증에 실패했습니다');
+    }
+    // 정지·탈퇴 계정이면 비번 변경 자체를 막고 강제 로그아웃
+    final blockReason = await _checkLoginBlock();
+    if (blockReason != null) {
+      pendingLoginMessage = blockReason;
+      await _supabase.auth.signOut();
+      throw Exception('blocked');
+    }
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
 }
 
 @riverpod
