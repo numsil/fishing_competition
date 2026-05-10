@@ -14,10 +14,13 @@ import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/utils/banned_error_handler.dart';
+import '../../../../core/utils/youtube_url_parser.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 const int _kMaxImages = 5;
+
+enum _UploadMode { photo, video, url }
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key, this.editPost});
@@ -32,6 +35,9 @@ class _UploadScreenState extends State<UploadScreen> {
   List<XFile> _selectedImages = [];
   XFile? _selectedVideo;
   bool _isVideo = false;
+  bool _isYoutube = false;
+  String? _youtubeUrl;
+  String? _youtubeVideoId;
   Uint8List? _thumbnailBytes;
   bool _generatingThumb = false;
 
@@ -51,6 +57,7 @@ class _UploadScreenState extends State<UploadScreen> {
         _selectedVideo = file;
         _selectedImages = [];
         _isVideo = true;
+        _isYoutube = false;
         _thumbnailBytes = bytes;
         _generatingThumb = false;
         _step = 1;
@@ -60,10 +67,24 @@ class _UploadScreenState extends State<UploadScreen> {
         _selectedImages = files;
         _selectedVideo = null;
         _isVideo = false;
+        _isYoutube = false;
         _thumbnailBytes = null;
         _step = 1;
       });
     }
+  }
+
+  void _onYoutubeSelected(String url, String videoId) {
+    setState(() {
+      _youtubeUrl = url;
+      _youtubeVideoId = videoId;
+      _selectedImages = [];
+      _selectedVideo = null;
+      _isVideo = false;
+      _isYoutube = true;
+      _thumbnailBytes = null;
+      _step = 1;
+    });
   }
 
   @override
@@ -88,12 +109,19 @@ class _UploadScreenState extends State<UploadScreen> {
     }
 
     return _step == 0
-        ? _MediaPickerStep(isDark: context.isDark, onMediaSelected: _onMediaSelected)
+        ? _MediaPickerStep(
+            isDark: context.isDark,
+            onMediaSelected: _onMediaSelected,
+            onYoutubeSelected: _onYoutubeSelected,
+          )
         : _CaptionStep(
             isDark: context.isDark,
-            imageFiles: _isVideo ? [] : _selectedImages,
+            imageFiles: (_isVideo || _isYoutube) ? [] : _selectedImages,
             videoFile: _isVideo ? _selectedVideo : null,
             isVideo: _isVideo,
+            isYoutube: _isYoutube,
+            youtubeUrl: _youtubeUrl,
+            youtubeVideoId: _youtubeVideoId,
             thumbnailBytes: _thumbnailBytes,
             onBack: widget.editPost != null
                 ? () => Navigator.of(context).pop()
@@ -105,9 +133,14 @@ class _UploadScreenState extends State<UploadScreen> {
 
 // ── Step 1: 미디어 선택 ───────────────────────────────────
 class _MediaPickerStep extends StatefulWidget {
-  const _MediaPickerStep({required this.isDark, required this.onMediaSelected});
+  const _MediaPickerStep({
+    required this.isDark,
+    required this.onMediaSelected,
+    required this.onYoutubeSelected,
+  });
   final bool isDark;
   final Future<void> Function(List<XFile> files, bool isVideo) onMediaSelected;
+  final void Function(String url, String videoId) onYoutubeSelected;
 
   @override
   State<_MediaPickerStep> createState() => _MediaPickerStepState();
@@ -115,8 +148,27 @@ class _MediaPickerStep extends StatefulWidget {
 
 class _MediaPickerStepState extends State<_MediaPickerStep> {
   final _picker = ImagePicker();
-  bool _videoMode = false;
+  _UploadMode _mode = _UploadMode.photo;
   bool _loadingMedia = false;
+  final _urlCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _urlCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _videoMode => _mode == _UploadMode.video;
+
+  void _submitYoutubeUrl() {
+    final raw = _urlCtrl.text.trim();
+    final id = extractYoutubeId(raw);
+    if (id == null) {
+      AppSnackBar.error(context, '올바른 유튜브 링크가 아닙니다.');
+      return;
+    }
+    widget.onYoutubeSelected(raw, id);
+  }
 
   Future<void> _pickFromGallery() async {
     setState(() => _loadingMedia = true);
@@ -176,6 +228,128 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
     }
   }
 
+  Widget _buildMediaBody(Color accent, Color sub) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: _videoMode
+                ? Icon(Icons.videocam_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3))
+                : AppSvg(AppIcons.fish, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _videoMode ? '동영상을 선택해주세요' : '사진을 선택해주세요',
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _videoMode
+              ? '갤러리에서 선택하거나 카메라로 촬영하세요'
+              : '갤러리에서 최대 $_kMaxImages장까지 선택할 수 있습니다',
+          style: TextStyle(color: sub, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 40),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PickButton(
+              icon: _videoMode ? Icons.video_library_outlined : Icons.collections_outlined,
+              label: '보관함',
+              accent: accent,
+              onTap: _pickFromGallery,
+            ),
+            const SizedBox(width: 20),
+            _PickButton(
+              icon: _videoMode ? Icons.videocam_outlined : Icons.camera_alt_outlined,
+              label: '카메라',
+              accent: accent,
+              onTap: _pickFromCamera,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUrlBody(Color accent, Color sub) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(LucideIcons.youtube, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '유튜브 링크를 붙여넣으세요',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'youtube.com/watch?v=... / youtu.be/... / shorts 모두 지원',
+            style: TextStyle(color: sub, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          TextField(
+            controller: _urlCtrl,
+            autocorrect: false,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submitYoutubeUrl(),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'https://youtu.be/…',
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              prefixIcon: Icon(LucideIcons.link, color: Colors.white.withValues(alpha: 0.4), size: 18),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              onPressed: _submitYoutubeUrl,
+              child: const Text('다음', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
@@ -214,7 +388,7 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
                     ),
                   ),
 
-                  // ── 사진/동영상 탭 ──
+                  // ── 사진/동영상/URL 탭 ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Container(
@@ -227,15 +401,21 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
                         children: [
                           _ModeTab(
                             label: '사진',
-                            selected: !_videoMode,
+                            selected: _mode == _UploadMode.photo,
                             accent: accent,
-                            onTap: () => setState(() => _videoMode = false),
+                            onTap: () => setState(() => _mode = _UploadMode.photo),
                           ),
                           _ModeTab(
                             label: '동영상',
-                            selected: _videoMode,
+                            selected: _mode == _UploadMode.video,
                             accent: accent,
-                            onTap: () => setState(() => _videoMode = true),
+                            onTap: () => setState(() => _mode = _UploadMode.video),
+                          ),
+                          _ModeTab(
+                            label: 'URL',
+                            selected: _mode == _UploadMode.url,
+                            accent: accent,
+                            onTap: () => setState(() => _mode = _UploadMode.url),
                           ),
                         ],
                       ),
@@ -244,56 +424,9 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
 
                   // ── 중앙 안내 영역 ──
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: _videoMode
-                                ? Icon(Icons.videocam_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3))
-                                : AppSvg(AppIcons.fish, size: 48, color: Colors.white.withValues(alpha: 0.3)),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          _videoMode ? '동영상을 선택해주세요' : '사진을 선택해주세요',
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _videoMode
-                              ? '갤러리에서 선택하거나 카메라로 촬영하세요'
-                              : '갤러리에서 최대 \$_kMaxImages장까지 선택할 수 있습니다',
-                          style: TextStyle(color: sub, fontSize: 13),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 40),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _PickButton(
-                              icon: _videoMode ? Icons.video_library_outlined : Icons.collections_outlined,
-                              label: '보관함',
-                              accent: accent,
-                              onTap: _pickFromGallery,
-                            ),
-                            const SizedBox(width: 20),
-                            _PickButton(
-                              icon: _videoMode ? Icons.videocam_outlined : Icons.camera_alt_outlined,
-                              label: '카메라',
-                              accent: accent,
-                              onTap: _pickFromCamera,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    child: _mode == _UploadMode.url
+                        ? _buildUrlBody(accent, sub)
+                        : _buildMediaBody(accent, sub),
                   ),
                 ],
               ),
@@ -396,6 +529,9 @@ class _CaptionStep extends ConsumerStatefulWidget {
     required this.isDark,
     required this.imageFiles,
     required this.isVideo,
+    required this.isYoutube,
+    this.youtubeUrl,
+    this.youtubeVideoId,
     this.videoFile,
     this.thumbnailBytes,
     required this.onBack,
@@ -405,9 +541,16 @@ class _CaptionStep extends ConsumerStatefulWidget {
   final List<XFile> imageFiles;   // 사진 모드
   final XFile? videoFile;          // 동영상 모드
   final bool isVideo;
+  final bool isYoutube;            // 유튜브 링크 모드
+  final String? youtubeUrl;
+  final String? youtubeVideoId;
   final Uint8List? thumbnailBytes;
   final VoidCallback onBack;
   final Post? editPost;
+
+  /// edit 모드 + 기존 게시물이 유튜브 게시물인지
+  bool get isEditingYoutube =>
+      editPost?.youtubeUrl != null && editPost!.youtubeUrl!.isNotEmpty;
 
   @override
   ConsumerState<_CaptionStep> createState() => _CaptionStepState();
@@ -503,7 +646,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       AppSnackBar.warning(context, '로그인이 필요합니다.');
       return;
     }
-    if (!widget.isVideo && _images.isEmpty) {
+    if (!widget.isVideo && !widget.isYoutube && _images.isEmpty) {
       AppSnackBar.warning(context, '사진을 최소 1장 선택해주세요.');
       return;
     }
@@ -511,6 +654,34 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     setState(() { _sharing = true; _compressProgress = 0.0; });
 
     try {
+      // 유튜브 링크 게시물 ─ 업로드 단계 없이 바로 createPost
+      if (widget.isYoutube) {
+        final rawCaption = _captionCtrl.text.trim();
+        final rawTags = _tagCtrl.text.trim();
+        final combinedCaption = [
+          if (rawCaption.isNotEmpty) rawCaption,
+          if (rawTags.isNotEmpty) rawTags,
+        ].join('\n\n');
+
+        await ref.read(feedRepositoryProvider).createPost(
+          userId: user.id,
+          youtubeUrl: widget.youtubeUrl,
+          youtubeThumbnailUrl: widget.youtubeVideoId != null
+              ? youtubeThumbnailUrl(widget.youtubeVideoId!)
+              : null,
+          aspectRatio: 16 / 9,
+          caption: combinedCaption.isEmpty ? null : combinedCaption,
+          fishType: _fish,
+          location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+          leagueId: null,
+        );
+
+        ref.invalidate(feedPostsProvider);
+        ref.invalidate(myPostsProvider);
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+
       File? compressedVideo;
 
       if (widget.isVideo) {
@@ -587,6 +758,22 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
   // 첫 번째 이미지 (또는 동영상 썸네일) 미리보기
   Widget _buildFirstThumb() {
+    // 유튜브 모드: YT 썸네일 + 재생 아이콘
+    if (widget.isYoutube && widget.youtubeVideoId != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: youtubeThumbnailUrl(widget.youtubeVideoId!),
+            fit: BoxFit.cover,
+          ),
+          Container(color: Colors.black.withValues(alpha: 0.25)),
+          const Center(
+            child: Icon(LucideIcons.youtube, color: Colors.white, size: 28),
+          ),
+        ],
+      );
+    }
     // edit 모드: 새 이미지 선택 전까지는 기존 URL 표시
     if (widget.editPost != null && _images.isEmpty && !widget.isVideo) {
       final url = widget.editPost!.imageUrls?.firstOrNull
@@ -824,8 +1011,10 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             ),
                           ),
                         ),
-                      // edit 모드: 사진 변경 오버레이
-                      if (widget.editPost != null)
+                      // edit 모드: 사진 변경 오버레이 (유튜브/영상 게시물은 제외)
+                      if (widget.editPost != null &&
+                          !widget.isEditingYoutube &&
+                          widget.editPost!.videoUrl == null)
                         Positioned.fill(
                           child: GestureDetector(
                             onTap: _replaceImages,

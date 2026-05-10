@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../data/post_model.dart';
 import 'feed_video_player.dart';
 import 'fullscreen_image_viewer.dart';
+import 'youtube_feed_player.dart';
 
 /// image_urls (다중) 또는 image_url (단일)을 PageView로 보여주는 공용 위젯.
 /// - 단일 이미지 or 동영상: 기존과 동일한 단순 뷰
@@ -50,6 +51,7 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
 
   void _openViewer(int index) {
     if (widget.post.videoUrl != null) return;
+    if (widget.post.youtubeUrl != null) return;
     final urls = _urls;
     if (urls.isEmpty) return;
     FullscreenImageViewer.open(
@@ -105,8 +107,12 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
       children: [
         // ── 이미지 / 동영상 영역 ──────────────────────────
         GestureDetector(
-          onTap: p.videoUrl != null ? null : () => _openViewer(_page),
-          onDoubleTap: p.videoUrl != null ? null : widget.onDoubleTap,
+          onTap: (p.videoUrl != null || p.youtubeUrl != null)
+              ? null
+              : () => _openViewer(_page),
+          onDoubleTap: (p.videoUrl != null || p.youtubeUrl != null)
+              ? null
+              : widget.onDoubleTap,
           child: Container(
             width: double.infinity,
             color: widget.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
@@ -115,6 +121,7 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
               // 영상은 화면을 넘지 않게 viewport 기반으로 최소 비율 계산.
               // 이미지는 4:5(0.8)~1.91 클램프로 피드 레이아웃 일관성 유지.
               aspectRatio: () {
+                if (p.youtubeUrl != null) return 16 / 9;
                 final natural = widget.post.aspectRatio ??
                     (p.videoUrl != null ? _detectedVideoAspect : null) ??
                     (4 / 3);
@@ -134,7 +141,12 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                 fit: StackFit.expand,
                 children: [
                   // 미디어
-                  if (p.videoUrl != null)
+                  if (p.youtubeUrl != null)
+                    YoutubeFeedPlayer(
+                      youtubeUrl: p.youtubeUrl!,
+                      thumbnailUrl: p.imageUrl,
+                    )
+                  else if (p.videoUrl != null)
                     FeedVideoPlayer(post: p, accent: widget.accent)
                   else if (_isMulti)
                     PageView.builder(
