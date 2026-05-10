@@ -8,8 +8,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../dm/data/dm_repository.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/score_card.dart';
@@ -109,6 +111,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
+  Future<void> _openAdminDm() async {
+    try {
+      final conversationId = await ref
+          .read(dmRepositoryProvider)
+          .getOrCreateConversation(AppConstants.adminUserId);
+      if (!mounted) return;
+      context.push(
+        AppRoutes.dmChat,
+        extra: DmConversation(
+          id: conversationId,
+          otherUserId: AppConstants.adminUserId,
+          otherUsername: AppConstants.adminUsername,
+          otherAvatarUrl: null,
+          lastMessageAt: DateTime.now(),
+          hasUnread: false,
+        ),
+      );
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '문의 화면을 열 수 없습니다');
+    }
+  }
+
   Future<void> _logout() async {
     final confirm = await showConfirmDialog(
       context,
@@ -163,6 +187,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               onTap: () {
                 Navigator.pop(sheetCtx);
                 rootContext.push(AppRoutes.passwordChange);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.headset_mic_outlined),
+              title: const Text('관리자에게 문의'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _openAdminDm();
               },
             ),
             const Divider(height: 1),

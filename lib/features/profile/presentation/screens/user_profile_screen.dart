@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
@@ -128,6 +129,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         if (mounted) context.go(AppRoutes.profile);
       });
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // 관리자 계정 프로필 진입 차단 — 안내 페이지 표시
+    if (widget.userId == AppConstants.adminUserId) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(LucideIcons.chevronLeft,
+                color: context.isDark ? Colors.white : Colors.black),
+            onPressed: () => context.pop(),
+          ),
+          backgroundColor: context.isDark ? AppColors.darkBg : Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.shield,
+                    size: 64, color: context.accentColor),
+                const SizedBox(height: 16),
+                const Text(
+                  '공식 계정',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${AppConstants.adminUsername}는 NAKSTAR 공식 계정입니다.\n문의는 프로필 → 햄버거 → "관리자에게 문의" 를 이용해주세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: sub, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return ref.watch(userProfileProvider(widget.userId)).when(
