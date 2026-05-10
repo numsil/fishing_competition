@@ -109,6 +109,121 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
+  Future<void> _showSettingsSheet(BuildContext rootContext) async {
+    final isDark = context.isDark;
+    await showModalBottomSheet<void>(
+      context: rootContext,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF444444)
+                    : const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('서비스 이용약관'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.terms);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('개인정보처리방침'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.privacy);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.person_remove_outlined,
+                  color: AppColors.error),
+              title: const Text('회원 탈퇴',
+                  style: TextStyle(color: AppColors.error)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _confirmWithdraw();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmWithdraw() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('회원 탈퇴'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '탈퇴 시 다음 사항을 확인해주세요.\n\n'
+              '• 작성하신 게시물·조과 기록은 즉시 비공개 처리됩니다\n'
+              '• 동일 이메일로 재가입할 수 없습니다\n'
+              '• 탈퇴 후 30일간 복구 문의가 가능합니다 (support@nakstar.app)\n\n'
+              '계속하려면 아래에 "탈퇴"를 입력해주세요.',
+              style: TextStyle(fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: '탈퇴',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (_, value, __) => TextButton(
+              onPressed: value.text.trim() == '탈퇴'
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              child: const Text('탈퇴', style: TextStyle(color: AppColors.error)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      // navigate 먼저: signOut으로 myProfile 재빌드 시 에러 화면 회피 (로그아웃과 동일 패턴)
+      if (mounted) context.go(AppRoutes.login);
+      await ref.read(authRepositoryProvider).withdraw();
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '탈퇴 처리에 실패했습니다');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -120,7 +235,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           appBar: AppBar(
             title: const Text('프로필', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
             actions: [
-              IconButton(icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black), onPressed: () {}),
+              IconButton(
+                icon: Icon(Icons.settings_outlined, color: context.isDark ? Colors.white : Colors.black),
+                onPressed: () => _showSettingsSheet(context),
+              ),
               IconButton(
                 icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
                 onPressed: () async {
@@ -208,8 +326,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             StatNumber(value: '${profile.postCount}', label: '게시물', subColor: sub),
-                            StatNumber(value: '0', label: '팔로워', subColor: sub),
-                            StatNumber(value: '0', label: '팔로잉', subColor: sub),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => context.push(
+                                '${AppRoutes.userProfile}/${profile.id}/followers',
+                                extra: profile.username,
+                              ),
+                              child: StatNumber(value: '${profile.followerCount}', label: '팔로워', subColor: sub),
+                            ),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => context.push(
+                                '${AppRoutes.userProfile}/${profile.id}/following',
+                                extra: profile.username,
+                              ),
+                              child: StatNumber(value: '${profile.followingCount}', label: '팔로잉', subColor: sub),
+                            ),
                           ],
                         ),
                       ),

@@ -18,24 +18,51 @@ class AuthRepository {
 
   Future<AuthResponse> signInWithEmail(String email, String password) async {
     final response = await _supabase.auth.signInWithPassword(email: email, password: password);
-    if (response.user != null && await isCurrentUserBanned()) {
-      pendingLoginMessage = '이용이 정지된 계정입니다. 문의: support@nakstar.app';
-      await _supabase.auth.signOut();
-      throw Exception('banned');
+    if (response.user != null) {
+      final blockReason = await _checkLoginBlock();
+      if (blockReason != null) {
+        pendingLoginMessage = blockReason;
+        await _supabase.auth.signOut();
+        throw Exception('blocked');
+      }
     }
     return response;
   }
 
-  /// 현재 로그인된 사용자가 banned 상태인지 확인
-  Future<bool> isCurrentUserBanned() async {
+  /// 로그인 후 차단 사유 확인 (정지 / 탈퇴). 차단되어야 한다면 사용자에게 보일 메시지 반환.
+  Future<String?> _checkLoginBlock() async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return false;
+    if (user == null) return null;
     final row = await _supabase
         .from('users')
-        .select('status')
+        .select('status, is_deleted')
         .eq('id', user.id)
         .maybeSingle();
-    return row?['status'] == 'banned';
+    if (row == null) return null;
+    if (row['status'] == 'banned') {
+      return '이용이 정지된 계정입니다. 문의: support@nakstar.app';
+    }
+    if (row['is_deleted'] == true) {
+      return '탈퇴한 계정입니다.';
+    }
+    return null;
+  }
+
+  /// (deprecated alias for legacy callers)
+  Future<bool> isCurrentUserBanned() async {
+    return (await _checkLoginBlock()) != null;
+  }
+
+  /// 회원 탈퇴 (soft-delete). users 행에 is_deleted/deleted_at 마킹 후 signOut.
+  /// auth.users 의 hard-delete 는 service_role 필요하므로 여기서는 미수행.
+  Future<void> withdraw() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Not logged in');
+    await _supabase.from('users').update({
+      'is_deleted': true,
+      'deleted_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', user.id);
+    await _supabase.auth.signOut();
   }
 
   Future<String> _generateUniqueUserKey(String username) async {
@@ -53,7 +80,13 @@ class AuthRepository {
     }
   }
 
-  Future<AuthResponse> signUpWithEmail(String email, String password, String username) async {
+  Future<AuthResponse> signUpWithEmail(
+    String email,
+    String password,
+    String username, {
+    required DateTime birthDate,
+    required bool marketingAgreed,
+  }) async {
     final response = await _supabase.auth.signUp(
       email: email,
       password: password,
@@ -61,11 +94,17 @@ class AuthRepository {
     );
     if (response.user != null) {
       final userKey = await _generateUniqueUserKey(username);
+      final now = DateTime.now().toUtc().toIso8601String();
       await _supabase.from('users').insert({
         'id': response.user!.id,
         'email': email,
         'username': username,
         'user_key': userKey,
+        'birth_date':
+            '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+        'terms_agreed_at': now,
+        'privacy_agreed_at': now,
+        if (marketingAgreed) 'marketing_agreed_at': now,
       });
     }
     return response;

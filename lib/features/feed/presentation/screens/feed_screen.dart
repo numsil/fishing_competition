@@ -974,13 +974,6 @@ class _MoreMenu extends StatelessWidget {
             color: textColor,
             onTap: () => Navigator.pop(context),
           ),
-          Divider(height: 1, color: divColor),
-          AppMenuItem(
-            icon: LucideIcons.userPlus,
-            label: '팔로우',
-            color: textColor,
-            onTap: () => Navigator.pop(context),
-          ),
           if (!isOwner) ...[
             Divider(height: 1, color: divColor),
             AppMenuItem(

@@ -23,6 +23,9 @@ class UserProfile {
   final int anglerScore;
   final int participationCount; // 완료된 리그 참가 수
   final int winCount;           // 우승 횟수 (rank == 1)
+  final int followerCount;
+  final int followingCount;
+  final bool isFollowing; // 현재 로그인 유저가 이 프로필을 팔로우 중인지
 
   UserProfile({
     required this.id,
@@ -40,6 +43,9 @@ class UserProfile {
     this.anglerScore = 0,
     this.participationCount = 0,
     this.winCount = 0,
+    this.followerCount = 0,
+    this.followingCount = 0,
+    this.isFollowing = false,
   });
 }
 
@@ -82,6 +88,9 @@ class ProfileRepository {
       anglerScore: (data['angler_score'] as num?)?.toInt() ?? 0,
       participationCount: (data['participation_count'] as num?)?.toInt() ?? 0,
       winCount: (data['win_count'] as num?)?.toInt() ?? 0,
+      followerCount: (data['follower_count'] as num?)?.toInt() ?? 0,
+      followingCount: (data['following_count'] as num?)?.toInt() ?? 0,
+      isFollowing: (data['is_following'] as bool?) ?? false,
     );
   }
 

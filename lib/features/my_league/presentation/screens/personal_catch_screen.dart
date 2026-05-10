@@ -16,6 +16,7 @@ import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../../../core/utils/image_compress.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
+import '../../../../core/services/location_consent_service.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class PersonalCatchScreen extends ConsumerStatefulWidget {
@@ -55,6 +56,9 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
 
   Future<void> _captureCurrentLocation() async {
     if (_fetchingLocation) return;
+    // 위치정보법: 시스템 권한과 별개로 앱 차원의 명시적 동의 필요 (1회)
+    final agreed = await LocationConsentService.ensureAgreed(context);
+    if (!agreed) return;
     setState(() => _fetchingLocation = true);
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {

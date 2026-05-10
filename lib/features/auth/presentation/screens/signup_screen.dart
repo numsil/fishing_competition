@@ -28,6 +28,52 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _obscureConfirm = true;
   bool _loading = false;
 
+  DateTime? _birthDate;
+  bool _agreeTerms = false;
+  bool _agreePrivacy = false;
+  bool _agreeAge = false;
+  bool _agreeMarketing = false;
+
+  bool get _agreeAll =>
+      _agreeTerms && _agreePrivacy && _agreeAge && _agreeMarketing;
+  bool get _requiredAgreed => _agreeTerms && _agreePrivacy && _agreeAge;
+
+  void _setAgreeAll(bool? v) {
+    final next = v ?? false;
+    setState(() {
+      _agreeTerms = next;
+      _agreePrivacy = next;
+      _agreeAge = next;
+      _agreeMarketing = next;
+    });
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final initial = _birthDate ?? DateTime(now.year - 20, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1920),
+      lastDate: now,
+      helpText: '생년월일 선택',
+    );
+    if (picked != null) {
+      setState(() => _birthDate = picked);
+    }
+  }
+
+  bool _isUnder14(DateTime birth) {
+    final now = DateTime.now();
+    final age = now.year -
+        birth.year -
+        ((now.month < birth.month ||
+                (now.month == birth.month && now.day < birth.day))
+            ? 1
+            : 0);
+    return age < 14;
+  }
+
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -39,6 +85,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_birthDate == null) {
+      AppSnackBar.warning(context, '생년월일을 선택해주세요');
+      return;
+    }
+    if (_isUnder14(_birthDate!)) {
+      AppSnackBar.error(context, '만 14세 미만은 가입할 수 없습니다');
+      return;
+    }
+    if (!_requiredAgreed) {
+      AppSnackBar.warning(context, '필수 약관에 동의해주세요');
+      return;
+    }
     setState(() => _loading = true);
 
     try {
@@ -46,6 +104,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         _emailCtrl.text.trim(),
         _pwCtrl.text,
         _usernameCtrl.text.trim(),
+        birthDate: _birthDate!,
+        marketingAgreed: _agreeMarketing,
       );
 
       if (!mounted) return;
@@ -222,7 +282,53 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 12),
+                    // 생년월일
+                    InkWell(
+                      onTap: _pickBirthDate,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          hintText: '생년월일',
+                          prefixIcon:
+                              const Icon(Icons.cake_outlined, size: 20),
+                          suffixIcon: const Icon(Icons.calendar_today, size: 18),
+                        ),
+                        child: Text(
+                          _birthDate == null
+                              ? '생년월일을 선택해주세요'
+                              : '${_birthDate!.year}년 ${_birthDate!.month}월 ${_birthDate!.day}일',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _birthDate == null
+                                ? sub
+                                : (context.isDark
+                                    ? Colors.white
+                                    : Colors.black87),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _ConsentSection(
+                      agreeAll: _agreeAll,
+                      agreeTerms: _agreeTerms,
+                      agreePrivacy: _agreePrivacy,
+                      agreeAge: _agreeAge,
+                      agreeMarketing: _agreeMarketing,
+                      onAgreeAll: _setAgreeAll,
+                      onAgreeTerms: (v) =>
+                          setState(() => _agreeTerms = v ?? false),
+                      onAgreePrivacy: (v) =>
+                          setState(() => _agreePrivacy = v ?? false),
+                      onAgreeAge: (v) =>
+                          setState(() => _agreeAge = v ?? false),
+                      onAgreeMarketing: (v) =>
+                          setState(() => _agreeMarketing = v ?? false),
+                      onTapTerms: () => context.push(AppRoutes.terms),
+                      onTapPrivacy: () => context.push(AppRoutes.privacy),
+                    ),
+                    const SizedBox(height: 24),
                     AppButton(
                       label: '가입하기',
                       onPressed: _loading ? null : _signup,
@@ -248,6 +354,151 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConsentSection extends StatelessWidget {
+  const _ConsentSection({
+    required this.agreeAll,
+    required this.agreeTerms,
+    required this.agreePrivacy,
+    required this.agreeAge,
+    required this.agreeMarketing,
+    required this.onAgreeAll,
+    required this.onAgreeTerms,
+    required this.onAgreePrivacy,
+    required this.onAgreeAge,
+    required this.onAgreeMarketing,
+    required this.onTapTerms,
+    required this.onTapPrivacy,
+  });
+
+  final bool agreeAll;
+  final bool agreeTerms;
+  final bool agreePrivacy;
+  final bool agreeAge;
+  final bool agreeMarketing;
+  final ValueChanged<bool?> onAgreeAll;
+  final ValueChanged<bool?> onAgreeTerms;
+  final ValueChanged<bool?> onAgreePrivacy;
+  final ValueChanged<bool?> onAgreeAge;
+  final ValueChanged<bool?> onAgreeMarketing;
+  final VoidCallback onTapTerms;
+  final VoidCallback onTapPrivacy;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final divColor =
+        isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: divColor),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          _ConsentRow(
+            value: agreeAll,
+            onChanged: onAgreeAll,
+            label: '전체 동의',
+            bold: true,
+          ),
+          Divider(height: 1, color: divColor),
+          _ConsentRow(
+            value: agreeAge,
+            onChanged: onAgreeAge,
+            label: '[필수] 만 14세 이상입니다',
+          ),
+          Divider(height: 1, color: divColor, indent: 12, endIndent: 12),
+          _ConsentRow(
+            value: agreeTerms,
+            onChanged: onAgreeTerms,
+            label: '[필수] 서비스 이용약관 동의',
+            trailingLabel: '보기',
+            onTrailingTap: onTapTerms,
+          ),
+          Divider(height: 1, color: divColor, indent: 12, endIndent: 12),
+          _ConsentRow(
+            value: agreePrivacy,
+            onChanged: onAgreePrivacy,
+            label: '[필수] 개인정보 수집·이용 동의',
+            trailingLabel: '보기',
+            onTrailingTap: onTapPrivacy,
+          ),
+          Divider(height: 1, color: divColor, indent: 12, endIndent: 12),
+          _ConsentRow(
+            value: agreeMarketing,
+            onChanged: onAgreeMarketing,
+            label: '[선택] 마케팅 정보 수신 동의',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConsentRow extends StatelessWidget {
+  const _ConsentRow({
+    required this.value,
+    required this.onChanged,
+    required this.label,
+    this.bold = false,
+    this.trailingLabel,
+    this.onTrailingTap,
+  });
+
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+  final String label;
+  final bool bold;
+  final String? trailingLabel;
+  final VoidCallback? onTrailingTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Checkbox(
+              value: value,
+              onChanged: onChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (trailingLabel != null)
+              TextButton(
+                onPressed: onTrailingTap,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(40, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: Text(
+                  trailingLabel!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.accentColor,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
