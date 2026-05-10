@@ -227,7 +227,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _hasEnded ? null : _togglePlay,
-                  onDoubleTap: () => _seekRelative(-10),
+                  onDoubleTap: () => _seekRelative(-5),
                   child: const SizedBox.expand(),
                 ),
               ),
@@ -235,7 +235,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _hasEnded ? null : _togglePlay,
-                  onDoubleTap: () => _seekRelative(10),
+                  onDoubleTap: () => _seekRelative(5),
                   child: const SizedBox.expand(),
                 ),
               ),
@@ -327,13 +327,13 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                   Row(
                     children: [
                       _CtrlIconButton(
-                        icon: Icons.replay_10,
-                        onTap: () => _seekRelative(-10),
+                        icon: Icons.replay_5,
+                        onTap: () => _seekRelative(-5),
                       ),
                       const SizedBox(width: 6),
                       _CtrlIconButton(
-                        icon: Icons.forward_10,
-                        onTap: () => _seekRelative(10),
+                        icon: Icons.forward_5,
+                        onTap: () => _seekRelative(5),
                       ),
                     ],
                   ),
@@ -431,7 +431,7 @@ class _SkipIndicator extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            forward ? Icons.forward_10 : Icons.replay_10,
+            forward ? Icons.forward_5 : Icons.replay_5,
             color: Colors.white,
             size: 22,
           ),

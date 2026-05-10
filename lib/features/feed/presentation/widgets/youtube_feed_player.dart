@@ -1,13 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../../../core/utils/youtube_url_parser.dart';
 
 /// 피드 카드 안에서 유튜브 영상을 보여주는 위젯.
-/// - 처음에는 썸네일 + 재생 버튼만 (가벼움)
-/// - 탭하면 YoutubePlayer 로 교체 + autoplay
-/// - 자동재생은 사용자가 의도적으로 누른 것만 (스크롤 자동재생 X)
+/// - 처음에는 썸네일 + ▶ (가벼움)
+/// - 탭하면 인라인 재생 + 기본 컨트롤 (자동 숨김)
+/// - 풀스크린 버튼은 → YouTube 앱(or 브라우저)에서 열기
+///   (인라인 fullscreen 은 부모 위젯트리에 막혀 제대로 안 됨)
 class YoutubeFeedPlayer extends StatefulWidget {
   const YoutubeFeedPlayer({super.key, required this.youtubeUrl, required this.thumbnailUrl});
   final String youtubeUrl;
@@ -36,54 +38,72 @@ class _YoutubeFeedPlayerState extends State<YoutubeFeedPlayer> {
           autoPlay: true,
           mute: false,
           enableCaption: true,
+          // 시작하자마자 컨트롤 보이게 → 사용자가 ±10s/풀스크린 발견 가능
+          controlsVisibleAtStart: true,
+          hideControls: false,
         ),
       );
     });
+  }
+
+  Future<void> _openInYoutubeApp() async {
+    final id = extractYoutubeId(widget.youtubeUrl);
+    if (id == null) return;
+    // 일반 YouTube URL을 외부 launch → iOS/Android 모두 YouTube 앱이
+    // Universal Link 로 가로채서 열어줌. 앱 없으면 자동으로 브라우저로.
+    final uri = Uri.parse('https://www.youtube.com/watch?v=$id');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
     final ctrl = _controller;
     if (ctrl != null) {
-      // YoutubePlayerBuilder 로 감싸야 전체화면 버튼이 실제로 풀스크린으로 전환됨.
-      // (안 감싸면 단순히 화면 회전만 되고 전체화면 안 됨)
-      return YoutubePlayerBuilder(
-        player: YoutubePlayer(
-          controller: ctrl,
-          showVideoProgressIndicator: true,
-          aspectRatio: isYoutubeShortsUrl(widget.youtubeUrl) ? 9 / 16 : 16 / 9,
-          // 기본 컨트롤 + 10초 점프 버튼 + 풀스크린.
-          bottomActions: [
-            const SizedBox(width: 12),
-            CurrentPosition(),
-            const SizedBox(width: 6),
-            ProgressBar(
-              isExpanded: true,
-              colors: const ProgressBarColors(
-                playedColor: Color(0xFFFF0000),
-                handleColor: Color(0xFFFF0000),
-              ),
-            ),
-            RemainingDuration(),
-            IconButton(
-              icon: const Icon(Icons.replay_10, color: Colors.white),
-              onPressed: () {
-                final pos = ctrl.value.position;
-                final target = pos - const Duration(seconds: 10);
-                ctrl.seekTo(target.isNegative ? Duration.zero : target);
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.forward_10, color: Colors.white),
-              onPressed: () {
-                final pos = ctrl.value.position;
-                ctrl.seekTo(pos + const Duration(seconds: 10));
-              },
-            ),
-            const FullScreenButton(),
-          ],
+      return YoutubePlayer(
+        controller: ctrl,
+        showVideoProgressIndicator: true,
+        aspectRatio: isYoutubeShortsUrl(widget.youtubeUrl) ? 9 / 16 : 16 / 9,
+        progressColors: const ProgressBarColors(
+          playedColor: Color(0xFFFF0000),
+          handleColor: Color(0xFFFF0000),
         ),
-        builder: (context, player) => player,
+        bottomActions: [
+          const SizedBox(width: 8),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.replay_5, color: Colors.white, size: 22),
+            onPressed: () {
+              final pos = ctrl.value.position;
+              final t = pos - const Duration(seconds: 5);
+              ctrl.seekTo(t.isNegative ? Duration.zero : t);
+            },
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.forward_5, color: Colors.white, size: 22),
+            onPressed: () {
+              ctrl.seekTo(ctrl.value.position + const Duration(seconds: 5));
+            },
+          ),
+          const SizedBox(width: 4),
+          CurrentPosition(),
+          const SizedBox(width: 4),
+          ProgressBar(
+            isExpanded: true,
+            colors: const ProgressBarColors(
+              playedColor: Color(0xFFFF0000),
+              handleColor: Color(0xFFFF0000),
+            ),
+          ),
+          RemainingDuration(),
+          // 인라인 풀스크린 대신 YouTube 앱으로 보내기 (휴대폰 전체 화면 = YT 앱이 가장 깔끔)
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.open_in_new, color: Colors.white, size: 20),
+            tooltip: 'YouTube 앱에서 보기',
+            onPressed: _openInYoutubeApp,
+          ),
+        ],
       );
     }
 

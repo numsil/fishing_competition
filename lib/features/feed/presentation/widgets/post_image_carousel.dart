@@ -124,10 +124,10 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
               aspectRatio: () {
                 if (p.youtubeUrl != null) {
                   // 쇼츠(9:16)는 화면을 꽉 채우면 컨트롤 조작이 어려우므로
-                  // 뷰포트 높이의 60% 까지로 제한해서 일반 영상보다 살짝 키만 큰 정도로.
+                  // 뷰포트 높이의 80% 까지로 제한.
                   if (isYoutubeShortsUrl(p.youtubeUrl!)) {
                     final media = MediaQuery.of(context);
-                    final cappedHeight = media.size.height * 0.6;
+                    final cappedHeight = media.size.height * 0.75;
                     final minAspect = cappedHeight > 0
                         ? media.size.width / cappedHeight
                         : 9 / 16;
@@ -139,12 +139,11 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                     (p.videoUrl != null ? _detectedVideoAspect : null) ??
                     (4 / 3);
                 if (p.videoUrl != null) {
-                  // 미디어 영역에 쓸 수 있는 최대 높이 (헤더/푸터/네비 제외)
+                  // 세로 영상은 화면 높이의 75% 까지로 제한
                   final media = MediaQuery.of(context);
-                  final maxMediaHeight =
-                      media.size.height - media.padding.top - 200;
-                  final minAspect = maxMediaHeight > 0
-                      ? media.size.width / maxMediaHeight
+                  final cappedHeight = media.size.height * 0.75;
+                  final minAspect = cappedHeight > 0
+                      ? media.size.width / cappedHeight
                       : 0.5625;
                   return natural.clamp(minAspect, 1.91);
                 }
