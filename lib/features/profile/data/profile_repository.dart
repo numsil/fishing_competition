@@ -156,7 +156,7 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, location, created_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
@@ -172,7 +172,7 @@ class ProfileRepository {
 
     final response = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .isFilter('league_id', null)
         .eq('is_personal_record', true)
@@ -203,7 +203,7 @@ class ProfileRepository {
     final response = await _supabase
         .from('posts')
         .select(
-          'id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, caption, '
+          'id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, youtube_url, caption, '
           'fish_type, length, location, is_lunker, is_personal_record, '
           'created_at, users(username, avatar_url)',
         )

@@ -14,6 +14,7 @@ abstract class Post with _$Post {
     @JsonKey(name: 'image_urls') List<String>? imageUrls,
     @JsonKey(name: 'aspect_ratio') double? aspectRatio,
     @JsonKey(name: 'video_url') String? videoUrl,
+    @JsonKey(name: 'youtube_url') String? youtubeUrl,
     String? caption,
     @JsonKey(name: 'fish_type') @Default('배스') String fishType,
     double? length,
