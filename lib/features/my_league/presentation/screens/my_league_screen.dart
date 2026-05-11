@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/info_chip.dart';
 import '../../data/my_league_repository.dart';
+import '../../../league/data/league_invite_repository.dart';
 import '../../../league/data/league_model.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -198,9 +199,11 @@ class _ActiveTab extends StatelessWidget {
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           children: [
+            const _ReceivedInvitesBanner(),
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.6,
+              height: MediaQuery.of(context).size.height * 0.55,
               child: _EmptyStateWithCta(
                 isDark: isDark,
                 sub: sub,
@@ -224,6 +227,7 @@ class _ActiveTab extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
+          const _ReceivedInvitesBanner(),
           _MySummaryCard(activeCount: leagues.length, isDark: isDark, accent: accent, sub: sub, cardBg: cardBg, divColor: divColor),
 
           // ── 진행중 리그 섹션 ─────────────────────────
@@ -1423,6 +1427,129 @@ class _VisibilityBadge extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: color,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  받은 초대 배너 (pending만, 최신순)
+// ─────────────────────────────────────────────────────────────────
+class _ReceivedInvitesBanner extends ConsumerWidget {
+  const _ReceivedInvitesBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final invitesAsync = ref.watch(receivedLeagueInvitesProvider);
+    final invites = invitesAsync.valueOrNull ?? const <LeagueInvite>[];
+    if (invites.isEmpty) return const SizedBox.shrink();
+
+    final isDark = context.isDark;
+    final accent = context.accentColor;
+    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+    final border = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
+    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(LucideIcons.mail, size: 16, color: accent),
+              const SizedBox(width: 6),
+              Text(
+                '받은 초대 ${invites.length}건',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final inv in invites)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: InkWell(
+                onTap: () =>
+                    context.push('/league/detail/${inv.leagueId}'),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              inv.leagueTitle ?? '리그',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${inv.inviterUsername ?? "호스트"}님이 초대했어요',
+                              style: TextStyle(fontSize: 12, color: sub),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '보기',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: accent,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(LucideIcons.chevronRight,
+                                size: 14, color: accent),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            height: 1,
+            color: border.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '리그 상세에서 수락하거나 거절할 수 있어요',
+            style: TextStyle(fontSize: 11, color: sub),
           ),
         ],
       ),
