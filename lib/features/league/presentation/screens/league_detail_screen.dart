@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../data/league_invite_repository.dart';
 import 'league_catch_screen.dart';
 import '../widgets/catch_review_tab.dart';
 import '../widgets/league_ranking_tab.dart';
@@ -145,10 +146,9 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   Future<void> _join() async {
     setState(() => _joining = true);
     try {
-      await ref.read(leagueRepositoryProvider).joinLeague(
-        widget.league.id,
-        isPublic: widget.league.isPublic,
-      );
+      await ref
+          .read(leagueRepositoryProvider)
+          .joinLeague(widget.league.id);
       ref.invalidate(leagueDetailProvider(widget.league.id));
       ref.invalidate(isJoinedProvider(widget.league.id));
       ref.invalidate(myParticipantStatusProvider(widget.league.id));
@@ -156,14 +156,12 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       if (mounted) {
         AppSnackBar.success(
           context,
-          widget.league.isPublic
-              ? '참가가 완료되었습니다! 🎣'
-              : '참가 신청이 접수되었습니다. 호스트 승인 후 활동 가능합니다.',
+          '참가 신청이 접수되었습니다. 호스트 승인 후 활동 가능합니다.',
         );
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.error(context, e.toString());
+        AppSnackBar.error(context, e.toString());
       }
     } finally {
       if (mounted) setState(() => _joining = false);
@@ -778,6 +776,24 @@ class _BottomBar extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // ── 비공개 리그 + 받은 pending 초대 있음 → 수락/거절 우선 노출 ──
+    // (참가자 status가 아직 approved 아닐 때만; approved면 일반 흐름)
+    if (!league.isPublic) {
+      final inviteAsync =
+          ref.watch(myPendingInviteForLeagueProvider(league.id));
+      final partStatus = ref.watch(myParticipantStatusProvider(league.id));
+      final invite = inviteAsync.valueOrNull;
+      final pStatus = partStatus.valueOrNull;
+      if (invite != null && pStatus != 'approved') {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _InviteResponseSection(invite: invite, league: league),
+          ),
+        );
+      }
+    }
+
     // ── 진행중: 참가자에게만 카메라 버튼 (순위 탭에서만) ─────
     if (league.status == 'in_progress') {
       if (!showCatchButton) return const SizedBox.shrink();
@@ -978,6 +994,38 @@ class _BottomBar extends ConsumerWidget {
                 ),
               );
             }
+            // 미참가 → 비공개 리그는 초대 전용 안내 (위에서 invite는 이미 처리됨)
+            if (!league.isPublic) {
+              return Container(
+                width: double.infinity,
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.lock,
+                        size: 16,
+                        color: isDark ? const Color(0xFF888888) : const Color(0xFF888888)),
+                    const SizedBox(width: 8),
+                    Text(
+                      '초대받은 사람만 참여할 수 있어요',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFF999999) : const Color(0xFF666666),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
             // 미참가 → 정원 초과 여부 확인
             final isFull = league.maxParticipants > 0 &&
                 league.participantsCount >= league.maxParticipants;
@@ -1073,6 +1121,145 @@ class _StatBox extends StatelessWidget {
                   color: context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
         ]),
       ),
+    );
+  }
+}
+
+// ── 초대 수락/거절 섹션 ────────────────────────────────
+class _InviteResponseSection extends ConsumerStatefulWidget {
+  const _InviteResponseSection({required this.invite, required this.league});
+  final LeagueInvite invite;
+  final League league;
+
+  @override
+  ConsumerState<_InviteResponseSection> createState() =>
+      _InviteResponseSectionState();
+}
+
+class _InviteResponseSectionState
+    extends ConsumerState<_InviteResponseSection> {
+  bool _busy = false;
+
+  Future<void> _respond(bool accept) async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(leagueInviteRepositoryProvider)
+          .respondInvite(widget.invite.id, accept: accept);
+      ref.invalidate(myPendingInviteForLeagueProvider(widget.league.id));
+      ref.invalidate(receivedLeagueInvitesProvider);
+      if (accept) {
+        ref.invalidate(myParticipantStatusProvider(widget.league.id));
+        ref.invalidate(isJoinedProvider(widget.league.id));
+        ref.invalidate(leagueDetailProvider(widget.league.id));
+        ref.invalidate(leagueRankingProvider(widget.league.id));
+      }
+      if (mounted) {
+        AppSnackBar.success(
+          context,
+          accept ? '초대를 수락했어요! 🎣' : '초대를 거절했어요',
+        );
+      }
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, _humanize(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _humanize(Object e) {
+    final s = e.toString();
+    final m = RegExp(r'message:\s*([^,}]+)').firstMatch(s);
+    if (m != null) return m.group(1)!.trim();
+    return s;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final accent = context.accentColor;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(LucideIcons.mail, size: 18, color: accent),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  '이 리그에 초대받았어요',
+                  style:
+                      TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _respond(false),
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(LucideIcons.x, size: 18),
+                  label: const Text('거절'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 54,
+                child: ElevatedButton.icon(
+                  onPressed: _busy ? null : () => _respond(true),
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.how_to_reg_rounded),
+                  label: Text(
+                    _busy ? '처리 중...' : '수락하고 참가',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

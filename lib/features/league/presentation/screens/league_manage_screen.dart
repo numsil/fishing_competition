@@ -15,6 +15,7 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
 import '../../../ranking/data/score_cache_invalidation.dart';
 import 'league_create_screen.dart';
+import 'league_invite_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../widgets/catch_review_tab.dart';
@@ -429,7 +430,11 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
               ),
 
               // ── 참가자 초대 버튼 ────────────────────────────────
-              if (status == LeagueManageStatus.upcoming)
+              // 공개: 링크 공유 시트(upcoming만). 비공개: @user_key 초대 화면(진행중 포함).
+              if (status != LeagueManageStatus.ended &&
+                  (league.isPublic
+                      ? status == LeagueManageStatus.upcoming
+                      : true))
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: SizedBox(
@@ -443,12 +448,27 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: Icon(Icons.person_add_outlined, size: 18, color: context.accentColor),
-                      label: Text('+ 참가자 초대',
+                      label: Text(league.isPublic ? '+ 참가자 초대' : '+ 유저 초대 (@아이디)',
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
                               color: context.accentColor)),
-                      onPressed: () => _showInviteSheet(context, context.accentColor, context.isDark),
+                      onPressed: () {
+                        if (league.isPublic) {
+                          _showInviteSheet(context, context.accentColor, context.isDark);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LeagueInviteScreen(
+                                leagueId: league.id,
+                                leagueTitle: league.title,
+                                inviterUsername: league.hostUsername,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 ),

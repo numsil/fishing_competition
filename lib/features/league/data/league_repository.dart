@@ -179,15 +179,24 @@ class LeagueRepository {
   }
 
   // ── 참가 신청 ────────────────────────────────────────
-  /// 공개 리그(isPublic=true)는 즉시 'approved',
-  /// 비공개 리그(isPublic=false)는 'pending' 으로 INSERT → 호스트 승인 대기.
-  Future<void> joinLeague(String leagueId, {required bool isPublic}) async {
+  /// 공개 리그: 'pending'으로 INSERT → 호스트 승인 대기.
+  /// 호스트 본인이 자기 리그에 가입하면 즉시 'approved'.
+  /// 비공개 리그는 이 메서드 호출 금지(RPC respond_league_invite 사용).
+  Future<void> joinLeague(String leagueId) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
+
+    final hostRow = await _supabase
+        .from('leagues')
+        .select('host_id')
+        .eq('id', leagueId)
+        .maybeSingle();
+    final isHost = hostRow != null && hostRow['host_id'] == userId;
+
     await _supabase.from('league_participants').insert({
       'league_id': leagueId,
       'user_id': userId,
-      'status': isPublic ? 'approved' : 'pending',
+      'status': isHost ? 'approved' : 'pending',
     });
   }
 
