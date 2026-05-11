@@ -28,6 +28,7 @@ class MyLeagueRepository {
         .from('leagues')
         .select('id, host_id, title, location, status, start_time, end_time, max_participants, is_public, created_at, league_participants(count)')
         .eq('host_id', userId)
+        .eq('league_participants.status', 'approved')
         .order('created_at', ascending: false);
 
     // 2. Participated leagues
@@ -35,6 +36,7 @@ class MyLeagueRepository {
         .from('league_participants')
         .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, is_public, created_at, league_participants(count))')
         .eq('user_id', userId)
+        .eq('leagues.league_participants.status', 'approved')
         .order('joined_at', ascending: false);
 
     final hosted = hostedRes.map((data) => _mapLeague(data)).toList();

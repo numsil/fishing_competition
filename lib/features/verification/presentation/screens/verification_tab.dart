@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -9,11 +10,50 @@ import '../../data/verification_model.dart';
 import '../../data/verification_repository.dart';
 import 'verification_detail_screen.dart';
 
-class VerificationTab extends ConsumerWidget {
+class VerificationTab extends ConsumerStatefulWidget {
   const VerificationTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VerificationTab> createState() => _VerificationTabState();
+}
+
+class _VerificationTabState extends ConsumerState<VerificationTab> {
+  RealtimeChannel? _channel;
+
+  @override
+  void initState() {
+    super.initState();
+    final myId = Supabase.instance.client.auth.currentUser?.id;
+    if (myId == null) return;
+
+    // catch_verifications UPDATE 수신 → status가 pending이 아니면
+    // (다른 voter에 의해 종결된 경우) 내 리스트에서 사라지도록 invalidate.
+    // RLS verif_select 덕분에 내가 배정된 인증의 변경만 수신됨.
+    _channel = Supabase.instance.client
+        .channel('verif_status_$myId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'catch_verifications',
+          callback: (payload) {
+            final newStatus = payload.newRecord['status'] as String?;
+            if (newStatus != null && newStatus != 'pending') {
+              ref.invalidate(myPendingVerificationsProvider);
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    final ch = _channel;
+    if (ch != null) Supabase.instance.client.removeChannel(ch);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = context.isDark;
     final accent = context.accentColor;
     final sub = isDark ? const Color(0xFF888888) : const Color(0xFF999999);
@@ -82,11 +122,11 @@ class VerificationTab extends ConsumerWidget {
   }
 
   Future<void> _openDetail(
-      BuildContext context, VerificationRequest req, WidgetRef ref) async {
+      BuildContext context, VerificationRequest req, WidgetRef _) async {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => VerificationDetailScreen(request: req)),
     );
-    if (result == true) {
+    if (result == true && mounted) {
       ref.invalidate(myPendingVerificationsProvider);
     }
   }

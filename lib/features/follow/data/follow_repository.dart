@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -110,4 +112,17 @@ class FollowRepository {
 @riverpod
 FollowRepository followRepository(FollowRepositoryRef ref) {
   return FollowRepository(Supabase.instance.client);
+}
+
+/// 피드 상단 팔로우 바 용 — 내가 팔로우한 유저 최대 100명을 캐시.
+/// keepAlive 10분: 위젯이 자체 Timer로 셔플하니 잦은 재페치 불필요.
+@riverpod
+Future<List<FollowUser>> myFollowingsForFeed(
+  MyFollowingsForFeedRef ref,
+) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 10), link.close);
+  final myId = Supabase.instance.client.auth.currentUser?.id;
+  if (myId == null) return [];
+  return ref.read(followRepositoryProvider).getFollowing(myId, limit: 100);
 }

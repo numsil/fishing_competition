@@ -23,5 +23,27 @@ final followRepositoryProvider = AutoDisposeProvider<FollowRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef FollowRepositoryRef = AutoDisposeProviderRef<FollowRepository>;
+String _$myFollowingsForFeedHash() =>
+    r'45ca92d7b0ab36330d61a5ae750db77c308ff400';
+
+/// 피드 상단 팔로우 바 용 — 내가 팔로우한 유저 최대 100명을 캐시.
+/// keepAlive 10분: 위젯이 자체 Timer로 셔플하니 잦은 재페치 불필요.
+///
+/// Copied from [myFollowingsForFeed].
+@ProviderFor(myFollowingsForFeed)
+final myFollowingsForFeedProvider =
+    AutoDisposeFutureProvider<List<FollowUser>>.internal(
+      myFollowingsForFeed,
+      name: r'myFollowingsForFeedProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$myFollowingsForFeedHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef MyFollowingsForFeedRef = AutoDisposeFutureProviderRef<List<FollowUser>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

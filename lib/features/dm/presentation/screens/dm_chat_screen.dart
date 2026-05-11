@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../league/presentation/screens/league_detail_screen.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
@@ -339,6 +340,18 @@ class _MessageBubble extends StatelessWidget {
   final bool showAvatar;
   final DmConversation conversation;
 
+  // huk:///league/detail/<id> 링크 1건 추출 + 본문에서 제거
+  static final _leagueLinkRe =
+      RegExp(r'huk:\/\/\/league\/detail\/([0-9a-fA-F-]{36})');
+
+  ({String text, String? leagueId}) _parseContent(String raw) {
+    final m = _leagueLinkRe.firstMatch(raw);
+    if (m == null) return (text: raw, leagueId: null);
+    // URL이 들어있던 줄 통째로 제거 (앞뒤 공백·줄바꿈 정리)
+    final stripped = raw.replaceAll(_leagueLinkRe, '').trim();
+    return (text: stripped, leagueId: m.group(1));
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeStr =
@@ -351,6 +364,62 @@ class _MessageBubble extends StatelessWidget {
         : (isDark ? Colors.white : Colors.black);
     final subColor =
         isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+
+    final parsed = _parseContent(msg.content);
+    final hasLeagueLink = parsed.leagueId != null;
+    final btnBg =
+        isMe ? Colors.white.withValues(alpha: 0.18) : accent.withValues(alpha: 0.12);
+    final btnFg = isMe ? textColor : accent;
+
+    final bubbleChild = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (parsed.text.isNotEmpty)
+          Text(
+            parsed.text,
+            style:
+                TextStyle(fontSize: 14, color: textColor, height: 1.4),
+          ),
+        if (hasLeagueLink) ...[
+          if (parsed.text.isNotEmpty) const SizedBox(height: 8),
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    LeagueDetailScreen(leagueId: parsed.leagueId!),
+              ),
+            ),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: btnBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.fish, size: 14, color: btnFg),
+                  const SizedBox(width: 6),
+                  Text(
+                    '리그 보기',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: btnFg,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(LucideIcons.chevronRight, size: 14, color: btnFg),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -399,11 +468,7 @@ class _MessageBubble extends StatelessWidget {
                   bottomRight: Radius.circular(isMe ? 4 : 18),
                 ),
               ),
-              child: Text(
-                msg.content,
-                style: TextStyle(
-                    fontSize: 14, color: textColor, height: 1.4),
-              ),
+              child: bubbleChild,
             ),
           ),
           if (!isMe) ...[

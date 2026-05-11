@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
@@ -66,6 +67,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   int _currentTabIndex = 0;
   bool _joining = false;
   bool _cancelling = false;
+  RealtimeChannel? _partChannel;
+  RealtimeChannel? _inviteChannel;
 
   bool get _hasTabs =>
       widget.league.status == 'in_progress' ||
@@ -99,6 +102,64 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         });
     }
     WidgetsBinding.instance.addObserver(this);
+    _subscribeRealtime();
+  }
+
+  // 호스트가 참가 승인/거절/초대 취소 등을 했을 때 즉시 반영.
+  void _subscribeRealtime() {
+    final sb = Supabase.instance.client;
+    final myId = sb.auth.currentUser?.id;
+    if (myId == null) return;
+    final leagueId = widget.league.id;
+
+    // league_participants: 내 행 INSERT/UPDATE/DELETE → 참가 상태/리그 갱신
+    _partChannel = sb
+        .channel('league_part_${leagueId}_$myId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'league_participants',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'league_id',
+            value: leagueId,
+          ),
+          callback: (payload) {
+            final row = payload.newRecord.isNotEmpty
+                ? payload.newRecord
+                : payload.oldRecord;
+            if (row['user_id'] != myId) return;
+            if (!mounted) return;
+            ref.invalidate(myParticipantStatusProvider(leagueId));
+            ref.invalidate(isJoinedProvider(leagueId));
+            ref.invalidate(leagueDetailProvider(leagueId));
+          },
+        )
+        .subscribe();
+
+    // league_invites: 나에게 온 초대 INSERT/UPDATE → 수락/거절 UI 갱신
+    _inviteChannel = sb
+        .channel('league_inv_${leagueId}_$myId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'league_invites',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'league_id',
+            value: leagueId,
+          ),
+          callback: (payload) {
+            final row = payload.newRecord.isNotEmpty
+                ? payload.newRecord
+                : payload.oldRecord;
+            if (row['invitee_id'] != myId) return;
+            if (!mounted) return;
+            ref.invalidate(myPendingInviteForLeagueProvider(leagueId));
+            ref.invalidate(receivedLeagueInvitesProvider);
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -119,6 +180,11 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    final sb = Supabase.instance.client;
+    final p = _partChannel;
+    final i = _inviteChannel;
+    if (p != null) sb.removeChannel(p);
+    if (i != null) sb.removeChannel(i);
     _tab?.dispose();
     super.dispose();
   }
