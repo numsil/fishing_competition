@@ -13,6 +13,7 @@ class FollowUser {
   final bool isLunkerClub;
   final bool isFollowing; // 현재 로그인 유저가 이 사람을 팔로우 중인지
   final DateTime followedAt;
+  final int maxScore; // 피드 바 티어 테두리용: max(league_score, angler_score)
 
   FollowUser({
     required this.userId,
@@ -22,6 +23,7 @@ class FollowUser {
     required this.isLunkerClub,
     required this.isFollowing,
     required this.followedAt,
+    this.maxScore = 0,
   });
 
   factory FollowUser.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class FollowUser {
       isLunkerClub: (json['is_lunker_club'] as bool?) ?? false,
       isFollowing: (json['is_following'] as bool?) ?? false,
       followedAt: DateTime.parse(json['followed_at'] as String).toLocal(),
+      maxScore: (json['max_score'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -45,6 +48,7 @@ class FollowUser {
       isLunkerClub: isLunkerClub,
       isFollowing: isFollowing ?? this.isFollowing,
       followedAt: followedAt,
+      maxScore: maxScore,
     );
   }
 }
@@ -107,6 +111,20 @@ class FollowRepository {
         .map((e) => FollowUser.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// 피드 상단 바 전용: 팔로잉 + 시즌 max_score 포함.
+  Future<List<FollowUser>> getFollowingWithScore(
+    String userId, {
+    int limit = 100,
+  }) async {
+    final res = await _supabase.rpc('get_following_with_max_score', params: {
+      'p_user_id': userId,
+      'p_limit': limit,
+    });
+    return (res as List)
+        .map((e) => FollowUser.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
 
 @riverpod
@@ -124,5 +142,5 @@ Future<List<FollowUser>> myFollowingsForFeed(
   Timer(const Duration(minutes: 10), link.close);
   final myId = Supabase.instance.client.auth.currentUser?.id;
   if (myId == null) return [];
-  return ref.read(followRepositoryProvider).getFollowing(myId, limit: 100);
+  return ref.read(followRepositoryProvider).getFollowingWithScore(myId, limit: 100);
 }

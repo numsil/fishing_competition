@@ -112,7 +112,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     if (myId == null) return;
     final leagueId = widget.league.id;
 
-    // league_participants: 내 행 INSERT/UPDATE/DELETE → 참가 상태/리그 갱신
+    // league_participants: 서버 측 user_id 필터로 내 행 변경만 broadcast 받음.
+    // (egress 절약. league_id는 클라이언트에서 추가 체크.)
     _partChannel = sb
         .channel('league_part_${leagueId}_$myId')
         .onPostgresChanges(
@@ -121,14 +122,14 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
           table: 'league_participants',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'league_id',
-            value: leagueId,
+            column: 'user_id',
+            value: myId,
           ),
           callback: (payload) {
             final row = payload.newRecord.isNotEmpty
                 ? payload.newRecord
                 : payload.oldRecord;
-            if (row['user_id'] != myId) return;
+            if (row['league_id'] != leagueId) return;
             if (!mounted) return;
             ref.invalidate(myParticipantStatusProvider(leagueId));
             ref.invalidate(isJoinedProvider(leagueId));
@@ -137,7 +138,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         )
         .subscribe();
 
-    // league_invites: 나에게 온 초대 INSERT/UPDATE → 수락/거절 UI 갱신
+    // league_invites: 서버 측 invitee_id 필터로 나에게 온 초대만 broadcast.
     _inviteChannel = sb
         .channel('league_inv_${leagueId}_$myId')
         .onPostgresChanges(
@@ -146,14 +147,14 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
           table: 'league_invites',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'league_id',
-            value: leagueId,
+            column: 'invitee_id',
+            value: myId,
           ),
           callback: (payload) {
             final row = payload.newRecord.isNotEmpty
                 ? payload.newRecord
                 : payload.oldRecord;
-            if (row['invitee_id'] != myId) return;
+            if (row['league_id'] != leagueId) return;
             if (!mounted) return;
             ref.invalidate(myPendingInviteForLeagueProvider(leagueId));
             ref.invalidate(receivedLeagueInvitesProvider);
@@ -842,9 +843,9 @@ class _BottomBar extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // ── 비공개 리그 + 받은 pending 초대 있음 → 수락/거절 우선 노출 ──
+    // ── 받은 pending 초대 있으면 수락/거절 우선 노출 (공개·비공개 공통) ──
     // (참가자 status가 아직 approved 아닐 때만; approved면 일반 흐름)
-    if (!league.isPublic) {
+    {
       final inviteAsync =
           ref.watch(myPendingInviteForLeagueProvider(league.id));
       final partStatus = ref.watch(myParticipantStatusProvider(league.id));
