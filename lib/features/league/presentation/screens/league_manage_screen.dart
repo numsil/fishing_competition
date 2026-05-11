@@ -234,127 +234,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     );
   }
 
-  void _showInviteSheet(BuildContext context, Color accent, bool isDark) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          left: 20, right: 20, top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('참가자 초대', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: accent.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.link_rounded, color: accent, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('초대 링크 공유',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: accent)),
-                        const SizedBox(height: 2),
-                        const Text('링크를 공유하면 누구든 참가 신청 가능',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(
-                          text: 'https://huk.app/join/${widget.leagueId}'));
-                      Navigator.pop(context);
-                                            AppSnackBar.info(context, '초대 링크가 클립보드에 복사됐습니다.');
-                    },
-                    child: Text('복사', style: TextStyle(fontWeight: FontWeight.w700, color: accent)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('아이디로 초대',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF888888))),
-            const SizedBox(height: 8),
-            StatefulBuilder(
-              builder: (ctx, setLocal) {
-                final ctrl = TextEditingController();
-                return Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: ctrl,
-                        decoration: InputDecoration(
-                          hintText: '@username 입력',
-                          hintStyle: const TextStyle(color: Color(0xFF888888)),
-                          prefixIcon: const Icon(Icons.person_search_rounded, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                                color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: accent),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accent,
-                        foregroundColor: isDark ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        if (ctrl.text.isNotEmpty) {
-                          Navigator.pop(context);
-                                                    AppSnackBar.success(context, '${ctrl.text} 님에게 초대장을 보냈습니다.');
-                        }
-                      },
-                      child: const Text('초대', style: TextStyle(fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -429,12 +308,9 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 onEnd: _endLeague,
               ),
 
-              // ── 참가자 초대 버튼 ────────────────────────────────
-              // 공개: 링크 공유 시트(upcoming만). 비공개: @user_key 초대 화면(진행중 포함).
-              if (status != LeagueManageStatus.ended &&
-                  (league.isPublic
-                      ? status == LeagueManageStatus.upcoming
-                      : true))
+              // ── 유저 초대 버튼 (@아이디) ─────────────────────────
+              // 공개·비공개 모두 동일하게 @user_key 초대 화면으로.
+              if (status != LeagueManageStatus.ended)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: SizedBox(
@@ -448,26 +324,22 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: Icon(Icons.person_add_outlined, size: 18, color: context.accentColor),
-                      label: Text(league.isPublic ? '+ 참가자 초대' : '+ 유저 초대 (@아이디)',
+                      label: Text('+ 유저 초대 (@아이디)',
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
                               color: context.accentColor)),
                       onPressed: () {
-                        if (league.isPublic) {
-                          _showInviteSheet(context, context.accentColor, context.isDark);
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LeagueInviteScreen(
-                                leagueId: league.id,
-                                leagueTitle: league.title,
-                                inviterUsername: league.hostUsername,
-                              ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LeagueInviteScreen(
+                              leagueId: league.id,
+                              leagueTitle: league.title,
+                              inviterUsername: league.hostUsername,
                             ),
-                          );
-                        }
+                          ),
+                        );
                       },
                     ),
                   ),

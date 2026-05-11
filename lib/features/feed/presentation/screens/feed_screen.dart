@@ -8,6 +8,7 @@ import '../widgets/post_image_carousel.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/widgets/tier_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
@@ -163,7 +164,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onSearchClear: _onSearchClear,
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(feedPostsProvider),
+        onRefresh: () async {
+          ref.invalidate(feedPostsProvider);
+          ref.invalidate(myFollowingsForFeedProvider);
+        },
         child: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
         child: CustomScrollView(
@@ -506,10 +510,10 @@ class _FollowingBarState extends ConsumerState<_FollowingBar> {
               padding: const EdgeInsets.fromLTRB(14, 10, 0, 8),
               child: Row(
                 children: [
-                  Icon(LucideIcons.users, size: 14, color: sub),
+                  Icon(LucideIcons.star, size: 14, color: sub),
                   const SizedBox(width: 4),
                   Text(
-                    '팔로우',
+                    '즐겨찾기',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -554,11 +558,13 @@ class _FollowingStoryItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
           children: [
-            UserAvatar(
+            TierAvatar(
               username: user.username,
               avatarUrl: user.avatarUrl,
-              radius: 30,
+              score: user.maxScore,
+              radius: 32,
               isDark: isDark,
+              borderWidth: 2.5,
             ),
             const SizedBox(height: 6),
             SizedBox(

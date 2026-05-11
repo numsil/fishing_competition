@@ -105,6 +105,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         await repo.follow(profile.id);
       }
       ref.invalidate(userProfileProvider(profile.id));
+      ref.invalidate(myFollowingsForFeedProvider);
       final me = ref.read(currentUserProvider)?.id;
       if (me != null) {
         ref.invalidate(myProfileProvider);

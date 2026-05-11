@@ -148,6 +148,7 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
       // 카운트 갱신을 위해 프로필 캐시 invalidate
       ref.invalidate(userProfileProvider(widget.userId));
       ref.invalidate(userProfileProvider(user.userId));
+      ref.invalidate(myFollowingsForFeedProvider);
       final me = ref.read(currentUserProvider)?.id;
       if (me != null) ref.invalidate(myProfileProvider);
 
