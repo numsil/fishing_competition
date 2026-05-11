@@ -302,6 +302,48 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             const SizedBox(height: 36),
 
+            // 가입 이메일 (수정 불가)
+            _Label(text: '가입 이메일'),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: context.isDark
+                    ? AppColors.darkSurface
+                    : AppColors.lightSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: context.isDark
+                      ? AppColors.darkSurface2
+                      : AppColors.lightDivider,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.mail, size: 18, color: sub),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.profile.email,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: context.isDark
+                            ? AppColors.darkText
+                            : AppColors.lightText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('가입 시 사용한 이메일이며 변경할 수 없습니다.',
+                style: TextStyle(fontSize: 11, color: sub)),
+            const SizedBox(height: 24),
+
             // 닉네임
             _Label(text: '닉네임'),
             const SizedBox(height: 8),
