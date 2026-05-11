@@ -140,7 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => context.push(AppRoutes.passwordChange),
-                        child: Text('비밀번호 변경', style: TextStyle(color: sub, fontSize: 12)),
+                        child: Text('비밀번호 찾기', style: TextStyle(color: sub, fontSize: 12)),
                       ),
                     ),
                     AppButton(

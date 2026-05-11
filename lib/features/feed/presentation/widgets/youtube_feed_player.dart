@@ -67,6 +67,12 @@ class _YoutubeFeedPlayerState extends State<YoutubeFeedPlayer> {
           playedColor: Color(0xFFFF0000),
           handleColor: Color(0xFFFF0000),
         ),
+        // 영상 끝나면 패키지 기본 동작이 무한 스피너로 멈춰서,
+        // 처음으로 되감고 일시정지 → 재생 버튼이 다시 나타나서 다시 누르면 처음부터 재생.
+        onEnded: (_) {
+          ctrl.seekTo(Duration.zero);
+          ctrl.pause();
+        },
         bottomActions: [
           const SizedBox(width: 8),
           IconButton(

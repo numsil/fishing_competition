@@ -70,8 +70,8 @@ class _PasswordChangeEmailScreenState
               color: isDark ? Colors.white : Colors.black),
           onPressed: () => context.pop(),
         ),
-        title: const Text('비밀번호 변경',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text(_isLoggedIn ? '비밀번호 변경' : '비밀번호 찾기',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         backgroundColor: isDark ? AppColors.darkBg : Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -86,8 +86,8 @@ class _PasswordChangeEmailScreenState
               children: [
                 Text(
                   _isLoggedIn
-                      ? '아래 이메일로 6자리 인증 코드를 발송합니다.'
-                      : '가입 시 사용한 이메일을 입력하세요. 6자리 인증 코드를 발송합니다.',
+                      ? '아래 이메일로 인증 코드를 발송합니다.'
+                      : '가입 시 사용한 이메일을 입력하세요.\n가입된 이메일이 아닐 경우 코드가 발송되지 않습니다.',
                   style: TextStyle(fontSize: 13, color: sub, height: 1.5),
                 ),
                 const SizedBox(height: 24),
@@ -118,7 +118,7 @@ class _PasswordChangeEmailScreenState
                 const SizedBox(height: 16),
                 Text(
                   '· 인증 코드는 1시간 동안 유효합니다.\n'
-                  '· 메일이 도착하지 않으면 스팸함을 확인해주세요.',
+                  '· 메일이 도착하지 않으면 스팸함 또는 가입 여부를 확인해주세요.',
                   style: TextStyle(fontSize: 11, color: sub, height: 1.6),
                 ),
               ],
