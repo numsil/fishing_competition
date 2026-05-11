@@ -20,6 +20,9 @@ import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
+import '../../../ads/data/ad_model.dart';
+import '../../../ads/data/ad_repository.dart';
+import '../../../ads/presentation/widgets/ad_card.dart';
 import '../utils/feed_search_utils.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
 
@@ -64,6 +67,29 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     if (pos.pixels >= pos.maxScrollExtent - 300) {
       ref.read(feedPostsProvider.notifier).loadMore();
     }
+  }
+
+  /// 게시물 사이에 광고를 3~5 인터벌로 결정적 삽입.
+  /// - post.id 해시 기반으로 다음 광고 위치 산정 → 같은 입력엔 같은 결과
+  /// - 광고가 부족하면 라운드로빈 (활성 광고 1개라도 있으면 채움)
+  List<Object> _interleaveAds(List<Post> posts, List<AdFeed> ads) {
+    if (ads.isEmpty || posts.isEmpty) return List<Object>.from(posts);
+    final result = <Object>[];
+    int adIdx = 0;
+    int sinceLastAd = 0;
+    // 첫 광고 위치: 3 + (첫 post.id 해시 % 3) → 3·4·5
+    int nextAdAt = 3 + (posts.first.id.hashCode.abs() % 3);
+    for (int i = 0; i < posts.length; i++) {
+      result.add(posts[i]);
+      sinceLastAd++;
+      if (sinceLastAd >= nextAdAt) {
+        result.add(ads[adIdx % ads.length]);
+        adIdx++;
+        sinceLastAd = 0;
+        nextAdAt = 3 + posts[i].id.hashCode.abs() % 3;
+      }
+    }
+    return result;
   }
 
   bool _onScrollNotification(ScrollNotification notif) {
@@ -192,6 +218,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     _searchQuery.isEmpty &&
                     ref.read(feedPostsProvider.notifier).hasMore &&
                     posts.isNotEmpty;
+
+                // 검색 중이 아닐 때만 광고 인터리브
+                final ads = (_isSearching || _searchQuery.isNotEmpty)
+                    ? const <AdFeed>[]
+                    : (ref.watch(activeFeedAdsProvider).valueOrNull ?? const []);
+                final items = _interleaveAds(filtered, ads);
+
                 return [
                   if (_isSearching && _searchQuery.isNotEmpty)
                     SliverToBoxAdapter(
@@ -214,7 +247,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, i) {
-                          final post = filtered[i];
+                          final item = items[i];
+                          if (item is AdFeed) {
+                            return KeyedSubtree(
+                              key: ValueKey('ad_${item.id}_$i'),
+                              child: AdCard(ad: item),
+                            );
+                          }
+                          final post = item as Post;
                           final isVideo = post.videoUrl != null;
                           final key = isVideo
                               ? (_videoPostKeys[post.id] ??= GlobalKey())
@@ -228,7 +268,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             ),
                           );
                         },
-                        childCount: filtered.length,
+                        childCount: items.length,
                       ),
                     ),
                   if (showLoadMore)

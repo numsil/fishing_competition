@@ -1,0 +1,246 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../../core/extensions/theme_extensions.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../data/ad_model.dart';
+import '../../data/ad_repository.dart';
+import 'ad_video_player.dart';
+
+/// 피드 광고 카드.
+/// - 진입 시 (한 번만) view 이벤트 기록
+/// - 탭 시 외부 브라우저로 link_url 열고 click 이벤트 기록
+class AdCard extends ConsumerStatefulWidget {
+  const AdCard({super.key, required this.ad});
+  final AdFeed ad;
+
+  @override
+  ConsumerState<AdCard> createState() => _AdCardState();
+}
+
+class _AdCardState extends ConsumerState<AdCard> {
+  bool _viewRecorded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _viewRecorded) return;
+      _viewRecorded = true;
+      ref.read(adRepositoryProvider).recordView(widget.ad.id);
+    });
+  }
+
+  Future<void> _onTap() async {
+    final ad = widget.ad;
+    // 클릭 기록 (best-effort)
+    unawaited(ref.read(adRepositoryProvider).recordClick(ad.id));
+    final uri = Uri.tryParse(ad.linkUrl);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = widget.ad;
+    final isDark = context.isDark;
+    final sub =
+        isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+            ),
+            bottom: BorderSide(
+              color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 미디어
+            AspectRatio(
+              aspectRatio: ad.aspectRatio <= 0 ? 1.0 : ad.aspectRatio,
+              child: Stack(
+                children: [
+                  Positioned.fill(child: _Media(ad: ad)),
+                  // "광고" 레이블 (앱마켓 정책)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '광고',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 캡션 + CTA
+            Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ad.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (ad.body?.isNotEmpty == true) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            ad.body!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: sub,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(LucideIcons.externalLink, size: 16, color: sub),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// best-effort fire-and-forget
+void unawaited(Future<void> f) {
+  f.then((_) {}, onError: (_) {});
+}
+
+// ──────────────────────────────────────────
+// 미디어 분기
+// ──────────────────────────────────────────
+class _Media extends StatelessWidget {
+  const _Media({required this.ad});
+  final AdFeed ad;
+
+  @override
+  Widget build(BuildContext context) {
+    if (ad.hasVideo) {
+      return AdVideoPlayer(
+        adId: ad.id,
+        videoUrl: ad.videoUrl!,
+        thumbnailUrl: ad.thumbnailUrl,
+      );
+    }
+    if (ad.hasCarousel) {
+      return _AdCarousel(urls: ad.imageUrls);
+    }
+    if (ad.hasImage) {
+      return CachedNetworkImage(
+        imageUrl: ad.imageUrl!,
+        fit: BoxFit.cover,
+        errorWidget: (_, __, ___) =>
+            Container(color: const Color(0xFF1A1A1A)),
+      );
+    }
+    return Container(color: const Color(0xFF1A1A1A));
+  }
+}
+
+class _AdCarousel extends StatefulWidget {
+  const _AdCarousel({required this.urls});
+  final List<String> urls;
+
+  @override
+  State<_AdCarousel> createState() => _AdCarouselState();
+}
+
+class _AdCarouselState extends State<_AdCarousel> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _ctrl,
+          itemCount: widget.urls.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) => CachedNetworkImage(
+            imageUrl: widget.urls[i],
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) =>
+                Container(color: const Color(0xFF1A1A1A)),
+          ),
+        ),
+        // 페이지 인디케이터
+        Positioned(
+          bottom: 8,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.urls.length, (i) {
+              final selected = i == _page;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: selected ? 8 : 6,
+                height: selected ? 8 : 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.5),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+}

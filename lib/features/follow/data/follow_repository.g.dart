@@ -24,7 +24,7 @@ final followRepositoryProvider = AutoDisposeProvider<FollowRepository>.internal(
 // ignore: unused_element
 typedef FollowRepositoryRef = AutoDisposeProviderRef<FollowRepository>;
 String _$myFollowingsForFeedHash() =>
-    r'45ca92d7b0ab36330d61a5ae750db77c308ff400';
+    r'a59f9bccd6c3c6704e8c471807cebfa642da5144';
 
 /// 피드 상단 팔로우 바 용 — 내가 팔로우한 유저 최대 100명을 캐시.
 /// keepAlive 10분: 위젯이 자체 Timer로 셔플하니 잦은 재페치 불필요.
