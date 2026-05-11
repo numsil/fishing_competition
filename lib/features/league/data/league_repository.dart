@@ -136,6 +136,7 @@ class LeagueRepository {
           'league_participants(count), users!host_id(username, avatar_url)',
         )
         .eq('id', id)
+        .eq('league_participants.status', 'approved')
         .single();
     final lpData = data['league_participants'];
     final pCount = (lpData is List && lpData.isNotEmpty)
@@ -156,7 +157,8 @@ class LeagueRepository {
   }) async {
     var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)');
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)')
+        .eq('league_participants.status', 'approved');
 
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());

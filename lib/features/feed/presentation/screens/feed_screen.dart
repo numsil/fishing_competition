@@ -11,6 +11,9 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
+import '../../../follow/data/follow_repository.dart';
+import 'dart:async';
+import 'dart:math';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/menu_item.dart';
@@ -168,7 +171,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           slivers: [
             if (!_isSearching) ...[
               SliverToBoxAdapter(
-                child: _FavoritesBar(isDark: context.isDark, accent: context.accentColor),
+                child: _FollowingBar(),
               ),
               SliverToBoxAdapter(
                 child: Divider(
@@ -435,206 +438,150 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// ── 즐겨찾기 스토리 바 ──────────────────────────────────
-class _FavoritesBar extends StatelessWidget {
-  const _FavoritesBar({required this.isDark, required this.accent});
-  final bool isDark;
-  final Color accent;
+// ── 팔로우 바 ──────────────────────────────────────────
+// 내가 팔로우한 유저 중 랜덤 8명을 노출. 30초마다 셔플.
+class _FollowingBar extends ConsumerStatefulWidget {
+  const _FollowingBar();
 
-  static const _favorites = [
-    _Favorite(name: '충주호 리그', type: _FavType.leagueLive, initials: 'L'),
-    _Favorite(name: '김민준', type: _FavType.user, initials: '김'),
-    _Favorite(name: '소양강 리그', type: _FavType.league, initials: 'L'),
-    _Favorite(name: '이서연', type: _FavType.user, initials: '이'),
-    _Favorite(name: '박태준', type: _FavType.user, initials: '박'),
-    _Favorite(name: '가평 대회', type: _FavType.league, initials: 'L'),
-    _Favorite(name: '최현수', type: _FavType.user, initials: '최'),
-  ];
+  @override
+  ConsumerState<_FollowingBar> createState() => _FollowingBarState();
+}
+
+class _FollowingBarState extends ConsumerState<_FollowingBar> {
+  static const int _maxVisible = 8;
+  static const Duration _rotateEvery = Duration(seconds: 30);
+
+  Timer? _timer;
+  List<FollowUser> _sample = const [];
+  List<FollowUser> _lastSource = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(_rotateEvery, (_) => _shuffle());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _shuffle() {
+    if (_lastSource.isEmpty) return;
+    if (_lastSource.length <= _maxVisible) return;
+    final next = List<FollowUser>.from(_lastSource)..shuffle(Random());
+    if (mounted) {
+      setState(() => _sample = next.take(_maxVisible).toList());
+    }
+  }
+
+  List<FollowUser> _initialSample(List<FollowUser> source) {
+    if (source.length <= _maxVisible) return source;
+    final shuffled = List<FollowUser>.from(source)..shuffle(Random());
+    return shuffled.take(_maxVisible).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 0, 8),
-          child: Row(
-            children: [
-              Icon(LucideIcons.star, size: 14,
-                  color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888)),
-              const SizedBox(width: 4),
-              Text(
-                '즐겨찾기',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888),
+    final isDark = context.isDark;
+    final asyncFollowings = ref.watch(myFollowingsForFeedProvider);
+    final sub = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888);
+
+    return asyncFollowings.maybeWhen(
+      data: (followings) {
+        if (followings.isEmpty) return const SizedBox.shrink();
+
+        // 소스가 바뀌면 샘플 재계산
+        if (!identical(followings, _lastSource)) {
+          _lastSource = followings;
+          _sample = _initialSample(followings);
+        }
+        final list = _sample.isEmpty ? followings : _sample;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 0, 8),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.users, size: 14, color: sub),
+                  const SizedBox(width: 4),
+                  Text(
+                    '팔로우',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: sub,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 96,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                itemCount: list.length,
+                itemBuilder: (_, i) => _FollowingStoryItem(
+                  user: list[i],
+                  isDark: isDark,
                 ),
               ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 96,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            itemCount: _favorites.length,
-            itemBuilder: (_, i) => _StoryItem(
-              fav: _favorites[i],
-              isDark: isDark,
-              accent: accent,
             ),
-          ),
-        ),
-        const SizedBox(height: 6),
-      ],
+            const SizedBox(height: 6),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }
 
-enum _FavType { leagueLive, league, user }
-
-class _Favorite {
-  const _Favorite({required this.name, required this.type, required this.initials});
-  final String name, initials;
-  final _FavType type;
-}
-
-class _StoryItem extends StatelessWidget {
-  const _StoryItem({required this.fav, required this.isDark, required this.accent});
-  final _Favorite fav;
+class _FollowingStoryItem extends StatelessWidget {
+  const _FollowingStoryItem({required this.user, required this.isDark});
+  final FollowUser user;
   final bool isDark;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final isLive = fav.type == _FavType.leagueLive;
-    final isLeague = fav.type == _FavType.league || isLive;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: isLive
-                      ? const LinearGradient(
-                          colors: [AppColors.liveRed, Color(0xFFFF6B6B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : isLeague
-                          ? LinearGradient(
-                              colors: [accent, accent.withValues(alpha: 0.5)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : const LinearGradient(
-                              colors: [Color(0xFFF58529), Color(0xFFDD2A7B), Color(0xFF8134AF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/user/${user.userId}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Column(
+          children: [
+            UserAvatar(
+              username: user.username,
+              avatarUrl: user.avatarUrl,
+              radius: 30,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 64,
+              child: Text(
+                user.username,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white : const Color(0xFF111111),
+                  fontWeight: FontWeight.w400,
                 ),
-              ),
-              Container(
-                width: 59,
-                height: 59,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? AppColors.darkBg : Colors.white,
-                ),
-              ),
-              Container(
-                width: 55,
-                height: 55,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0),
-                ),
-                child: isLeague
-                    ? Padding(
-                        padding: const EdgeInsets.all(13),
-                        child: Icon(
-                          LucideIcons.trophy,
-                          color: isLive ? AppColors.liveRed : accent,
-                          size: 28,
-                        ),
-                      )
-                    : Center(
-                        child: Text(
-                          fav.initials,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ),
-              ),
-              if (isLive)
-                Positioned(
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.liveRed,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkBg : Colors.white,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Text(
-                      'LIVE',
-                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
-              if (isLeague && !isLive)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkBg : Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(LucideIcons.award, size: 12, color: accent),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          SizedBox(
-            width: 64,
-            child: Text(
-              fav.name,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white : const Color(0xFF111111),
-                fontWeight: FontWeight.w400,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
 
 // ── 인스타그램 스타일 포스트 ──────────────────────────────
 class _InstaPost extends ConsumerStatefulWidget {
