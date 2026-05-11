@@ -101,13 +101,12 @@ class AuthRepository {
     await _supabase.auth.resetPasswordForEmail(email);
   }
 
-  /// 2단계: OTP 검증 + 새 비번 저장.
-  /// verifyOTP(recovery) 가 성공하면 해당 유저의 세션이 만들어짐.
-  /// 이후 updateUser 로 비번 변경. 변경 후 banned/탈퇴 검사도 함께 수행.
-  Future<void> verifyPasswordOtpAndChange({
+  /// 2-A 단계: OTP 검증만.
+  /// 성공하면 recovery 세션이 만들어져서 이후 updateUser 호출 가능.
+  /// 이 단계에서 banned/탈퇴 검사도 같이 수행.
+  Future<void> verifyPasswordOtp({
     required String email,
     required String token,
-    required String newPassword,
   }) async {
     final res = await _supabase.auth.verifyOTP(
       type: OtpType.recovery,
@@ -124,6 +123,11 @@ class AuthRepository {
       await _supabase.auth.signOut();
       throw Exception('blocked');
     }
+  }
+
+  /// 2-B 단계: 현재 세션(recovery)으로 비번만 업데이트.
+  /// 같은 비번이면 Supabase 가 422 same_password 에러를 던짐 → 호출부에서 분기.
+  Future<void> changePasswordWithSession(String newPassword) async {
     await _supabase.auth.updateUser(
       UserAttributes(password: newPassword),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/router/app_router.dart';
@@ -31,6 +32,8 @@ class _PasswordChangeOtpScreenState
   bool _obscurePw = true;
   bool _obscureConfirm = true;
   bool _loading = false;
+  // OTP 가 한번 인증되면 다음 시도부터는 updateUser 만 호출 (OTP 재사용 방지).
+  bool _otpVerified = false;
 
   @override
   void dispose() {
@@ -43,27 +46,49 @@ class _PasswordChangeOtpScreenState
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
+    final repo = ref.read(authRepositoryProvider);
     try {
-      await ref.read(authRepositoryProvider).verifyPasswordOtpAndChange(
+      // 1단계: OTP 검증 (이미 검증됐으면 스킵 — 같은 OTP 재사용 시 실패하기 때문)
+      if (!_otpVerified) {
+        try {
+          await repo.verifyPasswordOtp(
             email: widget.email,
             token: _otpCtrl.text.trim(),
-            newPassword: _pwCtrl.text,
           );
+          _otpVerified = true;
+        } catch (e) {
+          if (!mounted) return;
+          final msg = e.toString();
+          if (msg.contains('blocked')) {
+            context.go(AppRoutes.login);
+            return;
+          }
+          AppSnackBar.error(context, '인증 코드가 잘못되었거나 만료되었습니다');
+          return;
+        }
+      }
+
+      // 2단계: 비번 업데이트 — 실패해도 _otpVerified 유지하므로 OTP 재발급 불필요
+      try {
+        await repo.changePasswordWithSession(_pwCtrl.text);
+      } on AuthException catch (e) {
+        if (!mounted) return;
+        final m = e.message.toLowerCase();
+        // Supabase same_password (422): "New password should be different from the old password"
+        if (e.statusCode == '422' ||
+            m.contains('different from the old') ||
+            m.contains('same as the old') ||
+            m.contains('same_password')) {
+          AppSnackBar.error(context, '기존 비밀번호와 동일한 비밀번호로는 변경할 수 없습니다');
+        } else {
+          AppSnackBar.error(context, '비밀번호 변경에 실패했습니다');
+        }
+        return;
+      }
+
       if (!mounted) return;
       AppSnackBar.success(context, '비밀번호가 변경되었습니다');
-      // 변경 성공 시 자동 로그인 상태 → 피드로
       context.go(AppRoutes.feed);
-    } catch (e) {
-      if (!mounted) return;
-      final msg = e.toString();
-      if (msg.contains('blocked')) {
-        // _checkLoginBlock가 메시지 세팅 + signOut 함 → login 으로
-        context.go(AppRoutes.login);
-      } else if (msg.contains('expired') || msg.contains('invalid')) {
-        AppSnackBar.error(context, '인증 코드가 잘못되었거나 만료되었습니다');
-      } else {
-        AppSnackBar.error(context, '비밀번호 변경에 실패했습니다');
-      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -96,30 +121,42 @@ class _PasswordChangeOtpScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${widget.email} 으로 6자리 인증 코드를 발송했습니다.\n메일을 확인하고 코드를 입력해주세요.',
+                  '${widget.email} 으로 인증 코드를 발송했습니다.\n메일에 적힌 코드를 입력해주세요.\n(가입된 이메일이 아니면 메일이 발송되지 않습니다)',
                   style: TextStyle(fontSize: 13, color: sub, height: 1.5),
                 ),
                 const SizedBox(height: 24),
-                // OTP
+                // OTP (Supabase 설정에 따라 6~8자리)
+                Text(
+                  '인증 코드',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: sub,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _otpCtrl,
                   keyboardType: TextInputType.number,
-                  maxLength: 6,
+                  maxLength: 8,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 22,
-                    letterSpacing: 12,
+                    letterSpacing: 8,
                     fontWeight: FontWeight.w700,
                   ),
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                   ],
                   decoration: const InputDecoration(
-                    hintText: '······',
+                    hintText: '- - - - - - - -',
                     counterText: '',
                   ),
                   validator: (v) {
-                    if ((v ?? '').length != 6) return '6자리 코드를 입력해주세요';
+                    final s = (v ?? '').trim();
+                    if (s.length < 6 || s.length > 8) {
+                      return '인증 코드를 정확히 입력해주세요';
+                    }
                     return null;
                   },
                 ),
