@@ -49,7 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     
     try {
       await ref.read(authRepositoryProvider).signInWithEmail(
-        _emailCtrl.text,
+        _emailCtrl.text.trim(),
         _pwCtrl.text,
       );
       if (mounted) {
@@ -105,6 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username, AutofillHints.email],
                       decoration: const InputDecoration(
                         hintText: '이메일',
                         prefixIcon: Icon(Icons.email_outlined, size: 20),
@@ -119,6 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     TextFormField(
                       controller: _pwCtrl,
                       obscureText: _obscure,
+                      autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
                         hintText: '비밀번호',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),

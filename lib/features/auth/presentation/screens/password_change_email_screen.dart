@@ -94,6 +94,7 @@ class _PasswordChangeEmailScreenState
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.username, AutofillHints.email],
                   enabled: !_isLoggedIn,
                   decoration: InputDecoration(
                     hintText: '이메일',
