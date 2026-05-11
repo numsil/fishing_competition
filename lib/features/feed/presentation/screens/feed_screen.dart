@@ -163,7 +163,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onSearchClear: _onSearchClear,
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(feedPostsProvider),
+        onRefresh: () async {
+          ref.invalidate(feedPostsProvider);
+          ref.invalidate(myFollowingsForFeedProvider);
+        },
         child: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
         child: CustomScrollView(
