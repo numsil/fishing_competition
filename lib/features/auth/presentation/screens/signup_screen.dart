@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../legal/data/legal_versions.dart';
 import '../../data/auth_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -145,7 +146,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
     if (_birthDate == null || _gender == null) {
-      AppSnackBar.warning(context, '주민번호 앞 7자리를 정확히 입력해주세요');
+      AppSnackBar.warning(context, '올바른 생년월일·성별 코드가 아닙니다');
       return;
     }
     if (_isUnder14(_birthDate!)) {
@@ -166,6 +167,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         birthDate: _birthDate!,
         gender: _gender!,
         marketingAgreed: _agreeMarketing,
+        termsVersion: LegalVersions.terms,
+        privacyVersion: LegalVersions.privacy,
+        marketingVersion: LegalVersions.marketing,
       );
 
       if (!mounted) return;
@@ -260,6 +264,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     // 닉네임
                     TextFormField(
                       controller: _usernameCtrl,
+                      autofillHints: const [AutofillHints.nickname],
                       decoration: const InputDecoration(
                         hintText: '닉네임',
                         prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
@@ -276,6 +281,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username, AutofillHints.email],
                       decoration: const InputDecoration(
                         hintText: '이메일',
                         prefixIcon: Icon(Icons.email_outlined, size: 20),
@@ -291,6 +297,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     TextFormField(
                       controller: _pwCtrl,
                       obscureText: _obscurePw,
+                      autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
                         hintText: '비밀번호 (6자 이상)',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
@@ -313,6 +320,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     TextFormField(
                       controller: _pwConfirmCtrl,
                       obscureText: _obscureConfirm,
+                      autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
                         hintText: '비밀번호 확인',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
@@ -401,19 +409,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Text(
-                        _birthDate != null && _gender != null
-                            ? '${_birthDate!.year}년 ${_birthDate!.month}월 ${_birthDate!.day}일 · ${_gender == 'M' ? '남' : '여'}'
-                            : '생년월일 6자리 + 성별 1자리 (1·3=남, 2·4=여)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _birthDate != null ? Colors.green : sub,
+                    // 7자리 다 입력했는데 파싱 실패한 경우에만 에러 표시
+                    if (_rrnFrontCtrl.text.length == 6 &&
+                        _rrnBackCtrl.text.length == 1 &&
+                        _birthDate == null) ...[
+                      const SizedBox(height: 6),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Text(
+                          '올바른 생년월일·성별 코드가 아닙니다',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 20),
                     _ConsentSection(
                       agreeAll: _agreeAll,

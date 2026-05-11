@@ -138,6 +138,7 @@ class _PasswordChangeOtpScreenState
                 TextFormField(
                   controller: _otpCtrl,
                   keyboardType: TextInputType.number,
+                  autofillHints: const [AutofillHints.oneTimeCode],
                   maxLength: 8,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -165,6 +166,7 @@ class _PasswordChangeOtpScreenState
                 TextFormField(
                   controller: _pwCtrl,
                   obscureText: _obscurePw,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     hintText: '새 비밀번호 (6자 이상)',
                     prefixIcon: const Icon(Icons.lock_outline, size: 20),
@@ -190,6 +192,7 @@ class _PasswordChangeOtpScreenState
                 TextFormField(
                   controller: _pwConfirmCtrl,
                   obscureText: _obscureConfirm,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     hintText: '새 비밀번호 확인',
                     prefixIcon: const Icon(Icons.lock_outline, size: 20),

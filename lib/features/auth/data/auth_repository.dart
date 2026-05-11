@@ -71,6 +71,9 @@ class AuthRepository {
     required DateTime birthDate,
     required String gender, // 'M' or 'F'
     required bool marketingAgreed,
+    required String termsVersion,
+    required String privacyVersion,
+    required String marketingVersion,
   }) async {
     final birthStr =
         '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
@@ -82,6 +85,9 @@ class AuthRepository {
         'birth_date': birthStr,
         'gender': gender,
         'marketing_agreed': marketingAgreed,
+        'terms_version': termsVersion,
+        'privacy_version': privacyVersion,
+        'marketing_version': marketingVersion,
       },
     );
   }
