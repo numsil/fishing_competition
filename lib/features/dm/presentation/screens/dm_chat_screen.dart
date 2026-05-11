@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../league/presentation/screens/league_detail_screen.dart';
 import '../../data/dm_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
@@ -383,8 +384,12 @@ class _MessageBubble extends StatelessWidget {
         if (hasLeagueLink) ...[
           if (parsed.text.isNotEmpty) const SizedBox(height: 8),
           InkWell(
-            onTap: () =>
-                context.push('/league/detail/${parsed.leagueId}'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    LeagueDetailScreen(leagueId: parsed.leagueId!),
+              ),
+            ),
             borderRadius: BorderRadius.circular(10),
             child: Container(
               padding: const EdgeInsets.symmetric(
