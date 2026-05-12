@@ -52,6 +52,22 @@ AdRepository adRepository(AdRepositoryRef ref) {
   return AdRepository(Supabase.instance.client);
 }
 
+/// 같은 세션 안에서 같은 광고 view 중복 기록 방지.
+/// app 재시작 시 Set 초기화 → 새 세션으로 간주됨.
+class AdViewTracker {
+  final Set<String> _seen = <String>{};
+  bool markIfNew(String adId) {
+    if (_seen.contains(adId)) return false;
+    _seen.add(adId);
+    return true;
+  }
+}
+
+@Riverpod(keepAlive: true)
+AdViewTracker adViewTracker(AdViewTrackerRef ref) {
+  return AdViewTracker();
+}
+
 /// 피드 광고 풀. 10분 keepAlive (위젯에서 자체 셔플/회전).
 @riverpod
 Future<List<AdFeed>> activeFeedAds(ActiveFeedAdsRef ref) async {
