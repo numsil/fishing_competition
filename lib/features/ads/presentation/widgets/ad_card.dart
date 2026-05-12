@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -11,11 +12,12 @@ import '../../data/ad_repository.dart';
 import 'ad_video_player.dart';
 
 /// 피드 광고 카드.
-/// - 진입 시 (한 번만) view 이벤트 기록
+/// - 카드 가시 영역이 50%+ 들어왔을 때 view 이벤트 기록 (세션 내 1회만)
 /// - 탭 시 외부 브라우저로 link_url 열고 click 이벤트 기록
 class AdCard extends ConsumerStatefulWidget {
-  const AdCard({super.key, required this.ad});
+  const AdCard({super.key, required this.ad, required this.slotKey});
   final AdFeed ad;
+  final String slotKey; // VisibilityDetector 키 중복 방지 (같은 광고 재노출 시)
 
   @override
   ConsumerState<AdCard> createState() => _AdCardState();
@@ -24,14 +26,15 @@ class AdCard extends ConsumerStatefulWidget {
 class _AdCardState extends ConsumerState<AdCard> {
   bool _viewRecorded = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _viewRecorded) return;
-      _viewRecorded = true;
+  void _onVisibilityChanged(VisibilityInfo info) {
+    if (_viewRecorded) return;
+    if (info.visibleFraction < 0.5) return;
+    _viewRecorded = true;
+    // 세션 dedupe: 같은 광고 같은 세션 중복 기록 방지
+    final tracker = ref.read(adViewTrackerProvider);
+    if (tracker.markIfNew(widget.ad.id)) {
       ref.read(adRepositoryProvider).recordView(widget.ad.id);
-    });
+    }
   }
 
   Future<void> _onTap() async {
@@ -40,7 +43,12 @@ class _AdCardState extends ConsumerState<AdCard> {
     unawaited(ref.read(adRepositoryProvider).recordClick(ad.id));
     final uri = Uri.tryParse(ad.linkUrl);
     if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('링크를 열 수 없습니다.')),
+      );
+    }
   }
 
   @override
@@ -50,7 +58,10 @@ class _AdCardState extends ConsumerState<AdCard> {
     final sub =
         isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
-    return GestureDetector(
+    return VisibilityDetector(
+      key: Key('ad_card_${widget.slotKey}'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _onTap,
       child: Container(
@@ -74,7 +85,7 @@ class _AdCardState extends ConsumerState<AdCard> {
               aspectRatio: ad.aspectRatio <= 0 ? 1.0 : ad.aspectRatio,
               child: Stack(
                 children: [
-                  Positioned.fill(child: _Media(ad: ad)),
+                  Positioned.fill(child: _Media(ad: ad, slotKey: widget.slotKey)),
                   // "광고" 레이블 (앱마켓 정책)
                   Positioned(
                     top: 8,
@@ -143,6 +154,7 @@ class _AdCardState extends ConsumerState<AdCard> {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -156,14 +168,16 @@ void unawaited(Future<void> f) {
 // 미디어 분기
 // ──────────────────────────────────────────
 class _Media extends StatelessWidget {
-  const _Media({required this.ad});
+  const _Media({required this.ad, required this.slotKey});
   final AdFeed ad;
+  final String slotKey;
 
   @override
   Widget build(BuildContext context) {
     if (ad.hasVideo) {
       return AdVideoPlayer(
         adId: ad.id,
+        slotKey: slotKey,
         videoUrl: ad.videoUrl!,
         thumbnailUrl: ad.thumbnailUrl,
       );

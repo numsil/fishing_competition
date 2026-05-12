@@ -11,11 +11,13 @@ class AdVideoPlayer extends StatefulWidget {
   const AdVideoPlayer({
     super.key,
     required this.adId,
+    required this.slotKey,
     required this.videoUrl,
     this.thumbnailUrl,
   });
 
   final String adId;
+  final String slotKey; // 같은 광고가 여러 슬롯에 노출돼도 키 충돌 안 나게
   final String videoUrl;
   final String? thumbnailUrl;
 
@@ -76,7 +78,7 @@ class _AdVideoPlayerState extends State<AdVideoPlayer> {
   @override
   Widget build(BuildContext context) {
     return VisibilityDetector(
-      key: Key('ad_video_${widget.adId}'),
+      key: Key('ad_video_${widget.slotKey}'),
       onVisibilityChanged: _onVisibilityChanged,
       child: _initialized && _ctrl != null
           ? FittedBox(

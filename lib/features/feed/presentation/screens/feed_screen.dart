@@ -271,9 +271,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         (context, i) {
                           final item = items[i];
                           if (item is AdFeed) {
+                            final slotKey = '${item.id}_$i';
                             return KeyedSubtree(
-                              key: ValueKey('ad_${item.id}_$i'),
-                              child: AdCard(ad: item),
+                              key: ValueKey('ad_$slotKey'),
+                              child: AdCard(ad: item, slotKey: slotKey),
                             );
                           }
                           final post = item as Post;

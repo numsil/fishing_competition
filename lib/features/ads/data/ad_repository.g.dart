@@ -23,6 +23,23 @@ final adRepositoryProvider = AutoDisposeProvider<AdRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AdRepositoryRef = AutoDisposeProviderRef<AdRepository>;
+String _$adViewTrackerHash() => r'974df29da7947ffa73e932573e3afbd4838c1d42';
+
+/// See also [adViewTracker].
+@ProviderFor(adViewTracker)
+final adViewTrackerProvider = Provider<AdViewTracker>.internal(
+  adViewTracker,
+  name: r'adViewTrackerProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$adViewTrackerHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AdViewTrackerRef = ProviderRef<AdViewTracker>;
 String _$activeFeedAdsHash() => r'be4a99434eced75fc99d056d757c614be54e3cc1';
 
 /// 피드 광고 풀. 10분 keepAlive (위젯에서 자체 셔플/회전).
