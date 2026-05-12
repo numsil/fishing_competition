@@ -59,3 +59,39 @@ Future<List<AdFeed>> activeFeedAds(ActiveFeedAdsRef ref) async {
   Timer(const Duration(minutes: 10), link.close);
   return ref.read(adRepositoryProvider).getActiveAds();
 }
+
+/// 피드 광고 간격 설정. app_config에서 ad_min_gap, ad_max_gap 두 키 fetch.
+/// 실패 시 기본값 (5, 7) 사용.
+class AdGapConfig {
+  const AdGapConfig({required this.minGap, required this.maxGap});
+  final int minGap;
+  final int maxGap;
+}
+
+@riverpod
+Future<AdGapConfig> adGapConfig(AdGapConfigRef ref) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 30), link.close);
+  try {
+    final rows = await Supabase.instance.client
+        .from('app_config')
+        .select('key, value_int')
+        .inFilter('key', ['ad_min_gap', 'ad_max_gap']);
+    int? minV;
+    int? maxV;
+    for (final r in rows) {
+      final k = r['key'] as String?;
+      final v = (r['value_int'] as num?)?.toInt();
+      if (k == 'ad_min_gap') minV = v;
+      if (k == 'ad_max_gap') maxV = v;
+    }
+    final lo = minV ?? 5;
+    final hi = maxV ?? 7;
+    return AdGapConfig(
+      minGap: lo > 0 ? lo : 5,
+      maxGap: hi >= lo ? hi : lo,
+    );
+  } catch (_) {
+    return const AdGapConfig(minGap: 5, maxGap: 7);
+  }
+}

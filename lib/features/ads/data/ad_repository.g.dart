@@ -42,5 +42,22 @@ final activeFeedAdsProvider = AutoDisposeFutureProvider<List<AdFeed>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ActiveFeedAdsRef = AutoDisposeFutureProviderRef<List<AdFeed>>;
+String _$adGapConfigHash() => r'957a8acc370e91ce3efbee9a3dfa574107488f3a';
+
+/// See also [adGapConfig].
+@ProviderFor(adGapConfig)
+final adGapConfigProvider = AutoDisposeFutureProvider<AdGapConfig>.internal(
+  adGapConfig,
+  name: r'adGapConfigProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$adGapConfigHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AdGapConfigRef = AutoDisposeFutureProviderRef<AdGapConfig>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

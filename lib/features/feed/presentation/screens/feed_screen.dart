@@ -69,16 +69,23 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
   }
 
-  /// 게시물 사이에 광고를 3~5 인터벌로 결정적 삽입.
+  /// 게시물 사이에 광고를 minGap~maxGap 인터벌로 결정적 삽입.
   /// - post.id 해시 기반으로 다음 광고 위치 산정 → 같은 입력엔 같은 결과
   /// - 광고가 부족하면 라운드로빈 (활성 광고 1개라도 있으면 채움)
-  List<Object> _interleaveAds(List<Post> posts, List<AdFeed> ads) {
+  List<Object> _interleaveAds(
+    List<Post> posts,
+    List<AdFeed> ads, {
+    required int minGap,
+    required int maxGap,
+  }) {
     if (ads.isEmpty || posts.isEmpty) return List<Object>.from(posts);
+    final lo = minGap > 0 ? minGap : 5;
+    final hi = maxGap >= lo ? maxGap : lo;
+    final range = hi - lo + 1;
     final result = <Object>[];
     int adIdx = 0;
     int sinceLastAd = 0;
-    // 첫 광고 위치: 3 + (첫 post.id 해시 % 3) → 3·4·5
-    int nextAdAt = 3 + (posts.first.id.hashCode.abs() % 3);
+    int nextAdAt = lo + (posts.first.id.hashCode.abs() % range);
     for (int i = 0; i < posts.length; i++) {
       result.add(posts[i]);
       sinceLastAd++;
@@ -86,7 +93,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         result.add(ads[adIdx % ads.length]);
         adIdx++;
         sinceLastAd = 0;
-        nextAdAt = 3 + posts[i].id.hashCode.abs() % 3;
+        nextAdAt = lo + (posts[i].id.hashCode.abs() % range);
       }
     }
     return result;
@@ -220,10 +227,25 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     posts.isNotEmpty;
 
                 // 검색 중이 아닐 때만 광고 인터리브
-                final ads = (_isSearching || _searchQuery.isNotEmpty)
+                final rawAds = (_isSearching || _searchQuery.isNotEmpty)
                     ? const <AdFeed>[]
                     : (ref.watch(activeFeedAdsProvider).valueOrNull ?? const []);
-                final items = _interleaveAds(filtered, ads);
+                // 유저×날짜 시드로 셔플 → 사용자별로 광고 노출 분포 균등화.
+                // 같은 사용자가 같은 날 안에선 순서 일정 (스크롤 안정성).
+                final myId =
+                    ref.watch(currentUserProvider)?.id ?? 'anon';
+                final today = DateTime.now().toUtc();
+                final dayKey = '${today.year}-${today.month}-${today.day}';
+                final seed = ('$myId|$dayKey').hashCode;
+                final ads = List<AdFeed>.from(rawAds)..shuffle(Random(seed));
+                final gap = ref.watch(adGapConfigProvider).valueOrNull ??
+                    const AdGapConfig(minGap: 5, maxGap: 7);
+                final items = _interleaveAds(
+                  filtered,
+                  ads,
+                  minGap: gap.minGap,
+                  maxGap: gap.maxGap,
+                );
 
                 return [
                   if (_isSearching && _searchQuery.isNotEmpty)
