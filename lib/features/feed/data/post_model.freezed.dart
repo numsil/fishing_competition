@@ -13,9 +13,283 @@ part of 'post_model.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$MediaItem {
+
+ String get type;// 'image' | 'video'
+ String get url;@JsonKey(name: 'thumbnail_url') String? get thumbnailUrl;@JsonKey(name: 'aspect_ratio') double? get aspectRatio;
+/// Create a copy of MediaItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MediaItemCopyWith<MediaItem> get copyWith => _$MediaItemCopyWithImpl<MediaItem>(this as MediaItem, _$identity);
+
+  /// Serializes this MediaItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaItem&&(identical(other.type, type) || other.type == type)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,type,url,thumbnailUrl,aspectRatio);
+
+@override
+String toString() {
+  return 'MediaItem(type: $type, url: $url, thumbnailUrl: $thumbnailUrl, aspectRatio: $aspectRatio)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MediaItemCopyWith<$Res>  {
+  factory $MediaItemCopyWith(MediaItem value, $Res Function(MediaItem) _then) = _$MediaItemCopyWithImpl;
+@useResult
+$Res call({
+ String type, String url,@JsonKey(name: 'thumbnail_url') String? thumbnailUrl,@JsonKey(name: 'aspect_ratio') double? aspectRatio
+});
+
+
+
+
+}
+/// @nodoc
+class _$MediaItemCopyWithImpl<$Res>
+    implements $MediaItemCopyWith<$Res> {
+  _$MediaItemCopyWithImpl(this._self, this._then);
+
+  final MediaItem _self;
+  final $Res Function(MediaItem) _then;
+
+/// Create a copy of MediaItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? url = null,Object? thumbnailUrl = freezed,Object? aspectRatio = freezed,}) {
+  return _then(_self.copyWith(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
+as String?,aspectRatio: freezed == aspectRatio ? _self.aspectRatio : aspectRatio // ignore: cast_nullable_to_non_nullable
+as double?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MediaItem].
+extension MediaItemPatterns on MediaItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MediaItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MediaItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MediaItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _MediaItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MediaItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MediaItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  String url, @JsonKey(name: 'thumbnail_url')  String? thumbnailUrl, @JsonKey(name: 'aspect_ratio')  double? aspectRatio)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MediaItem() when $default != null:
+return $default(_that.type,_that.url,_that.thumbnailUrl,_that.aspectRatio);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  String url, @JsonKey(name: 'thumbnail_url')  String? thumbnailUrl, @JsonKey(name: 'aspect_ratio')  double? aspectRatio)  $default,) {final _that = this;
+switch (_that) {
+case _MediaItem():
+return $default(_that.type,_that.url,_that.thumbnailUrl,_that.aspectRatio);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  String url, @JsonKey(name: 'thumbnail_url')  String? thumbnailUrl, @JsonKey(name: 'aspect_ratio')  double? aspectRatio)?  $default,) {final _that = this;
+switch (_that) {
+case _MediaItem() when $default != null:
+return $default(_that.type,_that.url,_that.thumbnailUrl,_that.aspectRatio);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _MediaItem implements MediaItem {
+  const _MediaItem({required this.type, required this.url, @JsonKey(name: 'thumbnail_url') this.thumbnailUrl, @JsonKey(name: 'aspect_ratio') this.aspectRatio});
+  factory _MediaItem.fromJson(Map<String, dynamic> json) => _$MediaItemFromJson(json);
+
+@override final  String type;
+// 'image' | 'video'
+@override final  String url;
+@override@JsonKey(name: 'thumbnail_url') final  String? thumbnailUrl;
+@override@JsonKey(name: 'aspect_ratio') final  double? aspectRatio;
+
+/// Create a copy of MediaItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MediaItemCopyWith<_MediaItem> get copyWith => __$MediaItemCopyWithImpl<_MediaItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MediaItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaItem&&(identical(other.type, type) || other.type == type)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,type,url,thumbnailUrl,aspectRatio);
+
+@override
+String toString() {
+  return 'MediaItem(type: $type, url: $url, thumbnailUrl: $thumbnailUrl, aspectRatio: $aspectRatio)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MediaItemCopyWith<$Res> implements $MediaItemCopyWith<$Res> {
+  factory _$MediaItemCopyWith(_MediaItem value, $Res Function(_MediaItem) _then) = __$MediaItemCopyWithImpl;
+@override @useResult
+$Res call({
+ String type, String url,@JsonKey(name: 'thumbnail_url') String? thumbnailUrl,@JsonKey(name: 'aspect_ratio') double? aspectRatio
+});
+
+
+
+
+}
+/// @nodoc
+class __$MediaItemCopyWithImpl<$Res>
+    implements _$MediaItemCopyWith<$Res> {
+  __$MediaItemCopyWithImpl(this._self, this._then);
+
+  final _MediaItem _self;
+  final $Res Function(_MediaItem) _then;
+
+/// Create a copy of MediaItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? url = null,Object? thumbnailUrl = freezed,Object? aspectRatio = freezed,}) {
+  return _then(_MediaItem(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
+as String?,aspectRatio: freezed == aspectRatio ? _self.aspectRatio : aspectRatio // ignore: cast_nullable_to_non_nullable
+as double?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$Post {
 
- String get id;@JsonKey(name: 'user_id') String get userId;@JsonKey(name: 'league_id') String? get leagueId;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'image_urls') List<String>? get imageUrls;@JsonKey(name: 'aspect_ratio') double? get aspectRatio;@JsonKey(name: 'video_url') String? get videoUrl;@JsonKey(name: 'youtube_url') String? get youtubeUrl; String? get caption;@JsonKey(name: 'fish_type') String get fishType; double? get length;@JsonKey(name: 'lure_type') String? get lureType; double? get depth; double? get temperature; String? get location; double? get lat; double? get lng; double? get weight;@JsonKey(name: 'catch_count') int get catchCount;@JsonKey(name: 'is_lunker') bool get isLunker;@JsonKey(name: 'is_personal_record') bool get isPersonalRecord; int get score;@JsonKey(name: 'review_status') String get reviewStatus;@JsonKey(name: 'created_at') DateTime get createdAt;// Joined user data (can be populated after fetch)
+ String get id;@JsonKey(name: 'user_id') String get userId;@JsonKey(name: 'league_id') String? get leagueId;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'image_urls') List<String>? get imageUrls;@JsonKey(name: 'aspect_ratio') double? get aspectRatio;@JsonKey(name: 'video_url') String? get videoUrl;@JsonKey(name: 'youtube_url') String? get youtubeUrl; List<MediaItem>? get media; String? get caption;@JsonKey(name: 'fish_type') String get fishType; double? get length;@JsonKey(name: 'lure_type') String? get lureType; double? get depth; double? get temperature; String? get location; double? get lat; double? get lng; double? get weight;@JsonKey(name: 'catch_count') int get catchCount;@JsonKey(name: 'is_lunker') bool get isLunker;@JsonKey(name: 'is_personal_record') bool get isPersonalRecord; int get score;@JsonKey(name: 'review_status') String get reviewStatus;@JsonKey(name: 'created_at') DateTime get createdAt;// Joined user data (can be populated after fetch)
 @JsonKey(includeFromJson: false, includeToJson: false) String get username;@JsonKey(includeFromJson: false, includeToJson: false) int get commentsCount;@JsonKey(includeFromJson: false, includeToJson: false) String get avatarUrl;
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
@@ -29,16 +303,16 @@ $PostCopyWith<Post> get copyWith => _$PostCopyWithImpl<Post>(this as Post, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other.imageUrls, imageUrls)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.youtubeUrl, youtubeUrl) || other.youtubeUrl == youtubeUrl)&&(identical(other.caption, caption) || other.caption == caption)&&(identical(other.fishType, fishType) || other.fishType == fishType)&&(identical(other.length, length) || other.length == length)&&(identical(other.lureType, lureType) || other.lureType == lureType)&&(identical(other.depth, depth) || other.depth == depth)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.weight, weight) || other.weight == weight)&&(identical(other.catchCount, catchCount) || other.catchCount == catchCount)&&(identical(other.isLunker, isLunker) || other.isLunker == isLunker)&&(identical(other.isPersonalRecord, isPersonalRecord) || other.isPersonalRecord == isPersonalRecord)&&(identical(other.score, score) || other.score == score)&&(identical(other.reviewStatus, reviewStatus) || other.reviewStatus == reviewStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.username, username) || other.username == username)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other.imageUrls, imageUrls)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.youtubeUrl, youtubeUrl) || other.youtubeUrl == youtubeUrl)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.caption, caption) || other.caption == caption)&&(identical(other.fishType, fishType) || other.fishType == fishType)&&(identical(other.length, length) || other.length == length)&&(identical(other.lureType, lureType) || other.lureType == lureType)&&(identical(other.depth, depth) || other.depth == depth)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.weight, weight) || other.weight == weight)&&(identical(other.catchCount, catchCount) || other.catchCount == catchCount)&&(identical(other.isLunker, isLunker) || other.isLunker == isLunker)&&(identical(other.isPersonalRecord, isPersonalRecord) || other.isPersonalRecord == isPersonalRecord)&&(identical(other.score, score) || other.score == score)&&(identical(other.reviewStatus, reviewStatus) || other.reviewStatus == reviewStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.username, username) || other.username == username)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,userId,leagueId,imageUrl,const DeepCollectionEquality().hash(imageUrls),aspectRatio,videoUrl,youtubeUrl,caption,fishType,length,lureType,depth,temperature,location,lat,lng,weight,catchCount,isLunker,isPersonalRecord,score,reviewStatus,createdAt,username,commentsCount,avatarUrl]);
+int get hashCode => Object.hashAll([runtimeType,id,userId,leagueId,imageUrl,const DeepCollectionEquality().hash(imageUrls),aspectRatio,videoUrl,youtubeUrl,const DeepCollectionEquality().hash(media),caption,fishType,length,lureType,depth,temperature,location,lat,lng,weight,catchCount,isLunker,isPersonalRecord,score,reviewStatus,createdAt,username,commentsCount,avatarUrl]);
 
 @override
 String toString() {
-  return 'Post(id: $id, userId: $userId, leagueId: $leagueId, imageUrl: $imageUrl, imageUrls: $imageUrls, aspectRatio: $aspectRatio, videoUrl: $videoUrl, youtubeUrl: $youtubeUrl, caption: $caption, fishType: $fishType, length: $length, lureType: $lureType, depth: $depth, temperature: $temperature, location: $location, lat: $lat, lng: $lng, weight: $weight, catchCount: $catchCount, isLunker: $isLunker, isPersonalRecord: $isPersonalRecord, score: $score, reviewStatus: $reviewStatus, createdAt: $createdAt, username: $username, commentsCount: $commentsCount, avatarUrl: $avatarUrl)';
+  return 'Post(id: $id, userId: $userId, leagueId: $leagueId, imageUrl: $imageUrl, imageUrls: $imageUrls, aspectRatio: $aspectRatio, videoUrl: $videoUrl, youtubeUrl: $youtubeUrl, media: $media, caption: $caption, fishType: $fishType, length: $length, lureType: $lureType, depth: $depth, temperature: $temperature, location: $location, lat: $lat, lng: $lng, weight: $weight, catchCount: $catchCount, isLunker: $isLunker, isPersonalRecord: $isPersonalRecord, score: $score, reviewStatus: $reviewStatus, createdAt: $createdAt, username: $username, commentsCount: $commentsCount, avatarUrl: $avatarUrl)';
 }
 
 
@@ -49,7 +323,7 @@ abstract mixin class $PostCopyWith<$Res>  {
   factory $PostCopyWith(Post value, $Res Function(Post) _then) = _$PostCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String userId,@JsonKey(name: 'league_id') String? leagueId,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'image_urls') List<String>? imageUrls,@JsonKey(name: 'aspect_ratio') double? aspectRatio,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'youtube_url') String? youtubeUrl, String? caption,@JsonKey(name: 'fish_type') String fishType, double? length,@JsonKey(name: 'lure_type') String? lureType, double? depth, double? temperature, String? location, double? lat, double? lng, double? weight,@JsonKey(name: 'catch_count') int catchCount,@JsonKey(name: 'is_lunker') bool isLunker,@JsonKey(name: 'is_personal_record') bool isPersonalRecord, int score,@JsonKey(name: 'review_status') String reviewStatus,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) String username,@JsonKey(includeFromJson: false, includeToJson: false) int commentsCount,@JsonKey(includeFromJson: false, includeToJson: false) String avatarUrl
+ String id,@JsonKey(name: 'user_id') String userId,@JsonKey(name: 'league_id') String? leagueId,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'image_urls') List<String>? imageUrls,@JsonKey(name: 'aspect_ratio') double? aspectRatio,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'youtube_url') String? youtubeUrl, List<MediaItem>? media, String? caption,@JsonKey(name: 'fish_type') String fishType, double? length,@JsonKey(name: 'lure_type') String? lureType, double? depth, double? temperature, String? location, double? lat, double? lng, double? weight,@JsonKey(name: 'catch_count') int catchCount,@JsonKey(name: 'is_lunker') bool isLunker,@JsonKey(name: 'is_personal_record') bool isPersonalRecord, int score,@JsonKey(name: 'review_status') String reviewStatus,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) String username,@JsonKey(includeFromJson: false, includeToJson: false) int commentsCount,@JsonKey(includeFromJson: false, includeToJson: false) String avatarUrl
 });
 
 
@@ -66,7 +340,7 @@ class _$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? leagueId = freezed,Object? imageUrl = null,Object? imageUrls = freezed,Object? aspectRatio = freezed,Object? videoUrl = freezed,Object? youtubeUrl = freezed,Object? caption = freezed,Object? fishType = null,Object? length = freezed,Object? lureType = freezed,Object? depth = freezed,Object? temperature = freezed,Object? location = freezed,Object? lat = freezed,Object? lng = freezed,Object? weight = freezed,Object? catchCount = null,Object? isLunker = null,Object? isPersonalRecord = null,Object? score = null,Object? reviewStatus = null,Object? createdAt = null,Object? username = null,Object? commentsCount = null,Object? avatarUrl = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? leagueId = freezed,Object? imageUrl = null,Object? imageUrls = freezed,Object? aspectRatio = freezed,Object? videoUrl = freezed,Object? youtubeUrl = freezed,Object? media = freezed,Object? caption = freezed,Object? fishType = null,Object? length = freezed,Object? lureType = freezed,Object? depth = freezed,Object? temperature = freezed,Object? location = freezed,Object? lat = freezed,Object? lng = freezed,Object? weight = freezed,Object? catchCount = null,Object? isLunker = null,Object? isPersonalRecord = null,Object? score = null,Object? reviewStatus = null,Object? createdAt = null,Object? username = null,Object? commentsCount = null,Object? avatarUrl = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -76,7 +350,8 @@ as String,imageUrls: freezed == imageUrls ? _self.imageUrls : imageUrls // ignor
 as List<String>?,aspectRatio: freezed == aspectRatio ? _self.aspectRatio : aspectRatio // ignore: cast_nullable_to_non_nullable
 as double?,videoUrl: freezed == videoUrl ? _self.videoUrl : videoUrl // ignore: cast_nullable_to_non_nullable
 as String?,youtubeUrl: freezed == youtubeUrl ? _self.youtubeUrl : youtubeUrl // ignore: cast_nullable_to_non_nullable
-as String?,caption: freezed == caption ? _self.caption : caption // ignore: cast_nullable_to_non_nullable
+as String?,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+as List<MediaItem>?,caption: freezed == caption ? _self.caption : caption // ignore: cast_nullable_to_non_nullable
 as String?,fishType: null == fishType ? _self.fishType : fishType // ignore: cast_nullable_to_non_nullable
 as String,length: freezed == length ? _self.length : length // ignore: cast_nullable_to_non_nullable
 as double?,lureType: freezed == lureType ? _self.lureType : lureType // ignore: cast_nullable_to_non_nullable
@@ -180,10 +455,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  List<MediaItem>? media,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
+return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.media,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
   return orElse();
 
 }
@@ -201,10 +476,10 @@ return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageU
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  List<MediaItem>? media,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _Post():
-return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
+return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.media,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -221,10 +496,10 @@ return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageU
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String userId, @JsonKey(name: 'league_id')  String? leagueId, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'image_urls')  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio')  double? aspectRatio, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'youtube_url')  String? youtubeUrl,  List<MediaItem>? media,  String? caption, @JsonKey(name: 'fish_type')  String fishType,  double? length, @JsonKey(name: 'lure_type')  String? lureType,  double? depth,  double? temperature,  String? location,  double? lat,  double? lng,  double? weight, @JsonKey(name: 'catch_count')  int catchCount, @JsonKey(name: 'is_lunker')  bool isLunker, @JsonKey(name: 'is_personal_record')  bool isPersonalRecord,  int score, @JsonKey(name: 'review_status')  String reviewStatus, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeFromJson: false, includeToJson: false)  String username, @JsonKey(includeFromJson: false, includeToJson: false)  int commentsCount, @JsonKey(includeFromJson: false, includeToJson: false)  String avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
+return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageUrls,_that.aspectRatio,_that.videoUrl,_that.youtubeUrl,_that.media,_that.caption,_that.fishType,_that.length,_that.lureType,_that.depth,_that.temperature,_that.location,_that.lat,_that.lng,_that.weight,_that.catchCount,_that.isLunker,_that.isPersonalRecord,_that.score,_that.reviewStatus,_that.createdAt,_that.username,_that.commentsCount,_that.avatarUrl);case _:
   return null;
 
 }
@@ -236,7 +511,7 @@ return $default(_that.id,_that.userId,_that.leagueId,_that.imageUrl,_that.imageU
 @JsonSerializable()
 
 class _Post implements Post {
-  const _Post({required this.id, @JsonKey(name: 'user_id') required this.userId, @JsonKey(name: 'league_id') this.leagueId, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'image_urls') final  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio') this.aspectRatio, @JsonKey(name: 'video_url') this.videoUrl, @JsonKey(name: 'youtube_url') this.youtubeUrl, this.caption, @JsonKey(name: 'fish_type') this.fishType = '배스', this.length, @JsonKey(name: 'lure_type') this.lureType, this.depth, this.temperature, this.location, this.lat, this.lng, this.weight, @JsonKey(name: 'catch_count') this.catchCount = 1, @JsonKey(name: 'is_lunker') this.isLunker = false, @JsonKey(name: 'is_personal_record') this.isPersonalRecord = false, this.score = 0, @JsonKey(name: 'review_status') this.reviewStatus = 'pending', @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeFromJson: false, includeToJson: false) this.username = 'Unknown', @JsonKey(includeFromJson: false, includeToJson: false) this.commentsCount = 0, @JsonKey(includeFromJson: false, includeToJson: false) this.avatarUrl = ''}): _imageUrls = imageUrls;
+  const _Post({required this.id, @JsonKey(name: 'user_id') required this.userId, @JsonKey(name: 'league_id') this.leagueId, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'image_urls') final  List<String>? imageUrls, @JsonKey(name: 'aspect_ratio') this.aspectRatio, @JsonKey(name: 'video_url') this.videoUrl, @JsonKey(name: 'youtube_url') this.youtubeUrl, final  List<MediaItem>? media, this.caption, @JsonKey(name: 'fish_type') this.fishType = '배스', this.length, @JsonKey(name: 'lure_type') this.lureType, this.depth, this.temperature, this.location, this.lat, this.lng, this.weight, @JsonKey(name: 'catch_count') this.catchCount = 1, @JsonKey(name: 'is_lunker') this.isLunker = false, @JsonKey(name: 'is_personal_record') this.isPersonalRecord = false, this.score = 0, @JsonKey(name: 'review_status') this.reviewStatus = 'pending', @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeFromJson: false, includeToJson: false) this.username = 'Unknown', @JsonKey(includeFromJson: false, includeToJson: false) this.commentsCount = 0, @JsonKey(includeFromJson: false, includeToJson: false) this.avatarUrl = ''}): _imageUrls = imageUrls,_media = media;
   factory _Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
 
 @override final  String id;
@@ -255,6 +530,15 @@ class _Post implements Post {
 @override@JsonKey(name: 'aspect_ratio') final  double? aspectRatio;
 @override@JsonKey(name: 'video_url') final  String? videoUrl;
 @override@JsonKey(name: 'youtube_url') final  String? youtubeUrl;
+ final  List<MediaItem>? _media;
+@override List<MediaItem>? get media {
+  final value = _media;
+  if (value == null) return null;
+  if (_media is EqualUnmodifiableListView) return _media;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
 @override final  String? caption;
 @override@JsonKey(name: 'fish_type') final  String fishType;
 @override final  double? length;
@@ -289,16 +573,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other._imageUrls, _imageUrls)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.youtubeUrl, youtubeUrl) || other.youtubeUrl == youtubeUrl)&&(identical(other.caption, caption) || other.caption == caption)&&(identical(other.fishType, fishType) || other.fishType == fishType)&&(identical(other.length, length) || other.length == length)&&(identical(other.lureType, lureType) || other.lureType == lureType)&&(identical(other.depth, depth) || other.depth == depth)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.weight, weight) || other.weight == weight)&&(identical(other.catchCount, catchCount) || other.catchCount == catchCount)&&(identical(other.isLunker, isLunker) || other.isLunker == isLunker)&&(identical(other.isPersonalRecord, isPersonalRecord) || other.isPersonalRecord == isPersonalRecord)&&(identical(other.score, score) || other.score == score)&&(identical(other.reviewStatus, reviewStatus) || other.reviewStatus == reviewStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.username, username) || other.username == username)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other._imageUrls, _imageUrls)&&(identical(other.aspectRatio, aspectRatio) || other.aspectRatio == aspectRatio)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.youtubeUrl, youtubeUrl) || other.youtubeUrl == youtubeUrl)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.caption, caption) || other.caption == caption)&&(identical(other.fishType, fishType) || other.fishType == fishType)&&(identical(other.length, length) || other.length == length)&&(identical(other.lureType, lureType) || other.lureType == lureType)&&(identical(other.depth, depth) || other.depth == depth)&&(identical(other.temperature, temperature) || other.temperature == temperature)&&(identical(other.location, location) || other.location == location)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.weight, weight) || other.weight == weight)&&(identical(other.catchCount, catchCount) || other.catchCount == catchCount)&&(identical(other.isLunker, isLunker) || other.isLunker == isLunker)&&(identical(other.isPersonalRecord, isPersonalRecord) || other.isPersonalRecord == isPersonalRecord)&&(identical(other.score, score) || other.score == score)&&(identical(other.reviewStatus, reviewStatus) || other.reviewStatus == reviewStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.username, username) || other.username == username)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,userId,leagueId,imageUrl,const DeepCollectionEquality().hash(_imageUrls),aspectRatio,videoUrl,youtubeUrl,caption,fishType,length,lureType,depth,temperature,location,lat,lng,weight,catchCount,isLunker,isPersonalRecord,score,reviewStatus,createdAt,username,commentsCount,avatarUrl]);
+int get hashCode => Object.hashAll([runtimeType,id,userId,leagueId,imageUrl,const DeepCollectionEquality().hash(_imageUrls),aspectRatio,videoUrl,youtubeUrl,const DeepCollectionEquality().hash(_media),caption,fishType,length,lureType,depth,temperature,location,lat,lng,weight,catchCount,isLunker,isPersonalRecord,score,reviewStatus,createdAt,username,commentsCount,avatarUrl]);
 
 @override
 String toString() {
-  return 'Post(id: $id, userId: $userId, leagueId: $leagueId, imageUrl: $imageUrl, imageUrls: $imageUrls, aspectRatio: $aspectRatio, videoUrl: $videoUrl, youtubeUrl: $youtubeUrl, caption: $caption, fishType: $fishType, length: $length, lureType: $lureType, depth: $depth, temperature: $temperature, location: $location, lat: $lat, lng: $lng, weight: $weight, catchCount: $catchCount, isLunker: $isLunker, isPersonalRecord: $isPersonalRecord, score: $score, reviewStatus: $reviewStatus, createdAt: $createdAt, username: $username, commentsCount: $commentsCount, avatarUrl: $avatarUrl)';
+  return 'Post(id: $id, userId: $userId, leagueId: $leagueId, imageUrl: $imageUrl, imageUrls: $imageUrls, aspectRatio: $aspectRatio, videoUrl: $videoUrl, youtubeUrl: $youtubeUrl, media: $media, caption: $caption, fishType: $fishType, length: $length, lureType: $lureType, depth: $depth, temperature: $temperature, location: $location, lat: $lat, lng: $lng, weight: $weight, catchCount: $catchCount, isLunker: $isLunker, isPersonalRecord: $isPersonalRecord, score: $score, reviewStatus: $reviewStatus, createdAt: $createdAt, username: $username, commentsCount: $commentsCount, avatarUrl: $avatarUrl)';
 }
 
 
@@ -309,7 +593,7 @@ abstract mixin class _$PostCopyWith<$Res> implements $PostCopyWith<$Res> {
   factory _$PostCopyWith(_Post value, $Res Function(_Post) _then) = __$PostCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String userId,@JsonKey(name: 'league_id') String? leagueId,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'image_urls') List<String>? imageUrls,@JsonKey(name: 'aspect_ratio') double? aspectRatio,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'youtube_url') String? youtubeUrl, String? caption,@JsonKey(name: 'fish_type') String fishType, double? length,@JsonKey(name: 'lure_type') String? lureType, double? depth, double? temperature, String? location, double? lat, double? lng, double? weight,@JsonKey(name: 'catch_count') int catchCount,@JsonKey(name: 'is_lunker') bool isLunker,@JsonKey(name: 'is_personal_record') bool isPersonalRecord, int score,@JsonKey(name: 'review_status') String reviewStatus,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) String username,@JsonKey(includeFromJson: false, includeToJson: false) int commentsCount,@JsonKey(includeFromJson: false, includeToJson: false) String avatarUrl
+ String id,@JsonKey(name: 'user_id') String userId,@JsonKey(name: 'league_id') String? leagueId,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'image_urls') List<String>? imageUrls,@JsonKey(name: 'aspect_ratio') double? aspectRatio,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'youtube_url') String? youtubeUrl, List<MediaItem>? media, String? caption,@JsonKey(name: 'fish_type') String fishType, double? length,@JsonKey(name: 'lure_type') String? lureType, double? depth, double? temperature, String? location, double? lat, double? lng, double? weight,@JsonKey(name: 'catch_count') int catchCount,@JsonKey(name: 'is_lunker') bool isLunker,@JsonKey(name: 'is_personal_record') bool isPersonalRecord, int score,@JsonKey(name: 'review_status') String reviewStatus,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeFromJson: false, includeToJson: false) String username,@JsonKey(includeFromJson: false, includeToJson: false) int commentsCount,@JsonKey(includeFromJson: false, includeToJson: false) String avatarUrl
 });
 
 
@@ -326,7 +610,7 @@ class __$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? leagueId = freezed,Object? imageUrl = null,Object? imageUrls = freezed,Object? aspectRatio = freezed,Object? videoUrl = freezed,Object? youtubeUrl = freezed,Object? caption = freezed,Object? fishType = null,Object? length = freezed,Object? lureType = freezed,Object? depth = freezed,Object? temperature = freezed,Object? location = freezed,Object? lat = freezed,Object? lng = freezed,Object? weight = freezed,Object? catchCount = null,Object? isLunker = null,Object? isPersonalRecord = null,Object? score = null,Object? reviewStatus = null,Object? createdAt = null,Object? username = null,Object? commentsCount = null,Object? avatarUrl = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? leagueId = freezed,Object? imageUrl = null,Object? imageUrls = freezed,Object? aspectRatio = freezed,Object? videoUrl = freezed,Object? youtubeUrl = freezed,Object? media = freezed,Object? caption = freezed,Object? fishType = null,Object? length = freezed,Object? lureType = freezed,Object? depth = freezed,Object? temperature = freezed,Object? location = freezed,Object? lat = freezed,Object? lng = freezed,Object? weight = freezed,Object? catchCount = null,Object? isLunker = null,Object? isPersonalRecord = null,Object? score = null,Object? reviewStatus = null,Object? createdAt = null,Object? username = null,Object? commentsCount = null,Object? avatarUrl = null,}) {
   return _then(_Post(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -336,7 +620,8 @@ as String,imageUrls: freezed == imageUrls ? _self._imageUrls : imageUrls // igno
 as List<String>?,aspectRatio: freezed == aspectRatio ? _self.aspectRatio : aspectRatio // ignore: cast_nullable_to_non_nullable
 as double?,videoUrl: freezed == videoUrl ? _self.videoUrl : videoUrl // ignore: cast_nullable_to_non_nullable
 as String?,youtubeUrl: freezed == youtubeUrl ? _self.youtubeUrl : youtubeUrl // ignore: cast_nullable_to_non_nullable
-as String?,caption: freezed == caption ? _self.caption : caption // ignore: cast_nullable_to_non_nullable
+as String?,media: freezed == media ? _self._media : media // ignore: cast_nullable_to_non_nullable
+as List<MediaItem>?,caption: freezed == caption ? _self.caption : caption // ignore: cast_nullable_to_non_nullable
 as String?,fishType: null == fishType ? _self.fishType : fishType // ignore: cast_nullable_to_non_nullable
 as String,length: freezed == length ? _self.length : length // ignore: cast_nullable_to_non_nullable
 as double?,lureType: freezed == lureType ? _self.lureType : lureType // ignore: cast_nullable_to_non_nullable

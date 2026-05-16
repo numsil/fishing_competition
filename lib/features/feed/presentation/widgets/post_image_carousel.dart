@@ -6,12 +6,16 @@ import '../../data/post_model.dart';
 import '../../../../core/utils/youtube_url_parser.dart';
 import 'feed_video_player.dart';
 import 'fullscreen_image_viewer.dart';
+import 'fullscreen_video_viewer.dart';
 import 'youtube_feed_player.dart';
 
-/// image_urls (다중) 또는 image_url (단일)을 PageView로 보여주는 공용 위젯.
-/// - 단일 이미지 or 동영상: 기존과 동일한 단순 뷰
-/// - 다중 이미지: PageView + 상단 "N/총" 카운터 + 하단 dot 인디케이터
-/// [overlay]: 하트 애니메이션 등 이미지 위에 올릴 위젯
+/// 게시물의 미디어를 PageView로 보여주는 공용 위젯.
+/// - 사진/동영상 혼합 (post.effectiveMedia 기반)
+/// - 단일 항목: 단순 뷰
+/// - 다중: PageView + 상단 카운터 + 하단 dot 인디케이터
+/// - 사진 탭 → 풀스크린 이미지 뷰어
+/// - 동영상 풀스크린 버튼 → 풀스크린 동영상 뷰어
+/// [overlay]: 하트 애니메이션 등 미디어 위에 올릴 위젯
 class PostImageCarousel extends StatefulWidget {
   const PostImageCarousel({
     super.key,
@@ -41,24 +45,33 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
-  List<String> get _urls {
-    final p = widget.post;
-    if (p.imageUrls != null && p.imageUrls!.isNotEmpty) return p.imageUrls!;
-    if (p.imageUrl.isNotEmpty) return [p.imageUrl];
-    return [];
-  }
+  List<MediaItem> get _media => widget.post.effectiveMedia;
+  bool get _isMulti => _media.length > 1;
 
-  bool get _isMulti => _urls.length > 1;
-
-  void _openViewer(int index) {
-    if (widget.post.videoUrl != null) return;
-    if (widget.post.youtubeUrl != null) return;
-    final urls = _urls;
-    if (urls.isEmpty) return;
+  void _openImageViewer(int index) {
+    final imgs = _media.where((m) => m.type == 'image').toList();
+    if (imgs.isEmpty) return;
+    final urls = imgs.map((m) => m.url).toList();
+    // 현재 페이지가 이미지면 그 위치, 아니면 0
+    final cur = _media[index];
+    int viewerIdx = 0;
+    if (cur.type == 'image') {
+      viewerIdx = imgs.indexOf(cur);
+      if (viewerIdx < 0) viewerIdx = 0;
+    }
     FullscreenImageViewer.open(
       context,
       urls: urls,
-      initialIndex: index,
+      initialIndex: viewerIdx,
+    );
+  }
+
+  void _openVideoViewer(MediaItem item) {
+    FullscreenVideoViewer.open(
+      context,
+      videoUrl: item.url,
+      thumbnailUrl: item.thumbnailUrl ?? widget.post.imageUrl,
+      accent: widget.accent,
     );
   }
 
@@ -78,15 +91,16 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
     super.dispose();
   }
 
-  /// 영상 게시물인데 DB에 비율이 없는 경우, 썸네일 이미지에서 비율을 추출.
-  /// 썸네일은 영상 프레임에서 캡처한 것이라 비율이 동일.
+  /// 영상이 첫 미디어인데 비율이 없는 경우, 썸네일 이미지에서 비율을 추출.
   void _maybeDetectVideoAspect() {
     final p = widget.post;
-    if (p.videoUrl == null) return;
     if (p.aspectRatio != null) return;
-    if (p.imageUrl.isEmpty) return;
+    final first = _media.isNotEmpty ? _media.first : null;
+    if (first == null || first.type != 'video') return;
+    final thumb = first.thumbnailUrl ?? p.imageUrl;
+    if (thumb.isEmpty) return;
 
-    final provider = CachedNetworkImageProvider(p.imageUrl);
+    final provider = CachedNetworkImageProvider(thumb);
     _aspectStream = provider.resolve(ImageConfiguration.empty);
     _aspectListener = ImageStreamListener((info, _) {
       if (!mounted) return;
@@ -98,57 +112,76 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
     _aspectStream!.addListener(_aspectListener!);
   }
 
+  double _computeAspect(BuildContext context) {
+    final p = widget.post;
+    if (p.youtubeUrl != null) {
+      if (isYoutubeShortsUrl(p.youtubeUrl!)) {
+        final media = MediaQuery.of(context);
+        final cappedHeight = media.size.height * 0.75;
+        final minAspect =
+            cappedHeight > 0 ? media.size.width / cappedHeight : 9 / 16;
+        return (9 / 16).clamp(minAspect, 1.91);
+      }
+      return 16 / 9;
+    }
+    final hasVideo = _media.any((m) => m.type == 'video');
+    final natural = widget.post.aspectRatio ??
+        (hasVideo ? _detectedVideoAspect : null) ??
+        (4 / 3);
+    if (hasVideo) {
+      final media = MediaQuery.of(context);
+      final cappedHeight = media.size.height * 0.75;
+      final minAspect =
+          cappedHeight > 0 ? media.size.width / cappedHeight : 0.5625;
+      return natural.clamp(minAspect, 1.91);
+    }
+    return natural.clamp(0.8, 1.91);
+  }
+
+  Widget _buildPage(MediaItem item, int index) {
+    if (item.type == 'video') {
+      return FeedVideoPlayer(
+        post: widget.post,
+        accent: widget.accent,
+        videoUrlOverride: item.url,
+        thumbnailUrlOverride: item.thumbnailUrl ?? widget.post.imageUrl,
+        keyIdOverride: '${widget.post.id}_$index',
+        onTapFullscreen: () => _openVideoViewer(item),
+      );
+    }
+    return _NetImage(
+      url: item.url,
+      isDark: widget.isDark,
+      accent: widget.accent,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.post;
-    final urls = _urls;
+    final media = _media;
+    final currentIsVideo = media.isNotEmpty &&
+        _page < media.length &&
+        media[_page].type == 'video';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── 이미지 / 동영상 영역 ──────────────────────────
+        // ── 미디어 영역 ──────────────────────────
         GestureDetector(
-          onTap: (p.videoUrl != null || p.youtubeUrl != null)
+          onTap: (p.youtubeUrl != null || currentIsVideo)
               ? null
-              : () => _openViewer(_page),
-          onDoubleTap: (p.videoUrl != null || p.youtubeUrl != null)
+              : () => _openImageViewer(_page),
+          onDoubleTap: (p.youtubeUrl != null || currentIsVideo)
               ? null
               : widget.onDoubleTap,
           child: Container(
             width: double.infinity,
-            color: widget.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
+            color: widget.isDark
+                ? const Color(0xFF0A0A0A)
+                : const Color(0xFFF2F2F2),
             child: AspectRatio(
-              // 영상이고 DB 비율이 없으면 썸네일에서 검출한 비율 사용.
-              // 영상은 화면을 넘지 않게 viewport 기반으로 최소 비율 계산.
-              // 이미지는 4:5(0.8)~1.91 클램프로 피드 레이아웃 일관성 유지.
-              aspectRatio: () {
-                if (p.youtubeUrl != null) {
-                  // 쇼츠(9:16)는 화면을 꽉 채우면 컨트롤 조작이 어려우므로
-                  // 뷰포트 높이의 80% 까지로 제한.
-                  if (isYoutubeShortsUrl(p.youtubeUrl!)) {
-                    final media = MediaQuery.of(context);
-                    final cappedHeight = media.size.height * 0.75;
-                    final minAspect = cappedHeight > 0
-                        ? media.size.width / cappedHeight
-                        : 9 / 16;
-                    return (9 / 16).clamp(minAspect, 1.91);
-                  }
-                  return 16 / 9;
-                }
-                final natural = widget.post.aspectRatio ??
-                    (p.videoUrl != null ? _detectedVideoAspect : null) ??
-                    (4 / 3);
-                if (p.videoUrl != null) {
-                  // 세로 영상은 화면 높이의 75% 까지로 제한
-                  final media = MediaQuery.of(context);
-                  final cappedHeight = media.size.height * 0.75;
-                  final minAspect = cappedHeight > 0
-                      ? media.size.width / cappedHeight
-                      : 0.5625;
-                  return natural.clamp(minAspect, 1.91);
-                }
-                return natural.clamp(0.8, 1.91);
-              }(),
+              aspectRatio: _computeAspect(context),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -158,29 +191,22 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                       youtubeUrl: p.youtubeUrl!,
                       thumbnailUrl: p.imageUrl,
                     )
-                  else if (p.videoUrl != null)
-                    FeedVideoPlayer(post: p, accent: widget.accent)
-                  else if (_isMulti)
+                  else if (media.isEmpty)
+                    Center(
+                      child: Icon(LucideIcons.image,
+                          size: 60,
+                          color: widget.isDark
+                              ? const Color(0xFF3F3F46)
+                              : const Color(0xFFA1A1AA)),
+                    )
+                  else if (!_isMulti)
+                    _buildPage(media.first, 0)
+                  else
                     PageView.builder(
                       controller: _ctrl,
-                      itemCount: urls.length,
+                      itemCount: media.length,
                       onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (_, i) => _NetImage(
-                        url: urls[i],
-                        isDark: widget.isDark,
-                        accent: widget.accent,
-                      ),
-                    )
-                  else if (urls.isNotEmpty)
-                    _NetImage(
-                      url: urls.first,
-                      isDark: widget.isDark,
-                      accent: widget.accent,
-                    )
-                  else
-                    Center(
-                      child: Icon(LucideIcons.image, size: 60,
-                          color: widget.isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+                      itemBuilder: (_, i) => _buildPage(media[i], i),
                     ),
 
                   // 리그 배지
@@ -188,13 +214,15 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                     Positioned(
                       top: 12, left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(LucideIcons.trophy, size: 10, color: AppColors.gold),
+                          const Icon(LucideIcons.trophy,
+                              size: 10, color: AppColors.gold),
                           const SizedBox(width: 5),
                           Text('리그 게시물',
                               style: TextStyle(
@@ -205,18 +233,19 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                       ),
                     ),
 
-                  // 다중 이미지 페이지 카운터 (우상단)
+                  // 다중 페이지 카운터 (우상단)
                   if (_isMulti)
                     Positioned(
                       top: 12, right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${_page + 1} / ${urls.length}',
+                          '${_page + 1} / ${media.length}',
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -242,8 +271,9 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
             padding: const EdgeInsets.only(top: 6, bottom: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(urls.length, (i) {
+              children: List.generate(media.length, (i) {
                 final active = i == _page;
+                final isVideoDot = media[i].type == 'video';
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: active ? 16 : 6,
@@ -252,9 +282,11 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                   decoration: BoxDecoration(
                     color: active
                         ? widget.accent
-                        : (widget.isDark
-                            ? const Color(0xFF555555)
-                            : const Color(0xFFCCCCCC)),
+                        : (isVideoDot
+                            ? widget.accent.withValues(alpha: 0.5)
+                            : (widget.isDark
+                                ? const Color(0xFF555555)
+                                : const Color(0xFFCCCCCC))),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 );
@@ -267,7 +299,8 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
 }
 
 class _NetImage extends StatelessWidget {
-  const _NetImage({required this.url, required this.isDark, required this.accent});
+  const _NetImage(
+      {required this.url, required this.isDark, required this.accent});
   final String url;
   final bool isDark;
   final Color accent;
@@ -281,8 +314,11 @@ class _NetImage extends StatelessWidget {
         child: CircularProgressIndicator(strokeWidth: 2, color: accent),
       ),
       errorWidget: (_, __, ___) => Center(
-        child: Icon(LucideIcons.image, size: 60,
-            color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+        child: Icon(LucideIcons.image,
+            size: 60,
+            color: isDark
+                ? const Color(0xFF3F3F46)
+                : const Color(0xFFA1A1AA)),
       ),
     );
   }

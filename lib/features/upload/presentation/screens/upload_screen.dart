@@ -18,9 +18,31 @@ import '../../../../core/utils/youtube_url_parser.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
-const int _kMaxImages = 5;
+const int _kMaxMedia = 5;
 
-enum _UploadMode { photo, video, url }
+enum _UploadMode { media, url }
+
+/// 업로드 화면 내부에서 사용하는 선택 미디어 항목
+class _PickedItem {
+  final String type; // 'image' | 'video'
+  final XFile file;
+  final Uint8List? thumbnailBytes; // 동영상만
+  _PickedItem({required this.type, required this.file, this.thumbnailBytes});
+
+  bool get isVideo => type == 'video';
+  bool get isImage => type == 'image';
+}
+
+bool _isVideoPath(String path) {
+  final lower = path.toLowerCase();
+  return lower.endsWith('.mp4') ||
+      lower.endsWith('.mov') ||
+      lower.endsWith('.m4v') ||
+      lower.endsWith('.avi') ||
+      lower.endsWith('.mkv') ||
+      lower.endsWith('.webm') ||
+      lower.endsWith('.3gp');
+}
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key, this.editPost});
@@ -32,14 +54,11 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   int _step = 0;
-  List<XFile> _selectedImages = [];
-  XFile? _selectedVideo;
-  bool _isVideo = false;
+  List<_PickedItem> _selectedMedia = [];
   bool _isYoutube = false;
   String? _youtubeUrl;
   String? _youtubeVideoId;
-  Uint8List? _thumbnailBytes;
-  bool _generatingThumb = false;
+  bool _processingMedia = false;
 
   @override
   void initState() {
@@ -47,49 +66,30 @@ class _UploadScreenState extends State<UploadScreen> {
     if (widget.editPost != null) _step = 1; // edit 모드: 미디어 선택 스킵
   }
 
-  Future<void> _onMediaSelected(List<XFile> files, bool isVideo) async {
-    if (isVideo) {
-      final file = files.first;
-      setState(() => _generatingThumb = true);
-      final bytes = await VideoCompress.getByteThumbnail(file.path, quality: 80);
-      if (!mounted) return;
-      setState(() {
-        _selectedVideo = file;
-        _selectedImages = [];
-        _isVideo = true;
-        _isYoutube = false;
-        _thumbnailBytes = bytes;
-        _generatingThumb = false;
-        _step = 1;
-      });
-    } else {
-      setState(() {
-        _selectedImages = files;
-        _selectedVideo = null;
-        _isVideo = false;
-        _isYoutube = false;
-        _thumbnailBytes = null;
-        _step = 1;
-      });
-    }
+  Future<void> _onMediaPicked(List<_PickedItem> items) async {
+    if (items.isEmpty) return;
+    setState(() {
+      _selectedMedia = items.take(_kMaxMedia).toList();
+      _isYoutube = false;
+      _youtubeUrl = null;
+      _youtubeVideoId = null;
+      _step = 1;
+    });
   }
 
   void _onYoutubeSelected(String url, String videoId) {
     setState(() {
       _youtubeUrl = url;
       _youtubeVideoId = videoId;
-      _selectedImages = [];
-      _selectedVideo = null;
-      _isVideo = false;
+      _selectedMedia = [];
       _isYoutube = true;
-      _thumbnailBytes = null;
       _step = 1;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_generatingThumb) {
+    if (_processingMedia) {
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
@@ -111,18 +111,16 @@ class _UploadScreenState extends State<UploadScreen> {
     return _step == 0
         ? _MediaPickerStep(
             isDark: context.isDark,
-            onMediaSelected: _onMediaSelected,
+            onMediaPicked: _onMediaPicked,
             onYoutubeSelected: _onYoutubeSelected,
+            onProcessing: (v) => setState(() => _processingMedia = v),
           )
         : _CaptionStep(
             isDark: context.isDark,
-            imageFiles: (_isVideo || _isYoutube) ? [] : _selectedImages,
-            videoFile: _isVideo ? _selectedVideo : null,
-            isVideo: _isVideo,
+            media: _isYoutube ? const [] : _selectedMedia,
             isYoutube: _isYoutube,
             youtubeUrl: _youtubeUrl,
             youtubeVideoId: _youtubeVideoId,
-            thumbnailBytes: _thumbnailBytes,
             onBack: widget.editPost != null
                 ? () => Navigator.of(context).pop()
                 : () => setState(() => _step = 0),
@@ -135,12 +133,14 @@ class _UploadScreenState extends State<UploadScreen> {
 class _MediaPickerStep extends StatefulWidget {
   const _MediaPickerStep({
     required this.isDark,
-    required this.onMediaSelected,
+    required this.onMediaPicked,
     required this.onYoutubeSelected,
+    required this.onProcessing,
   });
   final bool isDark;
-  final Future<void> Function(List<XFile> files, bool isVideo) onMediaSelected;
+  final Future<void> Function(List<_PickedItem> items) onMediaPicked;
   final void Function(String url, String videoId) onYoutubeSelected;
+  final void Function(bool) onProcessing;
 
   @override
   State<_MediaPickerStep> createState() => _MediaPickerStepState();
@@ -148,7 +148,7 @@ class _MediaPickerStep extends StatefulWidget {
 
 class _MediaPickerStepState extends State<_MediaPickerStep> {
   final _picker = ImagePicker();
-  _UploadMode _mode = _UploadMode.photo;
+  _UploadMode _mode = _UploadMode.media;
   bool _loadingMedia = false;
   final _urlCtrl = TextEditingController();
 
@@ -157,8 +157,6 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
     _urlCtrl.dispose();
     super.dispose();
   }
-
-  bool get _videoMode => _mode == _UploadMode.video;
 
   void _submitYoutubeUrl() {
     final raw = _urlCtrl.text.trim();
@@ -170,56 +168,81 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
     widget.onYoutubeSelected(raw, id);
   }
 
+  /// 동영상 XFile들에 대해 썸네일 생성하여 _PickedItem 리스트 완성
+  Future<List<_PickedItem>> _buildItems(List<XFile> picked) async {
+    final items = <_PickedItem>[];
+    for (final f in picked) {
+      if (_isVideoPath(f.path)) {
+        final bytes = await VideoCompress.getByteThumbnail(f.path, quality: 80);
+        items.add(_PickedItem(type: 'video', file: f, thumbnailBytes: bytes));
+      } else {
+        items.add(_PickedItem(type: 'image', file: f));
+      }
+    }
+    return items;
+  }
+
   Future<void> _pickFromGallery() async {
     setState(() => _loadingMedia = true);
     try {
-      if (_videoMode) {
-        final video = await _picker.pickVideo(
-          source: ImageSource.gallery,
-          maxDuration: const Duration(minutes: 3),
-        );
-        if (video != null) await widget.onMediaSelected([video], true);
-      } else {
-        // 사진 최대 5장 다중 선택
-        final images = await _picker.pickMultiImage(
-          imageQuality: 80,
-          maxWidth: 1080,
-          maxHeight: 1080,
-          limit: _kMaxImages,
-        );
-        if (images.isNotEmpty) {
-          final selected = images.take(_kMaxImages).toList();
-          await widget.onMediaSelected(selected, false);
-        }
-      }
+      // 사진 + 동영상 혼합 선택 (image_picker 1.0+)
+      final picked = await _picker.pickMultipleMedia(
+        imageQuality: 80,
+        maxWidth: 1080,
+        maxHeight: 1080,
+        limit: _kMaxMedia,
+      );
+      if (picked.isEmpty) return;
+      final limited = picked.take(_kMaxMedia).toList();
+      final hasVideo = limited.any((f) => _isVideoPath(f.path));
+      if (hasVideo) widget.onProcessing(true);
+      final items = await _buildItems(limited);
+      widget.onProcessing(false);
+      await widget.onMediaPicked(items);
     } catch (e) {
+      widget.onProcessing(false);
       if (mounted) {
-        AppSnackBar.error(context, '사진 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
+        AppSnackBar.error(context, '미디어 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
     } finally {
       if (mounted) setState(() => _loadingMedia = false);
     }
   }
 
-  Future<void> _pickFromCamera() async {
+  Future<void> _pickPhotoFromCamera() async {
     setState(() => _loadingMedia = true);
     try {
-      if (_videoMode) {
-        final video = await _picker.pickVideo(
-          source: ImageSource.camera,
-          maxDuration: const Duration(minutes: 3),
-        );
-        if (video != null) await widget.onMediaSelected([video], true);
-      } else {
-        final image = await _picker.pickImage(
-          source: ImageSource.camera,
-          imageQuality: 80,
-          maxWidth: 1080,
-          maxHeight: 1080,
-        );
-        if (image != null) await widget.onMediaSelected([image], false);
-      }
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      );
+      if (image == null) return;
+      await widget.onMediaPicked([_PickedItem(type: 'image', file: image)]);
     } catch (e) {
+      if (mounted) {
+        AppSnackBar.error(context, '카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMedia = false);
+    }
+  }
+
+  Future<void> _pickVideoFromCamera() async {
+    setState(() => _loadingMedia = true);
+    try {
+      final video = await _picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: const Duration(minutes: 3),
+      );
+      if (video == null) return;
+      widget.onProcessing(true);
+      final items = await _buildItems([video]);
+      widget.onProcessing(false);
+      await widget.onMediaPicked(items);
+    } catch (e) {
+      widget.onProcessing(false);
       if (mounted) {
         AppSnackBar.error(context, '카메라에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
@@ -240,40 +263,43 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
             shape: BoxShape.circle,
           ),
           child: Center(
-            child: _videoMode
-                ? Icon(Icons.videocam_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3))
-                : AppSvg(AppIcons.fish, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+            child: AppSvg(AppIcons.fish, size: 48, color: Colors.white.withValues(alpha: 0.3)),
           ),
         ),
         const SizedBox(height: 20),
-        Text(
-          _videoMode ? '동영상을 선택해주세요' : '사진을 선택해주세요',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+        const Text(
+          '미디어를 선택해주세요',
+          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Text(
-          _videoMode
-              ? '갤러리에서 선택하거나 카메라로 촬영하세요'
-              : '갤러리에서 최대 $_kMaxImages장까지 선택할 수 있습니다',
+          '사진/동영상 합쳐서 최대 $_kMaxMedia개까지 선택할 수 있습니다',
           style: TextStyle(color: sub, fontSize: 13),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 40),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _PickButton(
-              icon: _videoMode ? Icons.video_library_outlined : Icons.collections_outlined,
+              icon: Icons.collections_outlined,
               label: '보관함',
               accent: accent,
               onTap: _pickFromGallery,
             ),
-            const SizedBox(width: 20),
             _PickButton(
-              icon: _videoMode ? Icons.videocam_outlined : Icons.camera_alt_outlined,
-              label: '카메라',
+              icon: Icons.camera_alt_outlined,
+              label: '사진 촬영',
               accent: accent,
-              onTap: _pickFromCamera,
+              onTap: _pickPhotoFromCamera,
+            ),
+            _PickButton(
+              icon: Icons.videocam_outlined,
+              label: '동영상 촬영',
+              accent: accent,
+              onTap: _pickVideoFromCamera,
             ),
           ],
         ),
@@ -388,7 +414,7 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
                     ),
                   ),
 
-                  // ── 사진/동영상/URL 탭 ──
+                  // ── 미디어/URL 탭 ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Container(
@@ -400,16 +426,10 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
                       child: Row(
                         children: [
                           _ModeTab(
-                            label: '사진',
-                            selected: _mode == _UploadMode.photo,
+                            label: '미디어',
+                            selected: _mode == _UploadMode.media,
                             accent: accent,
-                            onTap: () => setState(() => _mode = _UploadMode.photo),
-                          ),
-                          _ModeTab(
-                            label: '동영상',
-                            selected: _mode == _UploadMode.video,
-                            accent: accent,
-                            onTap: () => setState(() => _mode = _UploadMode.video),
+                            onTap: () => setState(() => _mode = _UploadMode.media),
                           ),
                           _ModeTab(
                             label: 'URL',
@@ -441,9 +461,9 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
                     children: [
                       CircularProgressIndicator(color: accent),
                       const SizedBox(height: 16),
-                      Text(
-                        _videoMode ? '동영상 불러오는 중...' : '사진 불러오는 중...',
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      const Text(
+                        '미디어 불러오는 중...',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -503,7 +523,7 @@ class _PickButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 130,
+        width: 110,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
@@ -515,7 +535,7 @@ class _PickButton extends StatelessWidget {
           children: [
             Icon(icon, color: accent, size: 32),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -527,24 +547,18 @@ class _PickButton extends StatelessWidget {
 class _CaptionStep extends ConsumerStatefulWidget {
   const _CaptionStep({
     required this.isDark,
-    required this.imageFiles,
-    required this.isVideo,
+    required this.media,
     required this.isYoutube,
     this.youtubeUrl,
     this.youtubeVideoId,
-    this.videoFile,
-    this.thumbnailBytes,
     required this.onBack,
     this.editPost,
   });
   final bool isDark;
-  final List<XFile> imageFiles;   // 사진 모드
-  final XFile? videoFile;          // 동영상 모드
-  final bool isVideo;
-  final bool isYoutube;            // 유튜브 링크 모드
+  final List<_PickedItem> media;
+  final bool isYoutube;
   final String? youtubeUrl;
   final String? youtubeVideoId;
-  final Uint8List? thumbnailBytes;
   final VoidCallback onBack;
   final Post? editPost;
 
@@ -563,16 +577,17 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   final String _fish = '배스';
   bool _sharing = false;
   double _compressProgress = 0.0;
+  int _compressIndex = 0; // 압축 중인 동영상 인덱스 (1-based)
+  int _videoCount = 0;
   dynamic _compressSub;
 
-  // 사진 선택 목록 (삭제 가능)
-  late List<XFile> _images;
+  late List<_PickedItem> _items;
   bool _imageReplaced = false; // edit 모드에서 이미지를 교체했는지
 
   @override
   void initState() {
     super.initState();
-    _images = List.from(widget.imageFiles);
+    _items = List.from(widget.media);
 
     final post = widget.editPost;
     if (post != null) {
@@ -597,9 +612,9 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     super.dispose();
   }
 
-  void _removeImage(int index) {
-    if (_images.length <= 1) return; // 최소 1장 유지
-    setState(() => _images.removeAt(index));
+  void _removeItem(int index) {
+    if (_items.length <= 1) return; // 최소 1개 유지
+    setState(() => _items.removeAt(index));
   }
 
   Future<void> _saveEdit() async {
@@ -613,11 +628,14 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         if (rawTags.isNotEmpty) rawTags,
       ].join('\n\n');
 
+      // edit 모드는 사진 교체만 지원 (동영상/혼합 교체는 미지원)
+      final imageFilesForEdit = _imageReplaced && _items.isNotEmpty
+          ? _items.where((m) => m.isImage).map((m) => File(m.file.path)).toList()
+          : null;
+
       await ref.read(feedRepositoryProvider).updatePost(
         postId: post.id,
-        newImageFiles: _imageReplaced && _images.isNotEmpty
-            ? _images.map((f) => File(f.path)).toList()
-            : null,
+        newImageFiles: imageFilesForEdit,
         caption: combinedCaption.isEmpty ? null : combinedCaption,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
       );
@@ -646,12 +664,18 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
       AppSnackBar.warning(context, '로그인이 필요합니다.');
       return;
     }
-    if (!widget.isVideo && !widget.isYoutube && _images.isEmpty) {
-      AppSnackBar.warning(context, '사진을 최소 1장 선택해주세요.');
+    if (!widget.isYoutube && _items.isEmpty) {
+      AppSnackBar.warning(context, '미디어를 최소 1개 선택해주세요.');
       return;
     }
 
-    setState(() { _sharing = true; _compressProgress = 0.0; });
+    final videos = _items.where((m) => m.isVideo).toList();
+    setState(() {
+      _sharing = true;
+      _compressProgress = 0.0;
+      _compressIndex = 0;
+      _videoCount = videos.length;
+    });
 
     try {
       // 유튜브 링크 게시물 ─ 업로드 단계 없이 바로 createPost
@@ -682,43 +706,60 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         return;
       }
 
-      File? compressedVideo;
-
-      if (widget.isVideo) {
-        _compressSub = VideoCompress.compressProgress$.subscribe((progress) {
-          if (mounted) setState(() => _compressProgress = progress / 100.0);
-        });
-
-        MediaInfo? info;
-        for (int attempt = 0; attempt < 2; attempt++) {
-          info = await VideoCompress.compressVideo(
-            widget.videoFile!.path,
-            quality: VideoQuality.MediumQuality,
-            deleteOrigin: false,
-            includeAudio: true,
-          );
-          if (info?.file != null) break;
-          await Future.delayed(const Duration(milliseconds: 800));
-        }
-
-        _compressSub?.unsubscribe();
-        _compressSub = null;
-        compressedVideo = info?.file;
-
-        if (compressedVideo == null) {
-          throw Exception('영상 압축에 실패했습니다. 다시 시도해주세요.');
+      // 미디어 압축 및 PickedMedia 리스트 구성
+      final pickedList = <PickedMedia>[];
+      int videoIdx = 0;
+      for (final item in _items) {
+        if (item.isImage) {
+          final ar = await getAspectRatioForUpload(File(item.file.path));
+          pickedList.add(PickedMedia(
+            type: 'image',
+            file: File(item.file.path),
+            aspectRatio: ar,
+          ));
+        } else {
+          // 동영상 압축
+          videoIdx++;
+          setState(() {
+            _compressIndex = videoIdx;
+            _compressProgress = 0.0;
+          });
+          _compressSub = VideoCompress.compressProgress$.subscribe((progress) {
+            if (mounted) setState(() => _compressProgress = progress / 100.0);
+          });
+          MediaInfo? info;
+          for (int attempt = 0; attempt < 2; attempt++) {
+            info = await VideoCompress.compressVideo(
+              item.file.path,
+              quality: VideoQuality.MediumQuality,
+              deleteOrigin: false,
+              includeAudio: true,
+            );
+            if (info?.file != null) break;
+            await Future.delayed(const Duration(milliseconds: 800));
+          }
+          _compressSub?.unsubscribe();
+          _compressSub = null;
+          final compressed = info?.file;
+          if (compressed == null) {
+            throw Exception('영상 압축에 실패했습니다. 다시 시도해주세요.');
+          }
+          double? ar;
+          if (item.thumbnailBytes != null) {
+            final dec = await decodeImageFromList(item.thumbnailBytes!);
+            ar = dec.width / dec.height;
+          }
+          pickedList.add(PickedMedia(
+            type: 'video',
+            file: compressed,
+            thumbnailBytes: item.thumbnailBytes,
+            aspectRatio: ar,
+          ));
         }
       }
 
-      // 원본 파일에서 비율 계산 (압축 전 = EXIF 정상 적용)
-      double? aspectRatio;
-      if (!widget.isVideo && _images.isNotEmpty) {
-        aspectRatio = await getAspectRatioForUpload(File(_images.first.path));
-      } else if (widget.isVideo && widget.thumbnailBytes != null) {
-        // 영상은 썸네일에서 비율 측정 (영상 프레임에서 캡처한 이미지라 비율 동일)
-        final info = await decodeImageFromList(widget.thumbnailBytes!);
-        aspectRatio = info.width / info.height;
-      }
+      // 첫 미디어 기준 aspect_ratio (피드 카드 레이아웃에 사용)
+      final firstAr = pickedList.first.aspectRatio;
 
       final rawCaption = _captionCtrl.text.trim();
       final rawTags = _tagCtrl.text.trim();
@@ -729,10 +770,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
-        imageFiles: widget.isVideo ? null : _images.map((f) => File(f.path)).toList(),
-        videoFile: compressedVideo,
-        videoThumbnailBytes: widget.thumbnailBytes,
-        aspectRatio: aspectRatio,
+        mediaFiles: pickedList,
+        aspectRatio: firstAr,
         caption: combinedCaption.isEmpty ? null : combinedCaption,
         fishType: _fish,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
@@ -745,7 +784,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     } catch (e) {
       _compressSub?.unsubscribe();
       _compressSub = null;
-      if (await handleIfBanned(e)) return; // 정지된 계정 → 강제 로그아웃, login에서 안내
+      if (await handleIfBanned(e)) return;
       if (mounted) {
         setState(() => _sharing = false);
         final msg = e.toString().contains('413')
@@ -756,9 +795,27 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     }
   }
 
-  // 첫 번째 이미지 (또는 동영상 썸네일) 미리보기
+  // 미디어 한 항목 썸네일
+  Widget _thumbFor(_PickedItem item) {
+    if (item.isVideo) {
+      if (item.thumbnailBytes != null) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.memory(item.thumbnailBytes!, fit: BoxFit.cover),
+            const Center(
+              child: Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 28),
+            ),
+          ],
+        );
+      }
+      return Container(color: Colors.black);
+    }
+    return Image.file(File(item.file.path), fit: BoxFit.cover);
+  }
+
+  // 첫 번째 미디어(또는 유튜브 썸네일) 미리보기
   Widget _buildFirstThumb() {
-    // 유튜브 모드: YT 썸네일 + 재생 아이콘
     if (widget.isYoutube && widget.youtubeVideoId != null) {
       return Stack(
         fit: StackFit.expand,
@@ -774,37 +831,30 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
         ],
       );
     }
-    // edit 모드: 새 이미지 선택 전까지는 기존 URL 표시
-    if (widget.editPost != null && _images.isEmpty && !widget.isVideo) {
+    // edit 모드: 기존 게시물의 첫 이미지/썸네일 표시
+    if (widget.editPost != null && _items.isEmpty) {
       final url = widget.editPost!.imageUrls?.firstOrNull
           ?? widget.editPost!.imageUrl;
       return CachedNetworkImage(imageUrl: url, fit: BoxFit.cover);
     }
-    if (widget.isVideo && widget.thumbnailBytes != null) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.memory(widget.thumbnailBytes!, fit: BoxFit.cover),
-          const Center(child: Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 36)),
-        ],
-      );
-    }
-    if (_images.isNotEmpty) {
-      return Image.file(File(_images.first.path), fit: BoxFit.cover);
-    }
+    if (_items.isNotEmpty) return _thumbFor(_items.first);
     return const SizedBox.shrink();
   }
 
   Future<void> _replaceImages() async {
+    // edit 모드: 사진 교체만 지원 (다중 이미지)
     final picked = await ImagePicker().pickMultiImage(
       imageQuality: 80,
       maxWidth: 1080,
       maxHeight: 1080,
-      limit: _kMaxImages,
+      limit: _kMaxMedia,
     );
     if (picked.isNotEmpty && mounted) {
       setState(() {
-        _images = picked.take(_kMaxImages).toList();
+        _items = picked
+            .take(_kMaxMedia)
+            .map((f) => _PickedItem(type: 'image', file: f))
+            .toList();
         _imageReplaced = true;
       });
     }
@@ -818,7 +868,10 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     final sub = isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final divColor = isDark ? const Color(0xFF262626) : const Color(0xFFEEEEEE);
     final textColor = isDark ? Colors.white : Colors.black;
-    final isMulti = !widget.isVideo && _images.length > 1;
+    final isMulti = _items.length > 1;
+    final hasAnyVideo = _items.any((m) => m.isVideo);
+    final hasOnlyImagesEditable =
+        widget.editPost != null && !widget.isEditingYoutube && widget.editPost!.videoUrl == null;
 
     return Scaffold(
       backgroundColor: bg,
@@ -859,15 +912,15 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 40),
           children: [
             // ── 업로드 진행 표시 ──
-            if (_sharing && widget.isVideo)
+            if (_sharing && hasAnyVideo)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _compressProgress < 1.0
-                          ? '동영상 압축 중... ${(_compressProgress * 100).toInt()}%'
+                      _compressProgress < 1.0 && _compressIndex > 0
+                          ? '동영상 $_compressIndex/$_videoCount 압축 중... ${(_compressProgress * 100).toInt()}%'
                           : '업로드 중...',
                       style: TextStyle(fontSize: 12, color: accent),
                     ),
@@ -885,7 +938,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                   ],
                 ),
               ),
-            if (_sharing && !widget.isVideo && _images.length > 1)
+            if (_sharing && !hasAnyVideo && _items.length > 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Column(
@@ -906,13 +959,13 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 ),
               ),
 
-            // ── 다중 사진 선택 스트립 (2장 이상) ──
+            // ── 다중 미디어 스트립 (2개 이상) ──
             if (isMulti) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 0, 8),
                 child: Row(children: [
                   Text(
-                    '선택된 사진 ${_images.length}/$_kMaxImages',
+                    '선택된 미디어 ${_items.length}/$_kMaxMedia',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor),
                   ),
                   const SizedBox(width: 6),
@@ -924,10 +977,11 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  itemCount: _images.length,
+                  itemCount: _items.length,
                   itemBuilder: (_, i) {
+                    final item = _items[i];
                     return GestureDetector(
-                      onLongPress: () => _removeImage(i),
+                      onLongPress: () => _removeItem(i),
                       child: Stack(
                         children: [
                           Container(
@@ -943,7 +997,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(7),
-                              child: Image.file(File(_images[i].path), fit: BoxFit.cover),
+                              child: _thumbFor(item),
                             ),
                           ),
                           if (i == 0)
@@ -958,10 +1012,22 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                                 child: const Text('대표', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.black)),
                               ),
                             ),
+                          if (item.isVideo)
+                            Positioned(
+                              top: 2, left: 10,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Icon(Icons.videocam, color: Colors.white, size: 12),
+                              ),
+                            ),
                           Positioned(
                             top: 2, right: 10,
                             child: GestureDetector(
-                              onTap: () => _removeImage(i),
+                              onTap: () => _removeItem(i),
                               child: Container(
                                 width: 18, height: 18,
                                 decoration: BoxDecoration(
@@ -1006,15 +1072,13 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '+${_images.length - 1}',
+                              '+${_items.length - 1}',
                               style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
                             ),
                           ),
                         ),
-                      // edit 모드: 사진 변경 오버레이 (유튜브/영상 게시물은 제외)
-                      if (widget.editPost != null &&
-                          !widget.isEditingYoutube &&
-                          widget.editPost!.videoUrl == null)
+                      // edit 모드: 사진 교체 오버레이 (유튜브/영상 게시물은 제외)
+                      if (hasOnlyImagesEditable)
                         Positioned.fill(
                           child: GestureDetector(
                             onTap: _replaceImages,

@@ -19,14 +19,16 @@ String? extractStoragePath(String? url, String bucket) {
 /// post의 image/video Storage 파일을 best-effort로 제거.
 ///
 /// - 실패해도 throw하지 않음 (DB 삭제와 분리되어 있어 청소 누락은 audit으로 보정)
-/// - image_url + image_urls + video_url 전부 정리
+/// - image_url + image_urls + video_url + media jsonb 전부 정리
 Future<void> removePostStorageFiles(
   SupabaseClient supabase, {
   String? imageUrl,
   List<String>? imageUrls,
   String? videoUrl,
+  List<dynamic>? media, // posts.media (jsonb): [{type, url, thumbnail_url?}, ...]
 }) async {
   final imagePaths = <String>{};
+  final videoPaths = <String>{};
 
   final single = extractStoragePath(imageUrl, 'post_images');
   if (single != null) imagePaths.add(single);
@@ -38,16 +40,36 @@ Future<void> removePostStorageFiles(
     }
   }
 
+  final videoPath = extractStoragePath(videoUrl, 'post_videos');
+  if (videoPath != null) videoPaths.add(videoPath);
+
+  if (media != null) {
+    for (final raw in media) {
+      if (raw is! Map) continue;
+      final type = raw['type'] as String?;
+      final url = raw['url'] as String?;
+      final thumb = raw['thumbnail_url'] as String?;
+      if (type == 'video') {
+        final p = extractStoragePath(url, 'post_videos');
+        if (p != null) videoPaths.add(p);
+        final tp = extractStoragePath(thumb, 'post_images');
+        if (tp != null) imagePaths.add(tp);
+      } else if (type == 'image') {
+        final p = extractStoragePath(url, 'post_images');
+        if (p != null) imagePaths.add(p);
+      }
+    }
+  }
+
   if (imagePaths.isNotEmpty) {
     try {
       await supabase.storage.from('post_images').remove(imagePaths.toList());
     } catch (_) {/* swallow */}
   }
 
-  final videoPath = extractStoragePath(videoUrl, 'post_videos');
-  if (videoPath != null) {
+  if (videoPaths.isNotEmpty) {
     try {
-      await supabase.storage.from('post_videos').remove([videoPath]);
+      await supabase.storage.from('post_videos').remove(videoPaths.toList());
     } catch (_) {/* swallow */}
   }
 }
