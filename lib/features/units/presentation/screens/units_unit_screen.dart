@@ -226,8 +226,8 @@ String _fmt(double v, {int decimals = 1}) {
 // ─────────────────────────────────────────────────────────
 // 1) 낚시줄 호수 ↔ 파운드(lb)
 // ─────────────────────────────────────────────────────────
-// 일반적인 모노/나일론 라인 기준 근사값 (대부분의 라인 패키지 표기 기준)
-const List<(double ho, double lb)> _lineTable = [
+// 나일론/카본(모노) 기준: lb ≈ 호 × 4
+const List<(double ho, double lb)> _monoLineTable = [
   (0.4, 1.7),
   (0.6, 2.5),
   (0.8, 3.0),
@@ -247,16 +247,30 @@ const List<(double ho, double lb)> _lineTable = [
   (12.0, 50.0),
 ];
 
-double _hoToLb(double ho) {
-  if (ho <= 0) return 0;
-  // 근사식: lb ≈ 4 * 호수 (모노 라인 기준)
-  return ho * 4.0;
-}
+// 합사(PE) 기준 — 제품별 편차가 크지만 통상적인 환산값
+const List<(double ho, double lb)> _peLineTable = [
+  (0.3, 6.0),
+  (0.4, 8.0),
+  (0.6, 12.0),
+  (0.8, 16.0),
+  (1.0, 20.0),
+  (1.2, 25.0),
+  (1.5, 30.0),
+  (2.0, 35.0),
+  (2.5, 40.0),
+  (3.0, 50.0),
+  (4.0, 60.0),
+  (5.0, 75.0),
+  (6.0, 90.0),
+  (8.0, 100.0),
+];
 
-double _lbToHo(double lb) {
-  if (lb <= 0) return 0;
-  return lb / 4.0;
-}
+double _monoHoToLb(double ho) => ho * 4.0;
+double _monoLbToHo(double lb) => lb / 4.0;
+
+// PE는 비선형이지만 간단 환산은 약 20배 (실제 표 기준 평균)
+double _peHoToLb(double ho) => ho * 20.0;
+double _peLbToHo(double lb) => lb / 20.0;
 
 class _LineTab extends StatefulWidget {
   const _LineTab();
@@ -265,77 +279,188 @@ class _LineTab extends StatefulWidget {
 }
 
 class _LineTabState extends State<_LineTab> {
-  final _ho = TextEditingController();
-  final _lb = TextEditingController();
+  final _monoHo = TextEditingController();
+  final _monoLb = TextEditingController();
+  final _peHo = TextEditingController();
+  final _peLb = TextEditingController();
+  int _segment = 0; // 0 = 나일론/카본, 1 = 합사
 
   @override
   void dispose() {
-    _ho.dispose();
-    _lb.dispose();
+    _monoHo.dispose();
+    _monoLb.dispose();
+    _peHo.dispose();
+    _peLb.dispose();
     super.dispose();
   }
 
-  void _onHo(String v) {
+  void _onMonoHo(String v) {
     final n = double.tryParse(v);
-    if (n == null) {
-      _lb.text = '';
-      return;
-    }
-    _lb.text = _fmt(_hoToLb(n));
+    _monoLb.text = n == null ? '' : _fmt(_monoHoToLb(n));
   }
 
-  void _onLb(String v) {
+  void _onMonoLb(String v) {
     final n = double.tryParse(v);
-    if (n == null) {
-      _ho.text = '';
-      return;
-    }
-    _ho.text = _fmt(_lbToHo(n));
+    _monoHo.text = n == null ? '' : _fmt(_monoLbToHo(n));
+  }
+
+  void _onPeHo(String v) {
+    final n = double.tryParse(v);
+    _peLb.text = n == null ? '' : _fmt(_peHoToLb(n));
+  }
+
+  void _onPeLb(String v) {
+    final n = double.tryParse(v);
+    _peHo.text = n == null ? '' : _fmt(_peLbToHo(n));
+  }
+
+  Widget _converterRow({
+    required TextEditingController hoCtrl,
+    required TextEditingController lbCtrl,
+    required ValueChanged<String> onHo,
+    required ValueChanged<String> onLb,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _NumberField(
+            label: '호수',
+            controller: hoCtrl,
+            onChanged: onHo,
+            suffix: '호',
+          ),
+        ),
+        AppSpacing.gapW12,
+        const Icon(LucideIcons.arrowLeftRight, size: 18),
+        AppSpacing.gapW12,
+        Expanded(
+          child: _NumberField(
+            label: '파운드',
+            controller: lbCtrl,
+            onChanged: onLb,
+            suffix: 'lb',
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMono = _segment == 0;
     return SingleChildScrollView(
       padding: AppSpacing.pageAll,
       child: Column(
         children: [
-          _ConverterCard(
-            title: '라인 호수 ↔ 파운드(lb)',
-            child: Row(
-              children: [
-                Expanded(
-                  child: _NumberField(
-                    label: '호수',
-                    controller: _ho,
-                    onChanged: _onHo,
-                    suffix: '호',
-                  ),
-                ),
-                AppSpacing.gapW12,
-                const Icon(LucideIcons.arrowLeftRight, size: 18),
-                AppSpacing.gapW12,
-                Expanded(
-                  child: _NumberField(
-                    label: '파운드',
-                    controller: _lb,
-                    onChanged: _onLb,
-                    suffix: 'lb',
-                  ),
-                ),
-              ],
-            ),
+          _SegmentSwitch(
+            value: _segment,
+            labels: const ['나일론/카본', '합사(PE)'],
+            onChanged: (v) => setState(() => _segment = v),
           ),
           AppSpacing.gapH16,
-          _ReferenceTable(
-            title: '라인 호수 환산표',
-            note: '모노/나일론 라인 기준 일반 근사값. 제품별로 차이 있음.',
-            leftHeader: '호수',
-            rightHeader: '파운드(lb)',
-            rows: _lineTable
-                .map((e) => ('${_fmt(e.$1)}호', '${_fmt(e.$2)} lb'))
-                .toList(),
-          ),
+          if (isMono) ...[
+            _ConverterCard(
+              title: '나일론/카본 (모노) ↔ lb',
+              child: _converterRow(
+                hoCtrl: _monoHo,
+                lbCtrl: _monoLb,
+                onHo: _onMonoHo,
+                onLb: _onMonoLb,
+              ),
+            ),
+            AppSpacing.gapH16,
+            _ReferenceTable(
+              title: '나일론/카본 환산표',
+              note: '모노 라인 기준 (lb ≈ 호수 × 4). 제품별 차이 있음.',
+              leftHeader: '호수',
+              rightHeader: '파운드(lb)',
+              rows: _monoLineTable
+                  .map((e) => ('${_fmt(e.$1)}호', '${_fmt(e.$2)} lb'))
+                  .toList(),
+            ),
+          ] else ...[
+            _ConverterCard(
+              title: '합사 (PE) ↔ lb',
+              child: _converterRow(
+                hoCtrl: _peHo,
+                lbCtrl: _peLb,
+                onHo: _onPeHo,
+                onLb: _onPeLb,
+              ),
+            ),
+            AppSpacing.gapH16,
+            _ReferenceTable(
+              title: '합사(PE) 환산표',
+              note: 'PE 라인 기준 일반값 (lb ≈ 호수 × 20). 제조사별 편차 큼.',
+              leftHeader: 'PE 호수',
+              rightHeader: '파운드(lb)',
+              rows: _peLineTable
+                  .map((e) => ('${_fmt(e.$1)}호', '${_fmt(e.$2)} lb'))
+                  .toList(),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+// 세그먼트 스위치 (상단 토글 버튼)
+class _SegmentSwitch extends StatelessWidget {
+  const _SegmentSwitch({
+    required this.value,
+    required this.labels,
+    required this.onChanged,
+  });
+
+  final int value;
+  final List<String> labels;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final accent = context.accentColor;
+    final bg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final border =
+        isDark ? AppColors.darkDivider : AppColors.lightDivider;
+    final inactive =
+        isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: List.generate(labels.length, (i) {
+          final selected = i == value;
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected ? accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  labels[i],
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: selected
+                        ? (isDark ? Colors.black : Colors.white)
+                        : inactive,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -449,65 +574,147 @@ class _OzGramTab extends StatefulWidget {
 }
 
 class _OzGramTabState extends State<_OzGramTab> {
-  final _oz = TextEditingController();
+  final _ozWhole = TextEditingController();
+  final _ozNum = TextEditingController();
+  final _ozDen = TextEditingController();
   final _g = TextEditingController();
+
+  // 무한 루프 방지 (g→oz로 oz 필드 갱신 시 onChanged 다시 안 타도록)
+  bool _updatingOz = false;
+  bool _updatingG = false;
 
   @override
   void dispose() {
-    _oz.dispose();
+    _ozWhole.dispose();
+    _ozNum.dispose();
+    _ozDen.dispose();
     _g.dispose();
     super.dispose();
   }
 
-  void _onOz(String v) {
-    final n = double.tryParse(v);
-    if (n == null) {
-      _g.text = '';
-      return;
+  double _readOzValue() {
+    final w = double.tryParse(_ozWhole.text) ?? 0;
+    final num = double.tryParse(_ozNum.text);
+    final den = double.tryParse(_ozDen.text);
+    if (num != null && den != null && den != 0) {
+      return w + num / den;
     }
-    _g.text = _fmt(n * _gPerOz);
+    return w;
+  }
+
+  void _onOzChanged(String _) {
+    if (_updatingOz) return;
+    final oz = _readOzValue();
+    _updatingG = true;
+    _g.text = oz == 0 &&
+            _ozWhole.text.isEmpty &&
+            _ozNum.text.isEmpty &&
+            _ozDen.text.isEmpty
+        ? ''
+        : _fmt(oz * _gPerOz);
+    _updatingG = false;
   }
 
   void _onG(String v) {
+    if (_updatingG) return;
     final n = double.tryParse(v);
+    _updatingOz = true;
     if (n == null) {
-      _oz.text = '';
-      return;
+      _ozWhole.text = '';
+      _ozNum.text = '';
+      _ozDen.text = '';
+    } else {
+      final snapped = _snapOzToFraction(n / _gPerOz);
+      _ozWhole.text = snapped.whole == 0 ? '' : '${snapped.whole}';
+      _ozNum.text = snapped.num == 0 ? '' : '${snapped.num}';
+      _ozDen.text = snapped.num == 0 ? '' : '${snapped.den}';
     }
-    _oz.text = _fmt(n / _gPerOz);
+    _updatingOz = false;
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final subColor =
+        isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final textColor = isDark ? AppColors.darkText : AppColors.lightText;
+
     const List<double> rows = [
       1 / 32, 1 / 16, 1 / 8, 1 / 4, 3 / 8, 1 / 2, 5 / 8, 3 / 4, 1.0, 1.5, 2.0, 3.0
     ];
+
     return SingleChildScrollView(
       padding: AppSpacing.pageAll,
       child: Column(
         children: [
           _ConverterCard(
             title: '온스(oz) ↔ 그램(g)',
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _NumberField(
-                    label: '온스',
-                    controller: _oz,
-                    onChanged: _onOz,
-                    suffix: 'oz',
-                  ),
+                Text('온스',
+                    style: AppTextStyles.captionBold
+                        .copyWith(color: subColor)),
+                const SizedBox(height: AppSpacing.sm),
+                _NumberField(
+                  label: '정수부',
+                  controller: _ozWhole,
+                  onChanged: _onOzChanged,
+                  suffix: 'oz',
                 ),
-                AppSpacing.gapW12,
-                const Icon(LucideIcons.arrowLeftRight, size: 18),
-                AppSpacing.gapW12,
-                Expanded(
-                  child: _NumberField(
-                    label: '그램',
-                    controller: _g,
-                    onChanged: _onG,
-                    suffix: 'g',
-                  ),
+                AppSpacing.gapH12,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: _NumberField(
+                        label: '분자',
+                        controller: _ozNum,
+                        onChanged: _onOzChanged,
+                        suffix: '',
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 12),
+                      child: Text('/',
+                          style: AppTextStyles.heading3
+                              .copyWith(color: textColor)),
+                    ),
+                    Expanded(
+                      child: _NumberField(
+                        label: '분모',
+                        controller: _ozDen,
+                        onChanged: _onOzChanged,
+                        suffix: '',
+                      ),
+                    ),
+                  ],
+                ),
+                AppSpacing.gapH16,
+                const Center(
+                    child: Icon(LucideIcons.arrowDownUp, size: 18)),
+                AppSpacing.gapH16,
+                _NumberField(
+                  label: '그램',
+                  controller: _g,
+                  onChanged: _onG,
+                  suffix: 'g',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(LucideIcons.info, size: 12, color: subColor),
+                    AppSpacing.gapW4,
+                    Expanded(
+                      child: Text(
+                        'g → oz는 가장 가까운 분수(1/32 단위)로 자동 환산됩니다. 근사값일 수 있어요.',
+                        style: AppTextStyles.captionSmall
+                            .copyWith(color: subColor),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -526,6 +733,26 @@ class _OzGramTabState extends State<_OzGramTab> {
       ),
     );
   }
+}
+
+// oz 값을 1/32 단위로 스냅 후 정수부 + 약분된 분자/분모로 분해
+class _OzSnap {
+  final int whole;
+  final int num;
+  final int den;
+  const _OzSnap(this.whole, this.num, this.den);
+}
+
+int _gcd(int a, int b) => b == 0 ? a : _gcd(b, a % b);
+
+_OzSnap _snapOzToFraction(double oz) {
+  if (oz < 0) oz = 0;
+  final total32 = (oz * 32).round();
+  final whole = total32 ~/ 32;
+  final remainder = total32 % 32;
+  if (remainder == 0) return _OzSnap(whole, 0, 1);
+  final g = _gcd(remainder, 32);
+  return _OzSnap(whole, remainder ~/ g, 32 ~/ g);
 }
 
 String _ozLabel(double v) {
@@ -562,6 +789,7 @@ class _LengthTabState extends State<_LengthTab> {
   final _ft = TextEditingController();
   final _cm = TextEditingController();
   final _m = TextEditingController();
+  int _exampleSegment = 0; // 0 = 인치, 1 = 피트
 
   @override
   void dispose() {
@@ -689,29 +917,36 @@ class _LengthTabState extends State<_LengthTab> {
             ),
           ),
           AppSpacing.gapH16,
-          _TappableRefTable(
-            title: '인치 → cm',
-            note: '1 in = 2.54 cm',
-            leftHeader: '인치',
-            rightHeader: 'cm',
-            rows: inchRows
-                .map((v) =>
-                    (v.toDouble(), '$v in', '${_fmt(v * _cmPerInch)} cm'))
-                .toList(),
-            onTap: onTapInch,
+          _SegmentSwitch(
+            value: _exampleSegment,
+            labels: const ['인치 예시', '피트 예시'],
+            onChanged: (v) => setState(() => _exampleSegment = v),
           ),
-          AppSpacing.gapH16,
-          _TappableRefTable(
-            title: '피트 → m',
-            note: '1 ft = 30.48 cm',
-            leftHeader: '피트',
-            rightHeader: 'm',
-            rows: ftRows
-                .map((v) => (v.toDouble(), '$v ft',
-                    '${_fmt(v * _cmPerFoot / 100)} m'))
-                .toList(),
-            onTap: onTapFt,
-          ),
+          AppSpacing.gapH12,
+          if (_exampleSegment == 0)
+            _TappableRefTable(
+              title: '인치 → cm',
+              note: '1 in = 2.54 cm. 행을 탭하면 변환기에 값이 입력됩니다.',
+              leftHeader: '인치',
+              rightHeader: 'cm',
+              rows: inchRows
+                  .map((v) =>
+                      (v.toDouble(), '$v in', '${_fmt(v * _cmPerInch)} cm'))
+                  .toList(),
+              onTap: onTapInch,
+            )
+          else
+            _TappableRefTable(
+              title: '피트 → m',
+              note: '1 ft = 30.48 cm. 행을 탭하면 변환기에 값이 입력됩니다.',
+              leftHeader: '피트',
+              rightHeader: 'm',
+              rows: ftRows
+                  .map((v) => (v.toDouble(), '$v ft',
+                      '${_fmt(v * _cmPerFoot / 100)} m'))
+                  .toList(),
+              onTap: onTapFt,
+            ),
         ],
       ),
     );
