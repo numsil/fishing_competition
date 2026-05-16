@@ -275,7 +275,7 @@ class LeagueRepository {
   Future<List<Post>> getLeagueCatchesForReview(String leagueId) async {
     final data = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
@@ -311,7 +311,7 @@ class LeagueRepository {
     final data = await _supabase
         .from('posts')
         .select(
-          'id, user_id, league_id, image_url, image_urls, aspect_ratio, '
+          'id, user_id, league_id, image_url, image_urls, media, aspect_ratio, '
           'video_url, caption, fish_type, length, weight, lure_type, '
           'catch_count, score, is_lunker, is_personal_record, review_status, '
           'location, created_at, users(username, avatar_url)',
@@ -383,7 +383,7 @@ class LeagueRepository {
     // 1. 삭제 전에 storage path 추출용 데이터 모음
     final postsRows = await _supabase
         .from('posts')
-        .select('image_url, image_urls, video_url')
+        .select('image_url, image_urls, video_url, media')
         .eq('league_id', leagueId);
 
     final leagueRow = await _supabase
@@ -404,6 +404,7 @@ class LeagueRepository {
         imageUrl: row['image_url'] as String?,
         imageUrls: imageUrls,
         videoUrl: row['video_url'] as String?,
+        media: row['media'] as List?,
       );
     }
 

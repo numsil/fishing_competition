@@ -6,6 +6,21 @@ part of 'post_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_MediaItem _$MediaItemFromJson(Map<String, dynamic> json) => _MediaItem(
+  type: json['type'] as String,
+  url: json['url'] as String,
+  thumbnailUrl: json['thumbnail_url'] as String?,
+  aspectRatio: (json['aspect_ratio'] as num?)?.toDouble(),
+);
+
+Map<String, dynamic> _$MediaItemToJson(_MediaItem instance) =>
+    <String, dynamic>{
+      'type': instance.type,
+      'url': instance.url,
+      'thumbnail_url': instance.thumbnailUrl,
+      'aspect_ratio': instance.aspectRatio,
+    };
+
 _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   id: json['id'] as String,
   userId: json['user_id'] as String,
@@ -17,6 +32,9 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   aspectRatio: (json['aspect_ratio'] as num?)?.toDouble(),
   videoUrl: json['video_url'] as String?,
   youtubeUrl: json['youtube_url'] as String?,
+  media: (json['media'] as List<dynamic>?)
+      ?.map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
+      .toList(),
   caption: json['caption'] as String?,
   fishType: json['fish_type'] as String? ?? '배스',
   length: (json['length'] as num?)?.toDouble(),
@@ -44,6 +62,7 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'aspect_ratio': instance.aspectRatio,
   'video_url': instance.videoUrl,
   'youtube_url': instance.youtubeUrl,
+  'media': instance.media,
   'caption': instance.caption,
   'fish_type': instance.fishType,
   'length': instance.length,

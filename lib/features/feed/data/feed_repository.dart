@@ -13,6 +13,26 @@ part 'feed_repository.g.dart';
 
 const int kFeedPageSize = 20;
 
+/// 업로드 시 사진/동영상 혼합 미디어 한 항목.
+/// - image: [file]은 원본 이미지(압축은 repo에서 처리)
+/// - video: [file]은 압축 완료된 mp4. [thumbnailBytes]는 썸네일 jpg 바이트.
+class PickedMedia {
+  final String type; // 'image' | 'video'
+  final File file;
+  final Uint8List? thumbnailBytes;
+  final double? aspectRatio;
+
+  const PickedMedia({
+    required this.type,
+    required this.file,
+    this.thumbnailBytes,
+    this.aspectRatio,
+  });
+
+  bool get isImage => type == 'image';
+  bool get isVideo => type == 'video';
+}
+
 class FeedRepository {
   final SupabaseClient _supabase;
 
@@ -24,7 +44,7 @@ class FeedRepository {
   }) async {
     var query = _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false');
@@ -75,7 +95,7 @@ class FeedRepository {
   Future<void> deletePost(String postId) async {
     final row = await _supabase
         .from('posts')
-        .select('image_url, image_urls, video_url')
+        .select('image_url, image_urls, video_url, media')
         .eq('id', postId)
         .maybeSingle();
 
@@ -88,6 +108,7 @@ class FeedRepository {
         imageUrl: row['image_url'] as String?,
         imageUrls: imageUrls,
         videoUrl: row['video_url'] as String?,
+        media: row['media'] as List?,
       );
     }
   }
@@ -207,6 +228,7 @@ class FeedRepository {
     List<File>? imageFiles,   // 다중 이미지 (피드 업로드)
     File? videoFile,
     Uint8List? videoThumbnailBytes,
+    List<PickedMedia>? mediaFiles, // 사진/동영상 혼합 (신규 피드 업로드)
     String? youtubeUrl,        // 유튜브 링크 게시물
     String? youtubeThumbnailUrl, // 유튜브 썸네일 (image_url 로 저장)
     double? aspectRatio,
@@ -226,10 +248,82 @@ class FeedRepository {
     String imageUrl;
     String? videoUrl;
     List<String>? imageUrls;
+    List<Map<String, dynamic>>? mediaJson; // posts.media (jsonb)
 
     if (youtubeUrl != null && youtubeUrl.isNotEmpty) {
       // 유튜브 모드: 업로드 없이 썸네일 URL 만 image_url 에 저장
       imageUrl = youtubeThumbnailUrl ?? '';
+    } else if (mediaFiles != null && mediaFiles.isNotEmpty) {
+      // 혼합 미디어 모드: 순서대로 업로드 후 media jsonb + legacy 필드 둘 다 채움
+      final media = <Map<String, dynamic>>[];
+      final imgUrls = <String>[];
+      String? firstVideoUrl;
+      String? firstThumbOrImageUrl;
+      for (int i = 0; i < mediaFiles.length; i++) {
+        final m = mediaFiles[i];
+        if (m.isImage) {
+          final compressed = await compressForUpload(m.file);
+          final storagePath = 'posts/${userId}_${ts}_$i.jpg';
+          await _supabase.storage.from('post_images').upload(
+            storagePath,
+            compressed,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+              cacheControl: '31536000',
+            ),
+          );
+          final url = _supabase.storage.from('post_images').getPublicUrl(storagePath);
+          imgUrls.add(url);
+          media.add({
+            'type': 'image',
+            'url': url,
+            if (m.aspectRatio != null) 'aspect_ratio': m.aspectRatio,
+          });
+          firstThumbOrImageUrl ??= url;
+        } else {
+          // video
+          String? thumbUrl;
+          if (m.thumbnailBytes != null) {
+            final thumbPath = 'posts/${userId}_${ts}_${i}_thumb.jpg';
+            await _supabase.storage.from('post_images').uploadBinary(
+              thumbPath,
+              m.thumbnailBytes!,
+              fileOptions: const FileOptions(
+                contentType: 'image/jpeg',
+                upsert: false,
+                cacheControl: '31536000',
+              ),
+            );
+            thumbUrl = _supabase.storage.from('post_images').getPublicUrl(thumbPath);
+          }
+          final videoPath = 'posts/${userId}_${ts}_$i.mp4';
+          await _supabase.storage.from('post_videos').upload(
+            videoPath,
+            m.file,
+            fileOptions: const FileOptions(
+              contentType: 'video/mp4',
+              upsert: false,
+              cacheControl: '31536000',
+            ),
+          );
+          final url = _supabase.storage.from('post_videos').getPublicUrl(videoPath);
+          firstVideoUrl ??= url;
+          firstThumbOrImageUrl ??= thumbUrl;
+          media.add({
+            'type': 'video',
+            'url': url,
+            if (thumbUrl != null) 'thumbnail_url': thumbUrl,
+            if (m.aspectRatio != null) 'aspect_ratio': m.aspectRatio,
+          });
+        }
+      }
+      mediaJson = media;
+      // legacy 호환: image_url(NOT NULL)에는 첫 미디어의 (이미지|동영상 썸네일) URL
+      imageUrl = firstThumbOrImageUrl ?? '';
+      // legacy: image_urls는 사진들만, video_url은 첫 동영상
+      imageUrls = imgUrls.isNotEmpty ? imgUrls : null;
+      videoUrl = firstVideoUrl;
     } else if (videoFile != null) {
       if (videoThumbnailBytes != null) {
         final thumbPath = 'posts/${userId}_${ts}_thumb.jpg';
@@ -297,6 +391,7 @@ class FeedRepository {
       'user_id': userId,
       'image_url': imageUrl,
       'image_urls': imageUrls,
+      'media': mediaJson,
       'aspect_ratio': aspectRatio,
       'video_url': videoUrl,
       'youtube_url': youtubeUrl,

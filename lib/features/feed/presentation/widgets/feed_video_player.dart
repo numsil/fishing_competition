@@ -9,9 +9,23 @@ import '../../data/post_model.dart';
 import '../providers/video_mute_provider.dart';
 
 class FeedVideoPlayer extends ConsumerStatefulWidget {
-  const FeedVideoPlayer({super.key, required this.post, required this.accent});
+  const FeedVideoPlayer({
+    super.key,
+    required this.post,
+    required this.accent,
+    this.videoUrlOverride,
+    this.thumbnailUrlOverride,
+    this.keyIdOverride,
+    this.onTapFullscreen,
+  });
   final Post post;
   final Color accent;
+  // 혼합 미디어 캐러셀에서 특정 미디어 항목을 재생할 때 사용 (없으면 post.videoUrl 사용)
+  final String? videoUrlOverride;
+  final String? thumbnailUrlOverride;
+  final String? keyIdOverride;
+  // 풀스크린 진입 콜백. 지정 시 우상단에 풀스크린 버튼 표시.
+  final VoidCallback? onTapFullscreen;
 
   @override
   ConsumerState<FeedVideoPlayer> createState() => _FeedVideoPlayerState();
@@ -24,6 +38,13 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
   bool _isSeeking = false;
   bool _hasEnded = false;
   bool _isLoading = false;
+
+  String get _videoUrl =>
+      widget.videoUrlOverride ?? widget.post.videoUrl ?? '';
+  String get _thumbUrl =>
+      widget.thumbnailUrlOverride ?? widget.post.imageUrl;
+  String get _keyId =>
+      widget.keyIdOverride ?? widget.post.id;
 
   // 더블탭 스킵 시 화면 좌/우에 잠깐 뜨는 오버레이
   int? _skipIndicator; // -10 / +10
@@ -80,7 +101,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
       setState(() => _isLoading = true);
       try {
         final isMuted = ref.read(videoMutedProvider);
-        final file = await DefaultCacheManager().getSingleFile(widget.post.videoUrl!);
+        final file = await DefaultCacheManager().getSingleFile(_videoUrl);
         final ctrl = VideoPlayerController.file(file);
         await ctrl.initialize();
         ctrl.setLooping(false);
@@ -183,7 +204,6 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.post;
     final isPlaying = _controller?.value.isPlaying ?? false;
     final isMuted = ref.watch(videoMutedProvider);
 
@@ -192,7 +212,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
     });
 
     return VisibilityDetector(
-      key: Key('video_${p.id}'),
+      key: Key('video_$_keyId'),
       onVisibilityChanged: _onVisibilityChanged,
       child: Stack(
         fit: StackFit.expand,
@@ -209,9 +229,9 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                 ),
               ),
             )
-          else if (p.imageUrl.isNotEmpty)
+          else if (_thumbUrl.isNotEmpty)
             CachedNetworkImage(
-              imageUrl: p.imageUrl,
+              imageUrl: _thumbUrl,
               fit: BoxFit.contain,
               errorWidget: (_, __, ___) => Container(color: const Color(0xFF1A1A1A)),
             )
@@ -315,6 +335,23 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
               child: Icon(Icons.videocam, color: Colors.white, size: 20, shadows: [
                 Shadow(color: Colors.black54, blurRadius: 4),
               ]),
+            ),
+
+          // 풀스크린 버튼
+          if (widget.onTapFullscreen != null)
+            Positioned(
+              top: 10, right: 10,
+              child: GestureDetector(
+                onTap: widget.onTapFullscreen,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                ),
+              ),
             ),
 
           // 시크바 옆 보조 컨트롤 (좌: ±10초, 우: 음소거)
