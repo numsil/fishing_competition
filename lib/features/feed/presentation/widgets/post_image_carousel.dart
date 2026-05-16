@@ -112,6 +112,21 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
     _aspectStream!.addListener(_aspectListener!);
   }
 
+  /// 다중 미디어가 모두 비슷한 비율을 가지는지 (orientation 일치).
+  /// - true: 각 페이지의 자기 비율 유지, 컨테이너 = 첫 미디어 비율
+  /// - false: 비율이 섞임 → 컨테이너 1:1 + BoxFit.contain (검은 여백)
+  bool get _isUniformAspect {
+    if (!_isMulti) return true;
+    final aspects = _media.map((m) => m.aspectRatio).whereType<double>().toList();
+    if (aspects.length != _media.length) {
+      // 일부 항목에 비율 정보 없음 → 보수적으로 균일로 간주 (구버전 호환)
+      return true;
+    }
+    final first = aspects.first;
+    if (first <= 0) return true;
+    return aspects.every((a) => (a - first).abs() / first < 0.15);
+  }
+
   double _computeAspect(BuildContext context) {
     final p = widget.post;
     if (p.youtubeUrl != null) {
@@ -123,6 +138,10 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
         return (9 / 16).clamp(minAspect, 1.91);
       }
       return 16 / 9;
+    }
+    // 다중 + 비율 섞임 → 1:1 컨테이너로 통일
+    if (_isMulti && !_isUniformAspect) {
+      return 1.0;
     }
     final hasVideo = _media.any((m) => m.type == 'video');
     final natural = widget.post.aspectRatio ??
@@ -138,8 +157,9 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
     return natural.clamp(0.8, 1.91);
   }
 
-  Widget _buildPage(MediaItem item, int index) {
+  Widget _buildPage(MediaItem item, int index, {required bool useContain}) {
     if (item.type == 'video') {
+      // 동영상은 항상 contain (FeedVideoPlayer 내부 FittedBox)
       return FeedVideoPlayer(
         post: widget.post,
         accent: widget.accent,
@@ -153,6 +173,7 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
       url: item.url,
       isDark: widget.isDark,
       accent: widget.accent,
+      fit: useContain ? BoxFit.contain : BoxFit.cover,
     );
   }
 
@@ -200,13 +221,17 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
                               : const Color(0xFFA1A1AA)),
                     )
                   else if (!_isMulti)
-                    _buildPage(media.first, 0)
+                    _buildPage(media.first, 0, useContain: false)
                   else
                     PageView.builder(
                       controller: _ctrl,
                       itemCount: media.length,
                       onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (_, i) => _buildPage(media[i], i),
+                      itemBuilder: (_, i) => _buildPage(
+                        media[i],
+                        i,
+                        useContain: !_isUniformAspect,
+                      ),
                     ),
 
                   // 리그 배지
@@ -299,17 +324,22 @@ class _PostImageCarouselState extends State<PostImageCarousel> {
 }
 
 class _NetImage extends StatelessWidget {
-  const _NetImage(
-      {required this.url, required this.isDark, required this.accent});
+  const _NetImage({
+    required this.url,
+    required this.isDark,
+    required this.accent,
+    this.fit = BoxFit.cover,
+  });
   final String url;
   final bool isDark;
   final Color accent;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
     return CachedNetworkImage(
       imageUrl: url,
-      fit: BoxFit.cover,
+      fit: fit,
       placeholder: (_, __) => Center(
         child: CircularProgressIndicator(strokeWidth: 2, color: accent),
       ),
