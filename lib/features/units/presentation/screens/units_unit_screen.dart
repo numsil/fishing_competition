@@ -213,7 +213,7 @@ class _ReferenceTable extends StatelessWidget {
   }
 }
 
-String _fmt(double v, {int decimals = 2}) {
+String _fmt(double v, {int decimals = 1}) {
   if (v.isNaN || v.isInfinite) return '-';
   final s = v.toStringAsFixed(decimals);
   // trim trailing zeros
@@ -474,7 +474,7 @@ class _OzGramTabState extends State<_OzGramTab> {
       _oz.text = '';
       return;
     }
-    _oz.text = _fmt(n / _gPerOz, decimals: 3);
+    _oz.text = _fmt(n / _gPerOz);
   }
 
   @override
