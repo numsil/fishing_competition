@@ -35,6 +35,7 @@ import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/dm/data/dm_repository.dart';
 import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
+import '../../features/units/presentation/screens/units_unit_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 import '../../dev/widget_catalog_screen.dart';
@@ -130,6 +131,12 @@ GoRouter appRouter(Ref ref) {
           final posts = (state.extra as List).cast<Post>();
           return MaterialPage(child: AlbumBundleShareScreen(posts: posts));
         },
+      ),
+      // 단위 변환: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.units,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: UnitsScreen()),
       ),
       // DM 목록: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -280,6 +287,7 @@ class AppRoutes {
   static const String postDetail = '/post';
   static const String userProfile = '/user';
   static const String dm = '/dm';
+  static const String units = '/units';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
   static const String widgetCatalog = '/widget-catalog';

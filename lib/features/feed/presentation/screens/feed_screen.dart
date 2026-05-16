@@ -456,6 +456,12 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
         ),
+        IconButton(
+          onPressed: () => context.push(AppRoutes.units),
+          icon: Icon(LucideIcons.ruler,
+              color: isDark ? Colors.white : Colors.black, size: 22),
+          visualDensity: VisualDensity.compact,
+        ),
         Consumer(
           builder: (context, ref, _) {
             final hasUnread =
