@@ -213,7 +213,7 @@ class _ReferenceTable extends StatelessWidget {
   }
 }
 
-String _fmt(double v, {int decimals = 1}) {
+String _fmt(double v, {int decimals = 2}) {
   if (v.isNaN || v.isInfinite) return '-';
   final s = v.toStringAsFixed(decimals);
   // trim trailing zeros
@@ -265,12 +265,34 @@ const List<(double ho, double lb)> _peLineTable = [
   (8.0, 100.0),
 ];
 
-double _monoHoToLb(double ho) => ho * 4.0;
-double _monoLbToHo(double lb) => lb / 4.0;
+// 표 기준 선형 보간. table은 첫 컬럼(x) 오름차순.
+double _interpolate(double x, List<(double, double)> table,
+    {bool reverse = false}) {
+  final pts = reverse
+      ? (table.map((e) => (e.$2, e.$1)).toList()
+        ..sort((a, b) => a.$1.compareTo(b.$1)))
+      : table;
+  if (x <= pts.first.$1) {
+    final p0 = pts[0], p1 = pts[1];
+    return p0.$2 + (x - p0.$1) * (p1.$2 - p0.$2) / (p1.$1 - p0.$1);
+  }
+  for (int i = 0; i < pts.length - 1; i++) {
+    final p0 = pts[i], p1 = pts[i + 1];
+    if (x <= p1.$1) {
+      return p0.$2 + (x - p0.$1) * (p1.$2 - p0.$2) / (p1.$1 - p0.$1);
+    }
+  }
+  final p0 = pts[pts.length - 2], p1 = pts[pts.length - 1];
+  return p0.$2 + (x - p0.$1) * (p1.$2 - p0.$2) / (p1.$1 - p0.$1);
+}
 
-// PE는 비선형이지만 간단 환산은 약 20배 (실제 표 기준 평균)
-double _peHoToLb(double ho) => ho * 20.0;
-double _peLbToHo(double lb) => lb / 20.0;
+double _monoHoToLb(double ho) => _interpolate(ho, _monoLineTable);
+double _monoLbToHo(double lb) =>
+    _interpolate(lb, _monoLineTable, reverse: true);
+
+double _peHoToLb(double ho) => _interpolate(ho, _peLineTable);
+double _peLbToHo(double lb) =>
+    _interpolate(lb, _peLineTable, reverse: true);
 
 class _LineTab extends StatefulWidget {
   const _LineTab();
@@ -301,7 +323,7 @@ class _LineTabState extends State<_LineTab> {
 
   void _onMonoLb(String v) {
     final n = double.tryParse(v);
-    _monoHo.text = n == null ? '' : _fmt(_monoLbToHo(n));
+    _monoHo.text = n == null ? '' : _fmt(_monoLbToHo(n), decimals: 1);
   }
 
   void _onPeHo(String v) {
@@ -311,7 +333,7 @@ class _LineTabState extends State<_LineTab> {
 
   void _onPeLb(String v) {
     final n = double.tryParse(v);
-    _peHo.text = n == null ? '' : _fmt(_peLbToHo(n));
+    _peHo.text = n == null ? '' : _fmt(_peLbToHo(n), decimals: 1);
   }
 
   Widget _converterRow({
@@ -371,11 +393,12 @@ class _LineTabState extends State<_LineTab> {
             AppSpacing.gapH16,
             _ReferenceTable(
               title: '나일론/카본 환산표',
-              note: '모노 라인 기준 (lb ≈ 호수 × 4). 제품별 차이 있음.',
+              note: '모노 라인 일반 환산표. 제품별 차이 있음.',
               leftHeader: '호수',
               rightHeader: '파운드(lb)',
               rows: _monoLineTable
-                  .map((e) => ('${_fmt(e.$1)}호', '${_fmt(e.$2)} lb'))
+                  .map((e) =>
+                      ('${_fmt(e.$1, decimals: 1)}호', '${_fmt(e.$2)} lb'))
                   .toList(),
             ),
           ] else ...[
@@ -391,11 +414,12 @@ class _LineTabState extends State<_LineTab> {
             AppSpacing.gapH16,
             _ReferenceTable(
               title: '합사(PE) 환산표',
-              note: 'PE 라인 기준 일반값 (lb ≈ 호수 × 20). 제조사별 편차 큼.',
+              note: 'PE 라인 일반 환산표. 제조사별 편차 큼.',
               leftHeader: 'PE 호수',
               rightHeader: '파운드(lb)',
               rows: _peLineTable
-                  .map((e) => ('${_fmt(e.$1)}호', '${_fmt(e.$2)} lb'))
+                  .map((e) =>
+                      ('${_fmt(e.$1, decimals: 1)}호', '${_fmt(e.$2)} lb'))
                   .toList(),
             ),
           ],
@@ -511,7 +535,7 @@ class _SinkerTabState extends State<_SinkerTab> {
       _ho.text = '';
       return;
     }
-    _ho.text = _fmt(_sinkerGToHo(n));
+    _ho.text = _fmt(_sinkerGToHo(n), decimals: 1);
   }
 
   @override
@@ -553,7 +577,10 @@ class _SinkerTabState extends State<_SinkerTab> {
             leftHeader: '호수',
             rightHeader: '무게(g)',
             rows: _sinkerHos
-                .map((h) => ('${_fmt(h)}호', '${_fmt(_sinkerHoToG(h))} g'))
+                .map((h) => (
+                      '${_fmt(h, decimals: 1)}호',
+                      '${_fmt(_sinkerHoToG(h))} g'
+                    ))
                 .toList(),
           ),
         ],
