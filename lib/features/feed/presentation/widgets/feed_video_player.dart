@@ -337,22 +337,6 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
               ]),
             ),
 
-          // 풀스크린 버튼
-          if (widget.onTapFullscreen != null)
-            Positioned(
-              top: 10, right: 10,
-              child: GestureDetector(
-                onTap: widget.onTapFullscreen,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
-                ),
-              ),
-            ),
 
           // 시크바 옆 보조 컨트롤 (좌: ±10초, 우: 음소거)
           if (_initialized)
@@ -374,11 +358,22 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
                       ),
                     ],
                   ),
-                  _CtrlIconButton(
-                    icon: isMuted
-                        ? Icons.volume_off_rounded
-                        : Icons.volume_up_rounded,
-                    onTap: _toggleMute,
+                  Row(
+                    children: [
+                      _CtrlIconButton(
+                        icon: isMuted
+                            ? Icons.volume_off_rounded
+                            : Icons.volume_up_rounded,
+                        onTap: _toggleMute,
+                      ),
+                      if (widget.onTapFullscreen != null) ...[
+                        const SizedBox(width: 6),
+                        _CtrlIconButton(
+                          icon: Icons.fullscreen,
+                          onTap: widget.onTapFullscreen!,
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
