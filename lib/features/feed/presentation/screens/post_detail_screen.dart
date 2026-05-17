@@ -17,6 +17,7 @@ import '../../data/post_model.dart';
 import '../widgets/post_image_carousel.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
+import '../../../../core/utils/time_ago.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../utils/feed_search_utils.dart';
@@ -319,13 +320,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     );
   }
 
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}일 전';
-    if (diff.inHours > 0) return '${diff.inHours}시간 전';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}분 전';
-    return '방금';
-  }
+  String _timeAgo(DateTime dt) => formatTimeAgo(dt);
 }
 
 // ── 더보기 메뉴 ──────────────────────────────────────────
@@ -481,14 +476,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     final avatarUrl = usersData?['avatar_url'] as String? ?? '';
     final userId = data['user_id'] as String? ?? '';
     final createdAt = DateTime.tryParse(data['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    final diff = DateTime.now().difference(createdAt);
-    final timeAgo = diff.inSeconds < 60
-        ? '방금'
-        : diff.inMinutes < 60
-            ? '${diff.inMinutes}분 전'
-            : diff.inHours < 24
-                ? '${diff.inHours}시간 전'
-                : '${diff.inDays}일 전';
+    final timeAgo = formatTimeAgo(createdAt);
     return _Comment(user: username, text: data['content'] as String? ?? '', timeAgo: timeAgo, userId: userId, avatarUrl: avatarUrl);
   }
 

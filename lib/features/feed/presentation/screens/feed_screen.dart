@@ -17,6 +17,7 @@ import 'dart:async';
 import 'dart:math';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
+import '../../../../core/utils/time_ago.dart';
 import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
@@ -934,7 +935,7 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 5, 16, 12),
           child: Text(
-            '${DateTime.now().difference(p.createdAt).inHours}시간 전',
+            formatTimeAgo(p.createdAt),
             style: TextStyle(fontSize: 10, color: subColor),
           ),
         ),
@@ -1075,14 +1076,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     final avatarUrl = usersData?['avatar_url'] as String? ?? '';
     final userId = data['user_id'] as String? ?? '';
     final createdAt = DateTime.tryParse(data['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    final diff = DateTime.now().difference(createdAt);
-    final timeAgo = diff.inSeconds < 60
-        ? '방금'
-        : diff.inMinutes < 60
-            ? '${diff.inMinutes}분 전'
-            : diff.inHours < 24
-                ? '${diff.inHours}시간 전'
-                : '${diff.inDays}일 전';
+    final timeAgo = formatTimeAgo(createdAt);
     return _Comment(
       user: username,
       text: data['content'] as String? ?? '',
