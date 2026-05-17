@@ -19,7 +19,6 @@ import '../../data/league_invite_repository.dart';
 import 'league_catch_screen.dart';
 import '../widgets/catch_review_tab.dart';
 import '../widgets/league_ranking_tab.dart';
-import 'league_participant_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -474,7 +473,6 @@ class _InfoTab extends StatelessWidget {
     final feeStr = league.entryFee > 0
         ? '${NumberFormat('#,###').format(league.entryFee)}원'
         : '무료';
-    final cardBg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     return ListView(

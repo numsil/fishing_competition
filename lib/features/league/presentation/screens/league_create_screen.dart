@@ -16,7 +16,6 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
-import 'league_detail_screen.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -642,7 +641,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final sub = context.isDark ? const Color(0xFF8E8E8E) : const Color(0xFF737373);
     final divColor = context.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
     final dateText = _dateRange == null
@@ -1401,7 +1399,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _isPublic,
-                    activeColor: context.accentColor,
+                    activeThumbColor: context.accentColor,
                     onChanged: _isEnded ? null : (v) => setState(() => _isPublic = v),
                   ),
                   Divider(height: 1, color: divColor),
@@ -1416,7 +1414,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _allowGallery,
-                    activeColor: context.accentColor,
+                    activeThumbColor: context.accentColor,
                     onChanged: _isEnded ? null : (v) => setState(() => _allowGallery = v),
                   ),
                 ],

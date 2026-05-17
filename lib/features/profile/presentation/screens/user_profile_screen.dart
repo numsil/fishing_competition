@@ -14,7 +14,6 @@ import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
-import '../../../../core/widgets/app_card.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
@@ -120,7 +119,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final currentUser = ref.watch(currentUserProvider);
     final isMe = currentUser?.id == widget.userId;
 

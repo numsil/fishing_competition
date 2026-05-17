@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -221,12 +220,12 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
           await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
           ref.invalidate(myLeaguesProvider);
           ref.invalidate(leaguesProvider);
-          if (mounted) {
+          if (context.mounted) {
                         AppSnackBar.success(context, '리그가 삭제되었습니다.');
             navigator.pop();
           }
         } catch (e) {
-          if (mounted) {
+          if (context.mounted) {
                         AppSnackBar.error(context, '삭제 실패: $e');
           }
         }

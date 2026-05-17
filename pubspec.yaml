@@ -24,6 +24,7 @@ dependencies:
 
   # UI
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1  # cached_network_image 의존이지만 직접 import 사용
 
   # 네트워크
   dio: ^5.8.0+1
