@@ -9,7 +9,9 @@ part 'profile_repository.g.dart';
 
 class UserProfile {
   final String id;
-  final String email;
+  // 본인 프로필일 때만 채워짐 (auth.currentUser.email). 다른 유저 프로필은 null.
+  // users.email 컬럼은 anon/authenticated 가 SELECT 할 수 없도록 잠겨있음.
+  final String? email;
   final String username;
   final String userKey;
   final String? avatarUrl;
@@ -29,7 +31,7 @@ class UserProfile {
 
   UserProfile({
     required this.id,
-    required this.email,
+    this.email,
     required this.username,
     required this.userKey,
     this.avatarUrl,
@@ -54,8 +56,14 @@ class ProfileRepository {
 
   ProfileRepository(this._supabase);
 
-  /// 통합 RPC 호출: user 정보 + 시즌 점수 + 우승/참가 + 최대어 한 번에
-  Future<UserProfile> _buildProfileViaRpc(String userId, List<Post> posts) async {
+  /// 통합 RPC 호출: user 정보 + 시즌 점수 + 우승/참가 + 최대어 한 번에.
+  /// email 은 RPC 응답에 포함되지 않으므로(타인 프로필 PII 차단) 본인일 경우에만
+  /// 호출자가 [email] 인자로 전달한다.
+  Future<UserProfile> _buildProfileViaRpc(
+    String userId,
+    List<Post> posts, {
+    String? email,
+  }) async {
     final res = await _supabase.rpc(
       'get_user_profile_summary',
       params: {'p_user_id': userId},
@@ -74,7 +82,7 @@ class ProfileRepository {
 
     return UserProfile(
       id: data['id'] as String,
-      email: (data['email'] as String?) ?? '',
+      email: email,
       username: data['username'] as String,
       userKey: (data['user_key'] as String?) ?? (data['username'] as String),
       avatarUrl: data['avatar_url'] as String?,
@@ -96,9 +104,9 @@ class ProfileRepository {
 
   /// posts는 myPostsProvider에서 이미 받아온 것을 재사용 — RPC로 통계 일괄 조회
   Future<UserProfile> buildMyProfileFromPosts(List<Post> posts) async {
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) throw Exception('Not logged in');
-    return _buildProfileViaRpc(userId, posts);
+    final me = _supabase.auth.currentUser;
+    if (me == null) throw Exception('Not logged in');
+    return _buildProfileViaRpc(me.id, posts, email: me.email);
   }
 
   Future<bool> isUserKeyAvailable(String userKey) async {

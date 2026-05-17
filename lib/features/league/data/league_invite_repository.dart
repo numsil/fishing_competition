@@ -66,22 +66,19 @@ class LeagueInviteRepository {
 
   // ── user_key 검색 ────────────────────────────────────
   /// `@` 접두/공백 무시, 정확 매칭(대소문자 구분). 본인은 결과에서 제외.
+  /// 타인의 status/is_deleted 컬럼 노출 차단을 위해 find_invitable_user RPC 사용
+  /// (서버에서 active && !is_deleted && id <> auth.uid() 필터링).
   Future<LeagueInviteUserHit?> findUserByKey(String input) async {
-    final myId = _myId;
     var key = input.trim();
     if (key.startsWith('@')) key = key.substring(1).trim();
     if (key.isEmpty) return null;
 
-    final row = await _supabase
-        .from('users')
-        .select('id, username, user_key, avatar_url, status, is_deleted')
-        .eq('user_key', key)
-        .maybeSingle();
-
-    if (row == null) return null;
-    if (row['is_deleted'] == true) return null;
-    if (row['status'] != 'active') return null;
-    if (myId != null && row['id'] == myId) return null;
+    final res = await _supabase.rpc(
+      'find_invitable_user',
+      params: {'p_user_key': key},
+    );
+    if (res is! List || res.isEmpty) return null;
+    final row = res.first as Map<String, dynamic>;
 
     return LeagueInviteUserHit(
       id: row['id'] as String,
