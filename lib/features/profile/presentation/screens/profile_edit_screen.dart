@@ -326,7 +326,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      widget.profile.email,
+                      widget.profile.email ?? '',
                       style: TextStyle(
                         fontSize: 14,
                         color: context.isDark

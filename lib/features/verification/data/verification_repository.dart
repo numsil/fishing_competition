@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../auth/data/auth_repository.dart';
 import 'verification_model.dart';
 
 part 'verification_repository.g.dart';
@@ -225,14 +226,10 @@ VerificationRepository verificationRepository(VerificationRepositoryRef ref) {
 Future<bool> isAdminUser(IsAdminUserRef ref) async {
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 10), link.close);
-  final userId = Supabase.instance.client.auth.currentUser?.id;
-  if (userId == null) return false;
-  final row = await Supabase.instance.client
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .maybeSingle();
-  return row?['role'] == 'admin';
+  final supabase = Supabase.instance.client;
+  if (supabase.auth.currentUser == null) return false;
+  final s = await AuthRepository(supabase).getMyAccountStatus();
+  return s?.isAdmin ?? false;
 }
 
 @riverpod

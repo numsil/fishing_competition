@@ -1,4 +1,4 @@
-name: Build & Deploy APK
+name: Build & Deploy
 
 on:
   push:
@@ -73,7 +73,7 @@ jobs:
           echo "=== key.properties keys ==="
           grep -o "^[^=]*" /tmp/key.properties
 
-      # ── 8. APK 빌드 ───────────────────────────────────────────
+      # ── 8. APK 빌드 (sideload 친구 배포용) ────────────────────
       - name: Build APK
         run: |
           if [ "${{ env.BUILD_MODE }}" = "release" ]; then
@@ -82,20 +82,30 @@ jobs:
             flutter build apk --debug
           fi
 
-      # ── 8. 버전 정보 추출 ─────────────────────────────────────
+      # ── 8-1. AAB 빌드 (Play Store 업로드용, release 만) ─────
+      - name: Build AAB (Play Store)
+        if: env.BUILD_MODE == 'release'
+        run: flutter build appbundle --release
+
+      # ── 9. 버전 정보 추출 ─────────────────────────────────────
       - name: Extract version from pubspec.yaml
         run: |
           FULL_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
           VERSION=$(echo "$FULL_VERSION" | cut -d'+' -f1)
           BUILD_NUMBER=$(echo "$FULL_VERSION" | cut -d'+' -f2)
           FILENAME="${{ env.APP_ENV }}_${VERSION}_${BUILD_NUMBER}.apk"
+          AAB_FILENAME="${{ env.APP_ENV }}_${VERSION}_${BUILD_NUMBER}.aab"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "AAB_FILENAME=$AAB_FILENAME" >> $GITHUB_ENV
           echo "APK_PATH=build/app/outputs/flutter-apk/app-${{ env.BUILD_MODE }}.apk" >> $GITHUB_ENV
+          echo "AAB_PATH=build/app/outputs/bundle/release/app-release.aab" >> $GITHUB_ENV
 
-      # ── 9. GitHub Release 업로드 (develop 제외) ───────────────
-      - name: Upload APK to GitHub Release
+      # ── 10. GitHub Release 업로드 (develop 제외) ──────────────
+      #    release 빌드: APK + AAB 둘 다 첨부
+      #    debug 빌드: APK 만 첨부 (AAB 미생성)
+      - name: Upload artifacts to GitHub Release
         if: env.APP_ENV != 'development'
         run: |
           TAG="${{ env.APP_ENV }}-${{ env.VERSION }}-${{ env.BUILD_NUMBER }}"
@@ -104,15 +114,29 @@ jobs:
           gh release delete "$TAG" --yes 2>/dev/null || true
           git push origin --delete "$TAG" 2>/dev/null || true
 
-          gh release create "$TAG" \
-            "${{ env.APK_PATH }}#${{ env.FILENAME }}" \
-            --title "[${{ env.APP_ENV }}] v${{ env.VERSION }}+${{ env.BUILD_NUMBER }}" \
-            --notes "${{ github.event.head_commit.message }}" \
-            --latest=false
+          if [ "${{ env.BUILD_MODE }}" = "release" ]; then
+            gh release create "$TAG" \
+              "${{ env.APK_PATH }}#${{ env.FILENAME }}" \
+              "${{ env.AAB_PATH }}#${{ env.AAB_FILENAME }}" \
+              --title "[${{ env.APP_ENV }}] v${{ env.VERSION }}+${{ env.BUILD_NUMBER }}" \
+              --notes "${{ github.event.head_commit.message }}" \
+              --latest=false
+          else
+            gh release create "$TAG" \
+              "${{ env.APK_PATH }}#${{ env.FILENAME }}" \
+              --title "[${{ env.APP_ENV }}] v${{ env.VERSION }}+${{ env.BUILD_NUMBER }}" \
+              --notes "${{ github.event.head_commit.message }}" \
+              --latest=false
+          fi
 
           APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/app-release.apk"
+          AAB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${{ env.AAB_FILENAME }}"
           echo "APK_URL=$APK_URL" >> $GITHUB_ENV
-          echo "✅ APK uploaded to GitHub Release: $APK_URL"
+          echo "AAB_URL=$AAB_URL" >> $GITHUB_ENV
+          echo "✅ APK uploaded: $APK_URL"
+          if [ "${{ env.BUILD_MODE }}" = "release" ]; then
+            echo "✅ AAB uploaded: $AAB_URL"
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -160,4 +184,7 @@ jobs:
           echo "| 환경 | ${{ env.APP_ENV }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 버전 | ${{ env.VERSION }}+${{ env.BUILD_NUMBER }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 브랜치 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| APK | ${{ env.APK_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| APK (sideload) | ${{ env.APK_URL }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.BUILD_MODE }}" = "release" ]; then
+            echo "| AAB (Play Store) | ${{ env.AAB_URL }} |" >> $GITHUB_STEP_SUMMARY
+          fi

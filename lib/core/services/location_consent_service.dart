@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/auth/data/auth_repository.dart';
 import '../extensions/theme_extensions.dart';
 
 /// 위치정보법 §15 — 위치정보 수집 별도 동의.
@@ -12,17 +13,13 @@ class LocationConsentService {
   static bool? _cached;
 
   /// 동의했는지 여부. DB의 users.location_agreed_at 으로 판정.
+  /// (직접 SELECT 대신 get_my_account_status RPC 통해 조회 — anon SELECT 금지 컬럼)
   static Future<bool> hasAgreed() async {
     if (_cached != null) return _cached!;
     final supabase = Supabase.instance.client;
-    final me = supabase.auth.currentUser?.id;
-    if (me == null) return false;
-    final row = await supabase
-        .from('users')
-        .select('location_agreed_at')
-        .eq('id', me)
-        .maybeSingle();
-    final agreed = row?['location_agreed_at'] != null;
+    if (supabase.auth.currentUser == null) return false;
+    final s = await AuthRepository(supabase).getMyAccountStatus();
+    final agreed = s?.locationAgreedAt != null;
     _cached = agreed;
     return agreed;
   }
@@ -42,6 +39,8 @@ class LocationConsentService {
       'location_agreed_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', me);
     _cached = true;
+    // 다음번 getMyAccountStatus 호출이 신선한 값을 받도록 캐시 무효화
+    AuthRepository.invalidateAccountStatusCache();
     return true;
   }
 

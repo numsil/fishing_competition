@@ -3,6 +3,29 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'auth_repository.g.dart';
 
+/// 본인 계정 상태 통합 DTO. users 테이블의 비공개 컬럼(email, status, role 등)은
+/// REST 로 직접 조회할 수 없으므로 `get_my_account_status` RPC 응답을 래핑한다.
+class MyAccountStatus {
+  final String status;
+  final bool isDeleted;
+  final String? role;
+  final bool isVerifier;
+  final DateTime? locationAgreedAt;
+  final String? email;
+
+  MyAccountStatus({
+    required this.status,
+    required this.isDeleted,
+    required this.role,
+    required this.isVerifier,
+    required this.locationAgreedAt,
+    required this.email,
+  });
+
+  bool get isBanned => status == 'banned';
+  bool get isAdmin => role == 'admin';
+}
+
 class AuthRepository {
   final SupabaseClient _supabase;
 
@@ -12,6 +35,12 @@ class AuthRepository {
   /// 다음에 로그인 화면이 떴을 때 보여줄 안내문을 여기에 보관한다.
   /// 표시 후 login_screen 쪽에서 null로 초기화.
   static String? pendingLoginMessage;
+
+  // 본인 계정 상태 in-memory 캐시 (TTL 5분). main/auth/verification/location_consent
+  // 4곳에서 공유. 로그아웃 시 invalidate, 차단 검사 시 forceRefresh.
+  static MyAccountStatus? _cachedStatus;
+  static DateTime? _cachedStatusAt;
+  static const _statusCacheTtl = Duration(minutes: 5);
 
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
   User? get currentUser => _supabase.auth.currentUser;
@@ -29,20 +58,48 @@ class AuthRepository {
     return response;
   }
 
+  /// 본인 계정 상태 조회. 5분 캐시. status/role/is_verifier/location_agreed_at/email
+  /// 같이 한 번에 받음. 비로그인 / 행 없음 시 null.
+  Future<MyAccountStatus?> getMyAccountStatus({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _cachedStatus != null &&
+        _cachedStatusAt != null &&
+        DateTime.now().difference(_cachedStatusAt!) < _statusCacheTtl) {
+      return _cachedStatus;
+    }
+    if (_supabase.auth.currentUser == null) return null;
+    final res = await _supabase.rpc('get_my_account_status');
+    if (res is! List || res.isEmpty) return null;
+    final r = res.first as Map<String, dynamic>;
+    final fetched = MyAccountStatus(
+      status: (r['status'] as String?) ?? 'active',
+      isDeleted: (r['is_deleted'] as bool?) ?? false,
+      role: r['role'] as String?,
+      isVerifier: (r['is_verifier'] as bool?) ?? false,
+      locationAgreedAt: r['location_agreed_at'] == null
+          ? null
+          : DateTime.parse(r['location_agreed_at'] as String).toUtc(),
+      email: r['email'] as String?,
+    );
+    _cachedStatus = fetched;
+    _cachedStatusAt = DateTime.now();
+    return fetched;
+  }
+
+  /// 캐시 무효화 (로그아웃 / 위치 동의 갱신 등에서 호출).
+  static void invalidateAccountStatusCache() {
+    _cachedStatus = null;
+    _cachedStatusAt = null;
+  }
+
   /// 로그인 후 차단 사유 확인 (정지 / 탈퇴). 차단되어야 한다면 사용자에게 보일 메시지 반환.
   Future<String?> _checkLoginBlock() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return null;
-    final row = await _supabase
-        .from('users')
-        .select('status, is_deleted')
-        .eq('id', user.id)
-        .maybeSingle();
-    if (row == null) return null;
-    if (row['status'] == 'banned') {
+    final s = await getMyAccountStatus(forceRefresh: true);
+    if (s == null) return null;
+    if (s.isBanned) {
       return '이용이 정지된 계정입니다. 문의: support@nakstar.app';
     }
-    if (row['is_deleted'] == true) {
+    if (s.isDeleted) {
       return '탈퇴한 계정입니다.';
     }
     return null;
@@ -59,6 +116,7 @@ class AuthRepository {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not logged in');
     await _supabase.rpc('withdraw_user');
+    invalidateAccountStatusCache();
     await _supabase.auth.signOut();
   }
 
@@ -93,6 +151,7 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    invalidateAccountStatusCache();
     await _supabase.auth.signOut();
   }
 

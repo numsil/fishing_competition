@@ -86,21 +86,17 @@ class _AppRootWidgetState extends State<AppRootWidget>
   Future<void> _verifyNotBanned() async {
     if (_checkingBan) return;
     final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
+    if (supabase.auth.currentUser == null) return;
     _checkingBan = true;
     try {
-      final row = await supabase
-          .from('users')
-          .select('status, is_deleted')
-          .eq('id', user.id)
-          .maybeSingle();
-      final inactive = row == null ||
-          row['status'] == 'banned' ||
-          row['is_deleted'] == true;
+      final s = await AuthRepository(supabase)
+          .getMyAccountStatus(forceRefresh: true);
+      final inactive = s != null && (s.isBanned || s.isDeleted);
       if (inactive) {
-        AuthRepository.pendingLoginMessage =
-            '이용이 정지된 계정입니다. 문의: support@nakstar.app';
+        AuthRepository.pendingLoginMessage = s.isBanned
+            ? '이용이 정지된 계정입니다. 문의: support@nakstar.app'
+            : '탈퇴한 계정입니다.';
+        AuthRepository.invalidateAccountStatusCache();
         await supabase.auth.signOut();
       }
     } catch (_) {/* 네트워크 에러는 무시 (다음 resume 때 재시도) */}
