@@ -29,6 +29,7 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/league/presentation/screens/league_participant_detail_screen.dart';
 import '../../features/profile/presentation/screens/user_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_edit_screen.dart';
+import '../../features/profile/presentation/screens/blocked_users_screen.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/follow/presentation/screens/follow_list_screen.dart';
 import '../../features/legal/presentation/screens/legal_document_screen.dart';
@@ -85,6 +86,10 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.privacy,
         builder: (context, state) =>
             const LegalDocumentScreen(type: LegalDocType.privacy),
+      ),
+      GoRoute(
+        path: AppRoutes.blockedUsers,
+        builder: (context, state) => const BlockedUsersScreen(),
       ),
       // 피드 상세: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -295,4 +300,5 @@ class AppRoutes {
   static const String privacy = '/legal/privacy';
   static const String passwordChange = '/password-change';
   static const String passwordChangeOtp = '/password-change/otp';
+  static const String blockedUsers = '/profile/blocked-users';
 }

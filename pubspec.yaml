@@ -2,7 +2,7 @@ name: fishing_competition
 description: "낚시 대회 관리 앱 - 웹/모바일 지원"
 publish_to: 'none'
 
-version: 1.0.0+47
+version: 1.0.0+48
 
 environment:
   sdk: ^3.8.1
@@ -24,6 +24,7 @@ dependencies:
 
   # UI
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1  # cached_network_image 의존이지만 직접 import 사용
 
   # 네트워크
   dio: ^5.8.0+1

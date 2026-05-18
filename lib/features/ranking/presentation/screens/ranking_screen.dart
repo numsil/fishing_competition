@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/widgets/tier_avatar.dart';
 import '../../data/ranking_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
-import '../../../../core/widgets/app_card.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../verification/data/verification_repository.dart';
 import '../../../verification/presentation/screens/verification_tab.dart';
@@ -490,99 +488,5 @@ class _ScoreRankRow extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w800, color: accent, fontSize: 15)),
       ]),
     );
-  }
-}
-
-// ── 이달의 탭 ────────────────────────────────────────────
-class _MonthlyTab extends StatelessWidget {
-  const _MonthlyTab({required this.isDark, required this.accent});
-  final bool isDark;
-  final Color accent;
-
-  static const _badges = [
-    (LucideIcons.award, '런커 클럽', '50cm+'),
-    (LucideIcons.crown, '3연승', '3회'),
-    (LucideIcons.flame, '주간 1위', '7일'),
-    (LucideIcons.star, '첫 런커', '달성'),
-    (LucideIcons.target, '면꽝 탈출', '달성'),
-    (LucideIcons.gem, '다이아', '등급'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        AppCard(
-          padding: const EdgeInsets.all(24),
-          radius: 20,
-          borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-          child: Column(children: [
-            Text('${DateTime.now().month}월의 앵글러',
-                style: TextStyle(fontSize: 12, color: sub, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 80, height: 80,
-                color: accent.withValues(alpha: 0.1),
-                child: Icon(LucideIcons.user, size: 38, color: accent),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('김민준', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text('충주호 낚시 크루', style: TextStyle(fontSize: 13, color: sub)),
-            const SizedBox(height: 20),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              _MonthStat(label: '참가', value: '5회', sub: sub),
-              Container(width: 1, height: 28, color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-              _MonthStat(label: '최대어', value: '52.3cm', sub: sub),
-              Container(width: 1, height: 28, color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-              _MonthStat(label: '점수', value: '1,840', sub: sub),
-            ]),
-          ]),
-        ),
-        const SizedBox(height: 24),
-        const Text('배지 보관함', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.1,
-          children: _badges.map((b) => AppCard(
-            padding: EdgeInsets.zero,
-            radius: 14,
-            borderColor: context.isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(b.$1 as IconData, size: 28, color: accent.withValues(alpha: 0.8)),
-              const SizedBox(height: 8),
-              Text(b.$2 as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-              Text(b.$3 as String, style: TextStyle(fontSize: 10, color: sub)),
-            ]),
-          )).toList(),
-        ),
-      ],
-    );
-  }
-}
-
-class _MonthStat extends StatelessWidget {
-  const _MonthStat({required this.label, required this.value, required this.sub});
-  final String label, value;
-  final Color sub;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 2),
-      Text(label, style: TextStyle(fontSize: 11, color: sub)),
-    ]);
   }
 }

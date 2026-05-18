@@ -210,7 +210,6 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
     final divColor = context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
 

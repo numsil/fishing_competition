@@ -13,13 +13,11 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../../core/widgets/stat_widgets.dart';
-import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
-import '../../../verification/data/verification_repository.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -195,6 +193,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               onTap: () {
                 Navigator.pop(sheetCtx);
                 _openAdminDm();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_outlined),
+              title: const Text('차단한 사용자'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.blockedUsers);
               },
             ),
             const Divider(height: 1),

@@ -71,6 +71,8 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
     }
   }
 
+  // 갤러리 선택은 부정 조과 방지 정책상 비활성. 정책 변경 시 호출 복원 예정.
+  // ignore: unused_element
   Future<void> _pickFromGallery() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -133,7 +135,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
     final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
     final divColor = context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
 

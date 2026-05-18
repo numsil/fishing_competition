@@ -7,6 +7,7 @@ import '../../../core/utils/image_compress.dart';
 import '../../../core/utils/score_calculator.dart';
 import '../../../core/utils/storage_cleanup.dart';
 import 'post_model.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../verification/data/verification_repository.dart';
 
 part 'feed_repository.g.dart';
@@ -41,6 +42,7 @@ class FeedRepository {
   Future<List<Post>> getPosts({
     int limit = kFeedPageSize,
     DateTime? before,
+    List<String> blockedUserIds = const [],
   }) async {
     var query = _supabase
         .from('posts')
@@ -48,6 +50,11 @@ class FeedRepository {
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false');
+
+    if (blockedUserIds.isNotEmpty) {
+      // PostgREST not-in syntax: not.in.(uuid1,uuid2,...)
+      query = query.not('user_id', 'in', '(${blockedUserIds.join(',')})');
+    }
 
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());
@@ -441,8 +448,11 @@ class FeedPosts extends _$FeedPosts {
     _loading = false;
     final link = ref.keepAlive();
     Timer(const Duration(minutes: 5), link.close);
-    final first = await ref.watch(feedRepositoryProvider)
-        .getPosts(limit: kFeedPageSize);
+    final blocked = await ref.read(authRepositoryProvider).getBlockedUserIds();
+    final first = await ref.watch(feedRepositoryProvider).getPosts(
+          limit: kFeedPageSize,
+          blockedUserIds: blocked,
+        );
     _hasMore = first.length >= kFeedPageSize;
     return first;
   }
@@ -453,10 +463,12 @@ class FeedPosts extends _$FeedPosts {
     if (current == null || current.isEmpty) return;
     _loading = true;
     try {
+      final blocked = await ref.read(authRepositoryProvider).getBlockedUserIds();
       final next = await ref.read(feedRepositoryProvider).getPosts(
-        limit: kFeedPageSize,
-        before: current.last.createdAt,
-      );
+            limit: kFeedPageSize,
+            before: current.last.createdAt,
+            blockedUserIds: blocked,
+          );
       _hasMore = next.length >= kFeedPageSize;
       if (next.isNotEmpty) {
         state = AsyncData([...current, ...next]);
