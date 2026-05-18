@@ -3,7 +3,16 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../auth/data/auth_repository.dart';
+
 part 'dm_repository.g.dart';
+
+/// 차단된 사용자에게 DM 시도 시 던지는 예외. UI 에서 친절한 메시지로 변환.
+class DmBlockedException implements Exception {
+  const DmBlockedException();
+  @override
+  String toString() => '차단한 사용자에게는 메시지를 보낼 수 없습니다';
+}
 
 class DmConversation {
   final String id;
@@ -65,6 +74,10 @@ class DmRepository {
     final myId = _myId;
     if (myId == null) return [];
 
+    // 차단한 사용자와의 대화는 목록에서 숨김
+    final blockedIds = await AuthRepository(_supabase).getBlockedUserIds();
+    final blockedSet = blockedIds.toSet();
+
     final data = await _supabase
         .from('conversations')
         .select(
@@ -92,6 +105,10 @@ class DmRepository {
 
       final otherUserId =
           isUser1 ? row['user2_id'] as String : row['user1_id'] as String;
+
+      // 차단한 사용자와의 대화 숨김
+      if (blockedSet.contains(otherUserId)) continue;
+
       final otherUser =
           (isUser1 ? row['user2'] : row['user1']) as Map<String, dynamic>?;
       if (otherUser == null) continue;
@@ -114,10 +131,16 @@ class DmRepository {
   }
 
   /// 두 유저 사이의 대화방 ID를 반환 (없으면 생성)
-  /// user1_id < user2_id 순으로 항상 정렬해서 저장
+  /// user1_id < user2_id 순으로 항상 정렬해서 저장.
+  /// 차단한 사용자에 대해서는 [DmBlockedException] 던짐.
   Future<String> getOrCreateConversation(String otherUserId) async {
     final myId = _myId;
     if (myId == null) throw Exception('로그인이 필요합니다');
+
+    final blockedIds = await AuthRepository(_supabase).getBlockedUserIds();
+    if (blockedIds.contains(otherUserId)) {
+      throw const DmBlockedException();
+    }
 
     final ids = [myId, otherUserId]..sort();
     final user1Id = ids[0];
@@ -199,6 +222,23 @@ class DmRepository {
   Future<void> sendMessage(String conversationId, String content) async {
     final myId = _myId;
     if (myId == null) throw Exception('로그인이 필요합니다');
+
+    // 차단 체크: 대화 상대가 차단 목록에 있으면 차단 (차단 후 기존 대화창에서
+    // 메시지 보내려는 케이스 차단).
+    final convRow = await _supabase
+        .from('conversations')
+        .select('user1_id, user2_id')
+        .eq('id', conversationId)
+        .maybeSingle();
+    if (convRow != null) {
+      final otherId = (convRow['user1_id'] as String) == myId
+          ? convRow['user2_id'] as String
+          : convRow['user1_id'] as String;
+      final blockedIds = await AuthRepository(_supabase).getBlockedUserIds();
+      if (blockedIds.contains(otherId)) {
+        throw const DmBlockedException();
+      }
+    }
 
     await _supabase.from('messages').insert({
       'conversation_id': conversationId,

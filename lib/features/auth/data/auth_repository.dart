@@ -26,6 +26,23 @@ class MyAccountStatus {
   bool get isAdmin => role == 'admin';
 }
 
+/// 차단한 사용자 (관리 화면용).
+class BlockedUser {
+  final String id;
+  final String username;
+  final String userKey;
+  final String? avatarUrl;
+  final DateTime blockedAt;
+
+  const BlockedUser({
+    required this.id,
+    required this.username,
+    required this.userKey,
+    this.avatarUrl,
+    required this.blockedAt,
+  });
+}
+
 class AuthRepository {
   final SupabaseClient _supabase;
 
@@ -92,6 +109,67 @@ class AuthRepository {
     _cachedStatusAt = null;
   }
 
+  // ─── 사용자 차단 (Play Store UGC 정책) ──────────────────
+  // 차단한 user_id 목록 in-memory 캐시 5분. 피드 필터에서 사용.
+  static List<String>? _cachedBlockedIds;
+  static DateTime? _cachedBlockedIdsAt;
+  static const _blockCacheTtl = Duration(minutes: 5);
+
+  /// 본인이 차단한 user_id 목록. 캐시 5분.
+  /// 비로그인 시 빈 리스트.
+  Future<List<String>> getBlockedUserIds({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _cachedBlockedIds != null &&
+        _cachedBlockedIdsAt != null &&
+        DateTime.now().difference(_cachedBlockedIdsAt!) < _blockCacheTtl) {
+      return _cachedBlockedIds!;
+    }
+    if (_supabase.auth.currentUser == null) return const [];
+    final res = await _supabase
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', _supabase.auth.currentUser!.id);
+    final ids = (res as List<dynamic>)
+        .map((r) => (r as Map<String, dynamic>)['blocked_id'] as String)
+        .toList();
+    _cachedBlockedIds = ids;
+    _cachedBlockedIdsAt = DateTime.now();
+    return ids;
+  }
+
+  /// 차단. RPC 사용 (자기 자신 차단·중복 차단 자동 차단).
+  Future<void> blockUser(String blockedUserId) async {
+    await _supabase.rpc('block_user', params: {'p_blocked_id': blockedUserId});
+    invalidateBlockedIdsCache();
+  }
+
+  /// 차단 해제.
+  Future<void> unblockUser(String blockedUserId) async {
+    await _supabase.rpc('unblock_user', params: {'p_blocked_id': blockedUserId});
+    invalidateBlockedIdsCache();
+  }
+
+  /// 차단 관리 화면용 (username/avatar 포함).
+  Future<List<BlockedUser>> getMyBlockedUsers() async {
+    final res = await _supabase.rpc('get_my_blocked_users');
+    if (res is! List) return const [];
+    return res.map((row) {
+      final r = row as Map<String, dynamic>;
+      return BlockedUser(
+        id: r['blocked_id'] as String,
+        username: (r['username'] as String?) ?? '',
+        userKey: (r['user_key'] as String?) ?? '',
+        avatarUrl: r['avatar_url'] as String?,
+        blockedAt: DateTime.parse(r['blocked_at'] as String).toLocal(),
+      );
+    }).toList();
+  }
+
+  static void invalidateBlockedIdsCache() {
+    _cachedBlockedIds = null;
+    _cachedBlockedIdsAt = null;
+  }
+
   /// 로그인 후 차단 사유 확인 (정지 / 탈퇴). 차단되어야 한다면 사용자에게 보일 메시지 반환.
   Future<String?> _checkLoginBlock() async {
     final s = await getMyAccountStatus(forceRefresh: true);
@@ -117,6 +195,7 @@ class AuthRepository {
     if (user == null) throw Exception('Not logged in');
     await _supabase.rpc('withdraw_user');
     invalidateAccountStatusCache();
+    invalidateBlockedIdsCache();
     await _supabase.auth.signOut();
   }
 
@@ -152,6 +231,7 @@ class AuthRepository {
 
   Future<void> signOut() async {
     invalidateAccountStatusCache();
+    invalidateBlockedIdsCache();
     await _supabase.auth.signOut();
   }
 

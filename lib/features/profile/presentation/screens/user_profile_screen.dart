@@ -10,6 +10,7 @@ import '../../../../core/widgets/score_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../../feed/data/feed_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
@@ -116,6 +117,45 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     }
   }
 
+  Future<void> _confirmBlock(String userId, String username) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('사용자 차단'),
+        content: Text(
+          '$username 님을 차단하시겠어요?\n'
+          '차단하면 이 사용자의 게시물이 더 이상 보이지 않으며,\n'
+          'DM 도 주고받을 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('차단'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      await ref.read(authRepositoryProvider).blockUser(userId);
+      // 피드/DM 목록 즉시 재로딩
+      ref.invalidate(feedPostsProvider);
+      ref.invalidate(dmConversationsProvider);
+      if (mounted) {
+        AppSnackBar.success(context, '차단했습니다');
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '차단 실패: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -185,6 +225,28 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           backgroundColor: context.isDark ? AppColors.darkBg : Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
+          actions: [
+            PopupMenuButton<String>(
+              icon: Icon(LucideIcons.moreVertical,
+                  color: context.isDark ? Colors.white70 : Colors.black87),
+              onSelected: (value) {
+                if (value == 'block') _confirmBlock(profile.id, profile.username);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'block',
+                  child: Row(
+                    children: [
+                      Icon(LucideIcons.ban, size: 18, color: AppColors.error),
+                      SizedBox(width: 8),
+                      Text('차단하기',
+                          style: TextStyle(color: AppColors.error)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         body: NestedScrollView(
           headerSliverBuilder: (context, _) => [

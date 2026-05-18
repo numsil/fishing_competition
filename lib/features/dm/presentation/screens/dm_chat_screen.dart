@@ -96,6 +96,11 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
       await ref
           .read(dmRepositoryProvider)
           .sendMessage(widget.conversation.id, text);
+    } on DmBlockedException catch (e) {
+      if (mounted) {
+        AppSnackBar.warning(context, e.toString());
+        _ctrl.text = text;
+      }
     } catch (e) {
       if (await handleIfBanned(e)) return;
       if (mounted) {

@@ -195,6 +195,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 _openAdminDm();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.block_outlined),
+              title: const Text('차단한 사용자'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                rootContext.push(AppRoutes.blockedUsers);
+              },
+            ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.description_outlined),
