@@ -1399,7 +1399,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _isPublic,
-                    activeThumbColor: context.accentColor,
+                    // ignore: deprecated_member_use
+                    activeColor: context.accentColor,
                     onChanged: _isEnded ? null : (v) => setState(() => _isPublic = v),
                   ),
                   Divider(height: 1, color: divColor),
@@ -1414,7 +1415,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                     value: _allowGallery,
-                    activeThumbColor: context.accentColor,
+                    // ignore: deprecated_member_use
+                    activeColor: context.accentColor,
                     onChanged: _isEnded ? null : (v) => setState(() => _allowGallery = v),
                   ),
                 ],
