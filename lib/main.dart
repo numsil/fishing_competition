@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/deep_link/deep_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/services/last_seen_tracker.dart';
 import 'core/theme/app_theme.dart';
@@ -112,12 +114,34 @@ class _AppRootWidgetState extends State<AppRootWidget>
   }
 }
 
-class FishingCompetitionApp extends ConsumerWidget {
+class FishingCompetitionApp extends ConsumerStatefulWidget {
   const FishingCompetitionApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FishingCompetitionApp> createState() =>
+      _FishingCompetitionAppState();
+}
+
+class _FishingCompetitionAppState extends ConsumerState<FishingCompetitionApp> {
+  DeepLinkService? _deepLinkService;
+  GoRouter? _attachedRouter;
+
+  @override
+  void dispose() {
+    _deepLinkService?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+
+    // 라우터 인스턴스가 바뀌면(ProviderScope 재생성 등) 딥링크 서비스 재바인딩
+    if (_attachedRouter != router) {
+      _deepLinkService?.dispose();
+      _deepLinkService = DeepLinkService(router)..start();
+      _attachedRouter = router;
+    }
 
     return MaterialApp.router(
       title: 'Nakstar',

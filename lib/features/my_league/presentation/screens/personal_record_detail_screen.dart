@@ -427,7 +427,7 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                           children: [
                             TileLayer(
                               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'app.huk.fishing_competition',
+                              userAgentPackageName: 'com.glution.nakstar',
                             ),
                             MarkerLayer(markers: [
                               Marker(

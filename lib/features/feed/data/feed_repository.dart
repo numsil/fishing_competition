@@ -81,6 +81,39 @@ class FeedRepository {
     }).toList();
   }
 
+  /// 딥링크/외부 진입용 단건 조회.
+  /// 삭제·심사반려 게시물은 null.
+  Future<Post?> fetchPostById(String postId) async {
+    final row = await _supabase
+        .from('posts')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
+        .eq('id', postId)
+        .or('is_deleted.is.null,is_deleted.eq.false')
+        .maybeSingle();
+
+    if (row == null) return null;
+
+    final post = Post.fromJson(row);
+    final usersData = row['users'];
+    final String username = (usersData != null && usersData is Map)
+        ? usersData['username'] ?? 'Unknown'
+        : 'Unknown';
+    final String avatarUrl = (usersData != null && usersData is Map)
+        ? usersData['avatar_url'] ?? ''
+        : '';
+
+    final commentsData = row['post_comments'];
+    final int comments = (commentsData is List && commentsData.isNotEmpty)
+        ? commentsData[0]['count'] ?? 0
+        : 0;
+
+    return post.copyWith(
+      username: username,
+      avatarUrl: avatarUrl,
+      commentsCount: comments,
+    );
+  }
+
   Future<void> addComment(String postId, String userId, String content) async {
     await _supabase.from('post_comments').insert({
       'post_id': postId,

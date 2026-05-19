@@ -104,7 +104,7 @@ class LeagueInviteRepository {
     try {
       final convId = await _dm.getOrCreateConversation(inviteeId);
       final msg =
-          '$inviterUsername님이 \'$leagueTitle\' 리그에 초대했어요.\nhuk:///league/detail/$leagueId';
+          '$inviterUsername님이 \'$leagueTitle\' 리그에 초대했어요.\nhttps://nakstar.app/league/$leagueId';
       await _dm.sendMessage(convId, msg);
     } catch (_) {
       // 무시

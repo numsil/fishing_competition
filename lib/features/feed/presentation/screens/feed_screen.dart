@@ -844,7 +844,7 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
               // 공유
               IconButton(
                 onPressed: () {
-                  final link = 'https://huk.app/p/${p.id}';
+                  final link = 'https://nakstar.app/post/${p.id}';
                   Clipboard.setData(ClipboardData(text: link));
                                     AppSnackBar.info(context, '링크가 복사되었습니다');
                 },
@@ -985,7 +985,7 @@ class _MoreMenu extends StatelessWidget {
             color: textColor,
             onTap: () {
               Navigator.pop(context);
-              final link = 'https://huk.app/p/$postId';
+              final link = 'https://nakstar.app/post/$postId';
               Clipboard.setData(ClipboardData(text: link));
                             AppSnackBar.info(context, '링크가 복사되었습니다');
             },

@@ -345,9 +345,11 @@ class _MessageBubble extends StatelessWidget {
   final bool showAvatar;
   final DmConversation conversation;
 
-  // huk:///league/detail/<id> 링크 1건 추출 + 본문에서 제거
-  static final _leagueLinkRe =
-      RegExp(r'huk:\/\/\/league\/detail\/([0-9a-fA-F-]{36})');
+  // 리그 초대 링크 1건 추출 + 본문에서 제거.
+  // 포맷: https://nakstar.app/league/<id>
+  static final _leagueLinkRe = RegExp(
+    r'https:\/\/nakstar\.app\/league\/([0-9a-fA-F-]{36})',
+  );
 
   ({String text, String? leagueId}) _parseContent(String raw) {
     final m = _leagueLinkRe.firstMatch(raw);
