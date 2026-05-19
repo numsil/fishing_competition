@@ -23,6 +23,7 @@ import '../../features/my_league/presentation/screens/personal_record_detail_scr
 import '../../features/my_league/presentation/screens/album_bundle_share_screen.dart';
 import '../../features/feed/data/post_model.dart';
 import '../../features/feed/presentation/screens/post_detail_screen.dart';
+import '../../features/feed/presentation/screens/post_detail_loader_screen.dart';
 import '../../features/upload/presentation/screens/upload_screen.dart';
 import '../../features/ranking/presentation/screens/ranking_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -98,6 +99,15 @@ GoRouter appRouter(Ref ref) {
           final post = state.extra as dynamic;
           return MaterialPage(child: PostDetailScreen(post: post));
         },
+      ),
+      // 피드 상세 딥링크 진입: /post/:id (extra 없이 ID로 fetch)
+      GoRoute(
+        path: '${AppRoutes.postDetail}/:id',
+        pageBuilder: (context, state) => MaterialPage(
+          child: PostDetailLoaderScreen(
+            postId: state.pathParameters['id']!,
+          ),
+        ),
       ),
       // 업로드: ShellRoute 밖 → 하단 탭 없는 풀스크린
       GoRoute(

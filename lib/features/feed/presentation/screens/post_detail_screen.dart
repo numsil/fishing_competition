@@ -214,7 +214,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 const SizedBox(width: 4),
                 IconButton(
                   onPressed: () {
-                    final link = 'https://huk.app/p/${p.id}';
+                    final link = 'https://nakstar.app/post/${p.id}';
                     Clipboard.setData(ClipboardData(text: link));
                                         AppSnackBar.info(context, '링크가 복사되었습니다');
                   },
@@ -386,7 +386,7 @@ class _MoreMenu extends StatelessWidget {
             icon: LucideIcons.link2, label: '링크 복사', color: textColor,
             onTap: () {
               Navigator.pop(context);
-              Clipboard.setData(ClipboardData(text: 'https://huk.app/p/$postId'));
+              Clipboard.setData(ClipboardData(text: 'https://nakstar.app/post/$postId'));
                             AppSnackBar.info(context, '링크가 복사되었습니다');
             },
           ),

@@ -370,7 +370,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           children: [
                             TileLayer(
                               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'com.huk.app',
+                              userAgentPackageName: 'com.glution.nakstar',
                             ),
                             MarkerLayer(
                               markers: [
@@ -906,7 +906,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                             children: [
                               TileLayer(
                                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.huk.app',
+                                userAgentPackageName: 'com.glution.nakstar',
                               ),
                               MarkerLayer(
                                 markers: [

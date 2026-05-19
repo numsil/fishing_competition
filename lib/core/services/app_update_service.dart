@@ -42,6 +42,10 @@ class AppUpdateService {
   String get _env => dotenv.env['APP_ENV'] ?? 'production';
 
   Future<AppVersionInfo?> checkForUpdate() async {
+    // production은 Play Store / App Store가 업데이트를 담당하므로
+    // 자체 APK 다운로드/설치 로직을 비활성화한다 (Play 정책 준수).
+    if (_env == 'production') return null;
+
     try {
       final info = await PackageInfo.fromPlatform();
       final currentBuild = int.tryParse(info.buildNumber) ?? 0;

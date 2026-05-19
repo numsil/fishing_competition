@@ -141,8 +141,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 10. app_versions 테이블 업데이트 (upsert) ─────────────
+      # production 은 Play Store / App Store 가 업데이트를 담당하므로 skip.
+      # (자체 APK sideload 업데이트는 staging 에서만 사용)
       - name: Update app_versions in Supabase
-        if: env.APP_ENV != 'development'
+        if: env.APP_ENV == 'staging'
         run: |
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
 

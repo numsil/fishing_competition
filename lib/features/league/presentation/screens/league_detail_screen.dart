@@ -260,7 +260,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   }
 
   void _shareLeague(BuildContext context) {
-    final link = 'huk:///league/detail/${widget.league.id}';
+    final link = 'https://nakstar.app/league/${widget.league.id}';
     Clipboard.setData(ClipboardData(text: link));
         AppSnackBar.info(context, '초대 링크가 복사되었습니다');
   }

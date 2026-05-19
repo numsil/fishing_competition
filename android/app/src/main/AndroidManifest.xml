@@ -9,8 +9,6 @@
     <!-- 위치(개인 기록 GPS) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <!-- 인앱 업데이트: APK 설치 권한 -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
         android:label="Nakstar"
         android:name="${applicationName}"
@@ -36,12 +34,20 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- 딥링크: huk:///league/detail/:id -->
+            <!-- 커스텀 스킴: nakstar://league/<id>, nakstar://post/<id>, nakstar://user/<id> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="huk" />
+                <data android:scheme="nakstar" />
+            </intent-filter>
+            <!-- Android App Links: https://nakstar.app/{league|post|user}/<id> -->
+            <!-- autoVerify는 .well-known/assetlinks.json 검증 통과 시 작동 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="nakstar.app" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
