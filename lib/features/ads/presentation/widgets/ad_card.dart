@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -206,21 +208,67 @@ class _AdCarousel extends StatefulWidget {
 }
 
 class _AdCarouselState extends State<_AdCarousel> {
+  static const _autoInterval = Duration(seconds: 3, milliseconds: 500);
+  static const _pauseAfterUser = Duration(seconds: 5);
+
   final _ctrl = PageController();
   int _page = 0;
+  Timer? _timer;
+  DateTime? _userInteractedAt;
+  bool _visible = false;
 
   @override
   void dispose() {
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
 
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.urls.length <= 1) return;
+    _timer = Timer.periodic(_autoInterval, (_) {
+      if (!mounted || !_visible || !_ctrl.hasClients) return;
+      final pausedUntil = _userInteractedAt?.add(_pauseAfterUser);
+      if (pausedUntil != null && DateTime.now().isBefore(pausedUntil)) return;
+      final next = (_page + 1) % widget.urls.length;
+      _ctrl.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  void _onVisibility(VisibilityInfo info) {
+    final v = info.visibleFraction >= 0.5;
+    if (v == _visible) return;
+    _visible = v;
+    if (_visible) {
+      _startTimer();
+    } else {
+      _timer?.cancel();
+      _timer = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return VisibilityDetector(
+      key: Key('ad_carousel_${widget.urls.first.hashCode}'),
+      onVisibilityChanged: _onVisibility,
+      child: Stack(
       fit: StackFit.expand,
       children: [
-        PageView.builder(
+        NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n is ScrollStartNotification &&
+                n.dragDetails != null) {
+              _userInteractedAt = DateTime.now();
+            }
+            return false;
+          },
+          child: PageView.builder(
           controller: _ctrl,
           itemCount: widget.urls.length,
           onPageChanged: (i) => setState(() => _page = i),
@@ -230,6 +278,7 @@ class _AdCarouselState extends State<_AdCarousel> {
             errorWidget: (_, __, ___) =>
                 Container(color: const Color(0xFF1A1A1A)),
           ),
+        ),
         ),
         // 페이지 인디케이터
         Positioned(
@@ -255,6 +304,7 @@ class _AdCarouselState extends State<_AdCarousel> {
           ),
         ),
       ],
+    ),
     );
   }
 }

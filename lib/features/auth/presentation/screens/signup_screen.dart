@@ -183,7 +183,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
-                AppSnackBar.error(context, _parseError(e.toString()));
+        AppSnackBar.error(context, _parseError(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
