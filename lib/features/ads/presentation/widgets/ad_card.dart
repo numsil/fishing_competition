@@ -209,12 +209,14 @@ class _AdCarousel extends StatefulWidget {
 
 class _AdCarouselState extends State<_AdCarousel> {
   static const _autoInterval = Duration(milliseconds: 2800);
-  static const _firstDelay = Duration(milliseconds: 1500);
+  static const _firstDelay = Duration(milliseconds: 900);
   static const _pauseAfterUser = Duration(seconds: 4);
-  static const _slideDuration = Duration(milliseconds: 650);
+  static const _slideDuration = Duration(milliseconds: 600);
+  static const _initialOffset = 10000; // 무한 스크롤용 가상 시작점
 
-  final _ctrl = PageController();
-  int _page = 0;
+  late final PageController _ctrl =
+      PageController(initialPage: _initialOffset);
+  int _page = _initialOffset;
   Timer? _timer;
   Timer? _firstTimer;
   DateTime? _userInteractedAt;
@@ -232,9 +234,8 @@ class _AdCarouselState extends State<_AdCarousel> {
     if (!mounted || !_visible || !_ctrl.hasClients) return;
     final pausedUntil = _userInteractedAt?.add(_pauseAfterUser);
     if (pausedUntil != null && DateTime.now().isBefore(pausedUntil)) return;
-    final next = (_page + 1) % widget.urls.length;
     _ctrl.animateToPage(
-      next,
+      _page + 1,
       duration: _slideDuration,
       curve: Curves.easeInOutCubic,
     );
@@ -282,10 +283,10 @@ class _AdCarouselState extends State<_AdCarousel> {
           },
           child: PageView.builder(
           controller: _ctrl,
-          itemCount: widget.urls.length,
+          itemCount: null,
           onPageChanged: (i) => setState(() => _page = i),
           itemBuilder: (_, i) => CachedNetworkImage(
-            imageUrl: widget.urls[i],
+            imageUrl: widget.urls[i % widget.urls.length],
             fit: BoxFit.cover,
             errorWidget: (_, __, ___) =>
                 Container(color: const Color(0xFF1A1A1A)),
@@ -300,7 +301,7 @@ class _AdCarouselState extends State<_AdCarousel> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(widget.urls.length, (i) {
-              final selected = i == _page;
+              final selected = i == _page % widget.urls.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 width: selected ? 8 : 6,
