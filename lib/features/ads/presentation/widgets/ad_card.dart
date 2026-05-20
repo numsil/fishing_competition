@@ -209,7 +209,7 @@ class _AdCarousel extends StatefulWidget {
 
 class _AdCarouselState extends State<_AdCarousel> {
   static const _autoInterval = Duration(milliseconds: 2800);
-  static const _firstDelay = Duration(milliseconds: 900);
+  static const _firstDelay = Duration(milliseconds: 2200);
   static const _pauseAfterUser = Duration(seconds: 4);
   static const _slideDuration = Duration(milliseconds: 600);
   static const _initialOffset = 10000; // 무한 스크롤용 가상 시작점
