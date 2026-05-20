@@ -208,35 +208,45 @@ class _AdCarousel extends StatefulWidget {
 }
 
 class _AdCarouselState extends State<_AdCarousel> {
-  static const _autoInterval = Duration(seconds: 3, milliseconds: 500);
-  static const _pauseAfterUser = Duration(seconds: 5);
+  static const _autoInterval = Duration(milliseconds: 2800);
+  static const _firstDelay = Duration(milliseconds: 1500);
+  static const _pauseAfterUser = Duration(seconds: 4);
+  static const _slideDuration = Duration(milliseconds: 650);
 
   final _ctrl = PageController();
   int _page = 0;
   Timer? _timer;
+  Timer? _firstTimer;
   DateTime? _userInteractedAt;
   bool _visible = false;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _firstTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
 
+  void _slideNext() {
+    if (!mounted || !_visible || !_ctrl.hasClients) return;
+    final pausedUntil = _userInteractedAt?.add(_pauseAfterUser);
+    if (pausedUntil != null && DateTime.now().isBefore(pausedUntil)) return;
+    final next = (_page + 1) % widget.urls.length;
+    _ctrl.animateToPage(
+      next,
+      duration: _slideDuration,
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   void _startTimer() {
     _timer?.cancel();
+    _firstTimer?.cancel();
     if (widget.urls.length <= 1) return;
-    _timer = Timer.periodic(_autoInterval, (_) {
-      if (!mounted || !_visible || !_ctrl.hasClients) return;
-      final pausedUntil = _userInteractedAt?.add(_pauseAfterUser);
-      if (pausedUntil != null && DateTime.now().isBefore(pausedUntil)) return;
-      final next = (_page + 1) % widget.urls.length;
-      _ctrl.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
+    _firstTimer = Timer(_firstDelay, () {
+      _slideNext();
+      _timer = Timer.periodic(_autoInterval, (_) => _slideNext());
     });
   }
 
@@ -249,6 +259,8 @@ class _AdCarouselState extends State<_AdCarousel> {
     } else {
       _timer?.cancel();
       _timer = null;
+      _firstTimer?.cancel();
+      _firstTimer = null;
     }
   }
 
