@@ -851,8 +851,9 @@ class _BottomBar extends ConsumerWidget {
       final pStatus = partStatus.valueOrNull;
       if (invite != null && pStatus != 'approved') {
         return SafeArea(
+          minimum: const EdgeInsets.only(bottom: 16),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             child: _InviteResponseSection(invite: invite, league: league),
           ),
         );
@@ -866,8 +867,9 @@ class _BottomBar extends ConsumerWidget {
         data: (status) {
           if (status != 'approved') return const SizedBox.shrink();
           return SafeArea(
+            minimum: const EdgeInsets.only(bottom: 16),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Row(
                 children: [
                   // 앨범 버튼 (리그 설정에서 허용한 경우만)
@@ -960,8 +962,9 @@ class _BottomBar extends ConsumerWidget {
 
     // ── 모집중: 참가 신청 / 참가 취소 ────────────────
     return SafeArea(
+      minimum: const EdgeInsets.only(bottom: 16),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
         child: ref.watch(myParticipantStatusProvider(league.id)).when(
           data: (status) {
             // 승인 대기 중 → 안내 + 취소 버튼

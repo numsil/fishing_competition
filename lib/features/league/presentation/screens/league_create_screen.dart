@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,7 +89,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _nameCtrl.text = l.title;
       _locationCtrl.text = l.location;
       _maxCtrl.text = l.maxParticipants.toString();
-      _feeCtrl.text = l.entryFee.toString();
+      _feeCtrl.text = l.entryFee > 0 ? NumberFormat('#,###').format(l.entryFee) : '';
       _shortDescCtrl.text = l.shortDescription ?? '';
       _introCtrl.text = l.description ?? '';
       _dateRange = DateTimeRange(start: l.startTime, end: l.endTime);
@@ -181,7 +182,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           lng: _selectedLatLng?.longitude,
           startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
           endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
-          entryFee: int.tryParse(_feeCtrl.text) ?? widget.league!.entryFee,
+          entryFee: int.tryParse(_feeCtrl.text.replaceAll(',', '')) ?? widget.league!.entryFee,
           maxParticipants: int.tryParse(_maxCtrl.text) ?? widget.league!.maxParticipants,
           rule: _rule,
           catchLimit: _catchLimit,
@@ -215,7 +216,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           lng: _selectedLatLng?.longitude,
           startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
           endTime: _dateRange != null ? _applyTime(_dateRange!.end, _endTimeCtrl.text) : null,
-          entryFee: int.tryParse(_feeCtrl.text) ?? 0,
+          entryFee: int.tryParse(_feeCtrl.text.replaceAll(',', '')) ?? 0,
           maxParticipants: int.parse(_maxCtrl.text),
           fishTypes: '배스',
           rule: _rule,
@@ -1100,7 +1101,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         controller: _feeCtrl,
                         readOnly: _isEnded,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [_ThousandsFormatter()],
                         decoration: const InputDecoration(hintText: '0', suffixText: '원'),
                       ),
                     ),
@@ -1169,7 +1170,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           Expanded(
                             child: TextField(
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [_ThousandsFormatter()],
                               style: const TextStyle(fontSize: 14),
                               decoration: const InputDecoration(
                                 hintText: '0',
@@ -1504,6 +1505,22 @@ class _PrizeItem {
   _PrizeItem({required this.rank, required this.value});
   String rank;
   String value;
+}
+
+// ── 천 단위 콤마 자동 포맷 입력 (금액용) ──
+class _ThousandsFormatter extends TextInputFormatter {
+  final NumberFormat _fmt = NumberFormat('#,###');
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return const TextEditingValue(text: '');
+    final formatted = _fmt.format(int.parse(digits));
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
 }
 
 // ── HH:mm 자동 포맷 입력 ──
