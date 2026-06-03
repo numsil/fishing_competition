@@ -14,6 +14,14 @@ part 'feed_repository.g.dart';
 
 const int kFeedPageSize = 20;
 
+/// getPosts 반환값 — 포스트 목록 + 다음 페이지 커서.
+typedef FeedPage = ({
+  List<Post> posts,
+  double? lastScore,
+  DateTime? lastCreatedAt,
+  String? lastId,
+});
+
 /// 업로드 시 사진/동영상 혼합 미디어 한 항목.
 /// - image: [file]은 원본 이미지(압축은 repo에서 처리)
 /// - video: [file]은 압축 완료된 mp4. [thumbnailBytes]는 썸네일 jpg 바이트.
@@ -39,58 +47,59 @@ class FeedRepository {
 
   FeedRepository(this._supabase);
 
-  Future<List<Post>> getPosts({
+  /// 인기도 혼합 정렬 피드 (RPC). 커서 기반 페이지네이션.
+  /// 점수 = 좋아요(0.4) + 댓글(0.3) + 최신성(0.3), 7일 감쇠.
+  Future<FeedPage> getPosts({
     int limit = kFeedPageSize,
-    DateTime? before,
+    double? beforeScore,
+    DateTime? beforeCreatedAt,
+    String? beforeId,
     List<String> blockedUserIds = const [],
   }) async {
-    var query = _supabase
-        .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url, user_key), post_comments(count), post_likes(count)')
-        .isFilter('league_id', null)
-        .eq('is_personal_record', false)
-        .or('is_deleted.is.null,is_deleted.eq.false');
-
-    if (blockedUserIds.isNotEmpty) {
-      // PostgREST not-in syntax: not.in.(uuid1,uuid2,...)
-      query = query.not('user_id', 'in', '(${blockedUserIds.join(',')})');
+    final params = <String, dynamic>{'p_limit': limit};
+    if (beforeScore != null) params['p_before_score'] = beforeScore;
+    if (beforeCreatedAt != null) {
+      params['p_before_created_at'] = beforeCreatedAt.toUtc().toIso8601String();
     }
+    if (beforeId != null) params['p_before_id'] = beforeId;
+    if (blockedUserIds.isNotEmpty) params['p_blocked_user_ids'] = blockedUserIds;
 
-    if (before != null) {
-      query = query.lt('created_at', before.toUtc().toIso8601String());
-    }
+    final response = await _supabase.rpc('get_scored_feed_posts', params: params);
+    final rows = (response as List).cast<Map<String, dynamic>>();
 
-    final response = await query
-        .order('created_at', ascending: false)
-        .limit(limit);
-
-    final posts = response.map((data) {
+    final posts = rows.map((data) {
       final post = Post.fromJson(data);
-      final usersData = data['users'];
-      final String username = (usersData != null && usersData is Map) ? usersData['username'] ?? 'Unknown' : 'Unknown';
-      final String avatarUrl = (usersData != null && usersData is Map) ? usersData['avatar_url'] ?? '' : '';
-      final String userKey = (usersData != null && usersData is Map) ? usersData['user_key'] ?? '' : '';
-
-      final commentsData = data['post_comments'];
-      final int comments = (commentsData is List && commentsData.isNotEmpty) ? commentsData[0]['count'] ?? 0 : 0;
-
-      final likesData = data['post_likes'];
-      final int likes = (likesData is List && likesData.isNotEmpty) ? likesData[0]['count'] ?? 0 : 0;
-
       return post.copyWith(
-        username: username,
-        userKey: userKey,
-        avatarUrl: avatarUrl,
-        commentsCount: comments,
-        likeCount: likes,
+        username: data['username'] as String? ?? 'Unknown',
+        userKey: data['user_key'] as String? ?? '',
+        avatarUrl: data['avatar_url'] as String? ?? '',
+        commentsCount: (data['comment_count'] as num?)?.toInt() ?? 0,
+        likeCount: (data['like_count'] as num?)?.toInt() ?? 0,
       );
     }).toList();
 
     // 현재 유저가 좋아요 누른 글 표시 (페이지당 1쿼리, N+1 없음)
     final likedIds = await _likedPostIds(posts.map((p) => p.id).toList());
-    return [
+    final hydrated = [
       for (final p in posts) p.copyWith(isLiked: likedIds.contains(p.id)),
     ];
+
+    // 커서: 마지막 행의 feed_score + created_at + id
+    double? lastScore;
+    DateTime? lastCreatedAt;
+    String? lastId;
+    if (rows.isNotEmpty) {
+      lastScore = (rows.last['feed_score'] as num?)?.toDouble();
+      lastCreatedAt = hydrated.last.createdAt;
+      lastId = hydrated.last.id;
+    }
+
+    return (
+      posts: hydrated,
+      lastScore: lastScore,
+      lastCreatedAt: lastCreatedAt,
+      lastId: lastId,
+    );
   }
 
   /// 주어진 게시물들 중 현재 로그인 유저가 좋아요 누른 post_id 집합.
@@ -542,21 +551,32 @@ class FeedPosts extends _$FeedPosts {
   bool _hasMore = true;
   bool _loading = false;
 
+  // 페이지네이션 커서 (RPC 복합 커서)
+  double? _lastScore;
+  DateTime? _lastCreatedAt;
+  String? _lastId;
+
   bool get hasMore => _hasMore;
 
   @override
   Future<List<Post>> build() async {
     _hasMore = true;
     _loading = false;
+    _lastScore = null;
+    _lastCreatedAt = null;
+    _lastId = null;
     final link = ref.keepAlive();
     Timer(const Duration(minutes: 5), link.close);
     final blocked = await ref.read(authRepositoryProvider).getBlockedUserIds();
-    final first = await ref.watch(feedRepositoryProvider).getPosts(
+    final page = await ref.watch(feedRepositoryProvider).getPosts(
           limit: kFeedPageSize,
           blockedUserIds: blocked,
         );
-    _hasMore = first.length >= kFeedPageSize;
-    return first;
+    _lastScore = page.lastScore;
+    _lastCreatedAt = page.lastCreatedAt;
+    _lastId = page.lastId;
+    _hasMore = page.posts.length >= kFeedPageSize;
+    return page.posts;
   }
 
   Future<void> loadMore() async {
@@ -566,14 +586,19 @@ class FeedPosts extends _$FeedPosts {
     _loading = true;
     try {
       final blocked = await ref.read(authRepositoryProvider).getBlockedUserIds();
-      final next = await ref.read(feedRepositoryProvider).getPosts(
+      final page = await ref.read(feedRepositoryProvider).getPosts(
             limit: kFeedPageSize,
-            before: current.last.createdAt,
+            beforeScore: _lastScore,
+            beforeCreatedAt: _lastCreatedAt,
+            beforeId: _lastId,
             blockedUserIds: blocked,
           );
-      _hasMore = next.length >= kFeedPageSize;
-      if (next.isNotEmpty) {
-        state = AsyncData([...current, ...next]);
+      _lastScore = page.lastScore;
+      _lastCreatedAt = page.lastCreatedAt;
+      _lastId = page.lastId;
+      _hasMore = page.posts.length >= kFeedPageSize;
+      if (page.posts.isNotEmpty) {
+        state = AsyncData([...current, ...page.posts]);
       }
     } finally {
       _loading = false;

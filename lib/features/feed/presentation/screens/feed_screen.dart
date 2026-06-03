@@ -515,50 +515,13 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ── 팔로우 바 ──────────────────────────────────────────
 // 내가 팔로우한 유저 중 랜덤 8명을 노출. 30초마다 셔플.
-class _FollowingBar extends ConsumerStatefulWidget {
+class _FollowingBar extends ConsumerWidget {
   const _FollowingBar();
 
-  @override
-  ConsumerState<_FollowingBar> createState() => _FollowingBarState();
-}
-
-class _FollowingBarState extends ConsumerState<_FollowingBar> {
   static const int _maxVisible = 8;
-  static const Duration _rotateEvery = Duration(seconds: 30);
-
-  Timer? _timer;
-  List<FollowUser> _sample = const [];
-  List<FollowUser> _lastSource = const [];
 
   @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(_rotateEvery, (_) => _shuffle());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _shuffle() {
-    if (_lastSource.isEmpty) return;
-    if (_lastSource.length <= _maxVisible) return;
-    final next = List<FollowUser>.from(_lastSource)..shuffle(Random());
-    if (mounted) {
-      setState(() => _sample = next.take(_maxVisible).toList());
-    }
-  }
-
-  List<FollowUser> _initialSample(List<FollowUser> source) {
-    if (source.length <= _maxVisible) return source;
-    final shuffled = List<FollowUser>.from(source)..shuffle(Random());
-    return shuffled.take(_maxVisible).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = context.isDark;
     final asyncFollowings = ref.watch(myFollowingsForFeedProvider);
     final sub = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888);
@@ -567,12 +530,8 @@ class _FollowingBarState extends ConsumerState<_FollowingBar> {
       data: (followings) {
         if (followings.isEmpty) return const SizedBox.shrink();
 
-        // 소스가 바뀌면 샘플 재계산
-        if (!identical(followings, _lastSource)) {
-          _lastSource = followings;
-          _sample = _initialSample(followings);
-        }
-        final list = _sample.isEmpty ? followings : _sample;
+        // RPC에서 이미 last_post_at DESC 정렬됨 → 앞 8명만 표시
+        final list = followings.take(_maxVisible).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

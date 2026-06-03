@@ -14,6 +14,7 @@ class FollowUser {
   final bool isFollowing; // 현재 로그인 유저가 이 사람을 팔로우 중인지
   final DateTime followedAt;
   final int maxScore; // 피드 바 티어 테두리용: max(league_score, angler_score)
+  final DateTime? lastPostAt; // 가장 최근 피드 게시 시각 (정렬용)
 
   FollowUser({
     required this.userId,
@@ -24,9 +25,11 @@ class FollowUser {
     required this.isFollowing,
     required this.followedAt,
     this.maxScore = 0,
+    this.lastPostAt,
   });
 
   factory FollowUser.fromJson(Map<String, dynamic> json) {
+    final lastPostAtRaw = json['last_post_at'] as String?;
     return FollowUser(
       userId: json['user_id'] as String,
       username: json['username'] as String,
@@ -36,6 +39,7 @@ class FollowUser {
       isFollowing: (json['is_following'] as bool?) ?? false,
       followedAt: DateTime.parse(json['followed_at'] as String).toLocal(),
       maxScore: (json['max_score'] as num?)?.toInt() ?? 0,
+      lastPostAt: lastPostAtRaw != null ? DateTime.parse(lastPostAtRaw).toLocal() : null,
     );
   }
 
@@ -49,6 +53,7 @@ class FollowUser {
       isFollowing: isFollowing ?? this.isFollowing,
       followedAt: followedAt,
       maxScore: maxScore,
+      lastPostAt: lastPostAt,
     );
   }
 }
