@@ -46,7 +46,7 @@ class FeedRepository {
   }) async {
     var query = _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count), post_likes(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false');
@@ -64,7 +64,7 @@ class FeedRepository {
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return response.map((data) {
+    final posts = response.map((data) {
       final post = Post.fromJson(data);
       final usersData = data['users'];
       final String username = (usersData != null && usersData is Map) ? usersData['username'] ?? 'Unknown' : 'Unknown';
@@ -73,12 +73,53 @@ class FeedRepository {
       final commentsData = data['post_comments'];
       final int comments = (commentsData is List && commentsData.isNotEmpty) ? commentsData[0]['count'] ?? 0 : 0;
 
+      final likesData = data['post_likes'];
+      final int likes = (likesData is List && likesData.isNotEmpty) ? likesData[0]['count'] ?? 0 : 0;
+
       return post.copyWith(
         username: username,
         avatarUrl: avatarUrl,
         commentsCount: comments,
+        likeCount: likes,
       );
     }).toList();
+
+    // 현재 유저가 좋아요 누른 글 표시 (페이지당 1쿼리, N+1 없음)
+    final likedIds = await _likedPostIds(posts.map((p) => p.id).toList());
+    return [
+      for (final p in posts) p.copyWith(isLiked: likedIds.contains(p.id)),
+    ];
+  }
+
+  /// 주어진 게시물들 중 현재 로그인 유저가 좋아요 누른 post_id 집합.
+  Future<Set<String>> _likedPostIds(List<String> postIds) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null || postIds.isEmpty) return <String>{};
+    final rows = await _supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', uid)
+        .inFilter('post_id', postIds);
+    return rows.map((r) => r['post_id'] as String).toSet();
+  }
+
+  /// 좋아요 토글. [like]가 true면 추가, false면 취소.
+  /// post_likes의 UNIQUE(post_id, user_id) 제약이 중복을 차단한다.
+  Future<void> toggleLike(String postId, bool like) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) return;
+    if (like) {
+      await _supabase
+          .from('post_likes')
+          .upsert({'post_id': postId, 'user_id': uid},
+              onConflict: 'post_id,user_id', ignoreDuplicates: true);
+    } else {
+      await _supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', uid);
+    }
   }
 
   /// 딥링크/외부 진입용 단건 조회.
@@ -86,7 +127,7 @@ class FeedRepository {
   Future<Post?> fetchPostById(String postId) async {
     final row = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count), post_likes(count)')
         .eq('id', postId)
         .or('is_deleted.is.null,is_deleted.eq.false')
         .maybeSingle();
@@ -107,10 +148,19 @@ class FeedRepository {
         ? commentsData[0]['count'] ?? 0
         : 0;
 
+    final likesData = row['post_likes'];
+    final int likes = (likesData is List && likesData.isNotEmpty)
+        ? likesData[0]['count'] ?? 0
+        : 0;
+
+    final likedIds = await _likedPostIds([postId]);
+
     return post.copyWith(
       username: username,
       avatarUrl: avatarUrl,
       commentsCount: comments,
+      likeCount: likes,
+      isLiked: likedIds.contains(postId),
     );
   }
 
@@ -508,6 +558,35 @@ class FeedPosts extends _$FeedPosts {
       }
     } finally {
       _loading = false;
+    }
+  }
+
+  /// 좋아요 토글 — 낙관적 업데이트(즉시 반영 → 서버 반영 → 실패 시 롤백).
+  Future<void> toggleLike(String postId) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final idx = current.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    final target = current[idx];
+    final newLiked = !target.isLiked;
+    final newCount =
+        newLiked ? target.likeCount + 1 : (target.likeCount > 0 ? target.likeCount - 1 : 0);
+
+    final optimistic = [...current];
+    optimistic[idx] = target.copyWith(isLiked: newLiked, likeCount: newCount);
+    state = AsyncData(optimistic);
+
+    try {
+      await ref.read(feedRepositoryProvider).toggleLike(postId, newLiked);
+    } catch (_) {
+      // 롤백: id로 다시 찾아 원래 값 복원
+      final rb = state.valueOrNull;
+      if (rb == null) return;
+      final i = rb.indexWhere((p) => p.id == postId);
+      if (i == -1) return;
+      final reverted = [...rb];
+      reverted[i] = reverted[i].copyWith(isLiked: target.isLiked, likeCount: target.likeCount);
+      state = AsyncData(reverted);
     }
   }
 }

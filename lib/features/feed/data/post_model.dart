@@ -48,6 +48,8 @@ abstract class Post with _$Post {
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('Unknown') String username,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int commentsCount,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String avatarUrl,
+    @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int likeCount,
+    @JsonKey(includeFromJson: false, includeToJson: false) @Default(false) bool isLiked,
   }) = _Post;
 
   factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);

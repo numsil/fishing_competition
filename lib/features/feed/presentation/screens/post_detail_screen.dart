@@ -33,6 +33,30 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final List<_Comment> _comments = [];
+  late bool _isLiked = widget.post.isLiked;
+  late int _likeCount = widget.post.likeCount;
+
+  /// 좋아요 토글 — 낙관적 업데이트 + 실패 시 롤백.
+  Future<void> _toggleLike() async {
+    final prevLiked = _isLiked;
+    final prevCount = _likeCount;
+    setState(() {
+      _isLiked = !prevLiked;
+      _likeCount = _isLiked ? prevCount + 1 : (prevCount > 0 ? prevCount - 1 : 0);
+    });
+    try {
+      await ref.read(feedRepositoryProvider).toggleLike(widget.post.id, _isLiked);
+      ref.invalidate(feedPostsProvider);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLiked = prevLiked;
+          _likeCount = prevCount;
+        });
+      }
+      await handleIfBanned(e);
+    }
+  }
 
   String _stripHashtags(String caption) {
     return caption.split(RegExp(r'\s+')).where((w) => !w.startsWith('#')).join(' ').trim();
@@ -205,6 +229,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               color: bgColor,
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
               child: Row(children: [
+                IconButton(
+                  onPressed: _toggleLike,
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: _isLiked ? AppColors.error : iconColor,
+                    size: 24,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                ),
+                if (_likeCount > 0) ...[
+                  const SizedBox(width: 2),
+                  Text('$_likeCount',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: iconColor)),
+                ],
+                const SizedBox(width: 10),
                 IconButton(
                   onPressed: _openComments,
                   icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),

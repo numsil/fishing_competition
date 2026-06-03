@@ -833,6 +833,27 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
           child: Row(
             children: [
+              // 좋아요
+              IconButton(
+                onPressed: () =>
+                    ref.read(feedPostsProvider.notifier).toggleLike(p.id),
+                icon: Icon(
+                  p.isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: p.isLiked ? AppColors.error : iconColor,
+                  size: 24,
+                ),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
+              if (p.likeCount > 0) ...[
+                const SizedBox(width: 2),
+                Text(
+                  '${p.likeCount}',
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: iconColor),
+                ),
+              ],
+              const SizedBox(width: 10),
               // 댓글
               IconButton(
                 onPressed: _openComments,
