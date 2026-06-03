@@ -41,6 +41,35 @@ class ReportRepository {
       'reason': reason,
     });
   }
+
+  Future<void> reportComment({
+    required String commentId,
+    String? postId,
+    required String reason,
+  }) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) throw const NotAuthenticatedException();
+
+    final existing = await _supabase
+        .from('reports')
+        .select('id')
+        .eq('comment_id', commentId)
+        .eq('reporter_id', uid)
+        .eq('status', 'pending')
+        .limit(1)
+        .maybeSingle();
+
+    if (existing != null) {
+      throw const AlreadyReportedException();
+    }
+
+    await _supabase.from('reports').insert({
+      'comment_id': commentId,
+      if (postId != null) 'post_id': postId,
+      'reporter_id': uid,
+      'reason': reason,
+    });
+  }
 }
 
 @riverpod

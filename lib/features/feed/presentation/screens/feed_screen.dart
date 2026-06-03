@@ -16,6 +16,7 @@ import '../../../follow/data/follow_repository.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/utils/time_ago.dart';
 import '../../../../core/widgets/menu_item.dart';
@@ -767,6 +768,8 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
                           ),
                         ],
                       ),
+                      if (p.userKey.isNotEmpty)
+                        Text('@${p.userKey}', style: TextStyle(fontSize: 11, color: subColor)),
                       if (p.location != null)
                         Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
                     ],
@@ -1067,8 +1070,10 @@ class _CommentSheet extends ConsumerStatefulWidget {
 class _CommentSheetState extends ConsumerState<_CommentSheet> {
   final _ctrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _focusNode = FocusNode();
   late List<_Comment> _localComments;
   String? _replyTo;
+  String? _editingId; // 수정 중인 댓글 id (null이면 일반 작성 모드)
   bool _isLoading = true;
 
   @override
@@ -1082,7 +1087,74 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
   void dispose() {
     _ctrl.dispose();
     _scrollCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  /// "수정" 탭 → 해당 댓글 본문을 입력창에 불러오고 수정 모드 진입.
+  void _startEditComment(_Comment comment) {
+    if (comment.id.isEmpty) return;
+    setState(() {
+      _editingId = comment.id;
+      _replyTo = null;
+      _ctrl.text = comment.text;
+      _ctrl.selection = TextSelection.fromPosition(
+        TextPosition(offset: _ctrl.text.length),
+      );
+    });
+    _focusNode.requestFocus();
+  }
+
+  void _cancelEdit() {
+    setState(() => _editingId = null);
+    _ctrl.clear();
+    _focusNode.unfocus();
+  }
+
+  /// 댓글 꾹 누르면 뜨는 액션 시트. 본인 댓글: 수정/삭제, 남의 댓글: 신고.
+  void _showCommentActions(_Comment comment) {
+    if (comment.id.isEmpty) return;
+    final isDark = widget.isDark;
+    final bg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        Widget action(IconData icon, String label, Color color, VoidCallback onTap) {
+          return ListTile(
+            leading: Icon(icon, color: color, size: 22),
+            title: Text(label,
+                style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w600)),
+            onTap: () {
+              Navigator.pop(ctx);
+              onTap();
+            },
+          );
+        }
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              if (comment.isMe) ...[
+                action(LucideIcons.pencil, '수정', textColor, () => _startEditComment(comment)),
+                action(LucideIcons.trash2, '삭제', AppColors.error, () => _confirmDeleteComment(comment)),
+              ] else
+                action(LucideIcons.flag, '신고', AppColors.error, () {
+                  ReportReasonSheet.showForComment(context, comment.id, postId: widget.post.id);
+                }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadComments() async {
@@ -1103,16 +1175,38 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     final usersData = data['users'] as Map?;
     final username = usersData?['username'] as String? ?? '알 수 없음';
     final avatarUrl = usersData?['avatar_url'] as String? ?? '';
+    final userKey = usersData?['user_key'] as String? ?? '';
     final userId = data['user_id'] as String? ?? '';
     final createdAt = DateTime.tryParse(data['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
     final timeAgo = formatTimeAgo(createdAt);
     return _Comment(
+      id: data['id'] as String? ?? '',
       user: username,
       text: data['content'] as String? ?? '',
       timeAgo: timeAgo,
       isMe: userId == currentUserId,
       userId: userId,
+      userKey: userKey,
       avatarUrl: avatarUrl,
+    );
+  }
+
+  Future<void> _confirmDeleteComment(_Comment comment) async {
+    if (comment.id.isEmpty) return;
+    showDeleteConfirmSheet(
+      context,
+      title: '댓글 삭제',
+      content: '이 댓글을 삭제하시겠습니까?',
+      onConfirmed: () async {
+        try {
+          await ref.read(feedRepositoryProvider).deleteComment(comment.id);
+          if (!mounted) return;
+          setState(() => _localComments.removeWhere((c) => c.id == comment.id));
+          ref.invalidate(feedPostsProvider);
+        } catch (e) {
+          if (mounted) AppSnackBar.error(context, '삭제 실패: $e');
+        }
+      },
     );
   }
 
@@ -1120,12 +1214,32 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
 
+    // 수정 모드: 새 댓글이 아니라 기존 댓글 본문을 갱신
+    if (_editingId != null) {
+      final id = _editingId!;
+      setState(() => _editingId = null);
+      _ctrl.clear();
+      _focusNode.unfocus();
+      try {
+        await ref.read(feedRepositoryProvider).updateComment(id, text);
+        await _loadComments();
+      } catch (e) {
+        if (await handleIfBanned(e)) return;
+        if (mounted) AppSnackBar.error(context, '댓글 수정 실패: $e');
+      }
+      return;
+    }
+
     final user = ref.read(currentUserProvider);
     final username = user?.userMetadata?['username'] as String? ?? '나';
 
+    // 답글이면 @멘션을 붙인 본문을 화면·DB에 동일하게 사용한다.
+    // (이전엔 화면엔 @멘션을 표시하면서 DB엔 원문만 저장 → 재진입 시 일반 댓글로 보였음)
+    final content = _replyTo != null ? '@$_replyTo $text' : text;
+
     final comment = _Comment(
       user: username,
-      text: _replyTo != null ? '@$_replyTo $text' : text,
+      text: content,
       timeAgo: '방금',
       isMe: true,
     );
@@ -1141,7 +1255,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
         await ref.read(feedRepositoryProvider).addComment(
           widget.post.id,
           user.id,
-          text,
+          content,
         );
         ref.invalidate(feedPostsProvider);
         await _loadComments();
@@ -1222,8 +1336,10 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                               accent: accent,
                               subColor: subColor,
                               onReply: (user) {
+                                if (_editingId != null) _cancelEdit();
                                 setState(() => _replyTo = user);
                               },
+                              onLongPress: () => _showCommentActions(_localComments[i]),
                             ),
                           ),
               ),
@@ -1242,6 +1358,28 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () => setState(() => _replyTo = null),
+                        child: Icon(LucideIcons.x, size: 16, color: subColor),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 수정 중 표시
+              if (_editingId != null)
+                Container(
+                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(LucideIcons.pencil, size: 14, color: subColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        '댓글 수정 중',
+                        style: TextStyle(fontSize: 12, color: subColor),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: _cancelEdit,
                         child: Icon(LucideIcons.x, size: 16, color: subColor),
                       ),
                     ],
@@ -1283,9 +1421,10 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                       Expanded(
                         child: TextField(
                           controller: _ctrl,
+                          focusNode: _focusNode,
                           style: const TextStyle(fontSize: 14),
                           decoration: InputDecoration(
-                            hintText: '댓글 달기...',
+                            hintText: _editingId != null ? '댓글 수정...' : '댓글 달기...',
                             hintStyle: TextStyle(color: subColor, fontSize: 14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(22),
@@ -1312,7 +1451,7 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                         builder: (_, val, __) => GestureDetector(
                           onTap: val.text.trim().isNotEmpty ? _submit : null,
                           child: Text(
-                            '게시',
+                            _editingId != null ? '수정' : '게시',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -1342,12 +1481,14 @@ class _CommentTile extends StatefulWidget {
     required this.accent,
     required this.subColor,
     required this.onReply,
+    required this.onLongPress,
   });
   final _Comment comment;
   final bool isDark;
   final Color accent;
   final Color subColor;
   final ValueChanged<String> onReply;
+  final VoidCallback onLongPress;
 
   @override
   State<_CommentTile> createState() => _CommentTileState();
@@ -1365,9 +1506,12 @@ class _CommentTileState extends State<_CommentTile> {
       }
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: widget.onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 아바타
@@ -1413,7 +1557,7 @@ class _CommentTileState extends State<_CommentTile> {
                     Text(c.timeAgo, style: TextStyle(fontSize: 11, color: widget.subColor)),
                     const SizedBox(width: 14),
                     GestureDetector(
-                      onTap: () => widget.onReply(c.user),
+                      onTap: () => widget.onReply(c.userKey.isNotEmpty ? c.userKey : c.user),
                       child: Text(
                         '답글 달기',
                         style: TextStyle(
@@ -1430,6 +1574,7 @@ class _CommentTileState extends State<_CommentTile> {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -1437,15 +1582,19 @@ class _CommentTileState extends State<_CommentTile> {
 // ── 데이터 모델 ─────────────────────────────────────────
 class _Comment {
   const _Comment({
+    this.id = '',
     required this.user,
     required this.text,
     required this.timeAgo,
     this.isMe = false,
     this.userId = '',
+    this.userKey = '',
     this.avatarUrl = '',
   });
+  final String id;
   final String user, text, timeAgo;
   final bool isMe;
   final String userId;
+  final String userKey;
   final String avatarUrl;
 }

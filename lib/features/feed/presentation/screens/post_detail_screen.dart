@@ -209,6 +209,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         Text(p.username,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                       ]),
+                      if (p.userKey.isNotEmpty)
+                        Text('@${p.userKey}', style: TextStyle(fontSize: 11, color: subColor)),
                       if (p.location != null)
                         Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
                     ]),

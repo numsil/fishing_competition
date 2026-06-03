@@ -46,7 +46,7 @@ class FeedRepository {
   }) async {
     var query = _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count), post_likes(count)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url, user_key), post_comments(count), post_likes(count)')
         .isFilter('league_id', null)
         .eq('is_personal_record', false)
         .or('is_deleted.is.null,is_deleted.eq.false');
@@ -69,6 +69,7 @@ class FeedRepository {
       final usersData = data['users'];
       final String username = (usersData != null && usersData is Map) ? usersData['username'] ?? 'Unknown' : 'Unknown';
       final String avatarUrl = (usersData != null && usersData is Map) ? usersData['avatar_url'] ?? '' : '';
+      final String userKey = (usersData != null && usersData is Map) ? usersData['user_key'] ?? '' : '';
 
       final commentsData = data['post_comments'];
       final int comments = (commentsData is List && commentsData.isNotEmpty) ? commentsData[0]['count'] ?? 0 : 0;
@@ -78,6 +79,7 @@ class FeedRepository {
 
       return post.copyWith(
         username: username,
+        userKey: userKey,
         avatarUrl: avatarUrl,
         commentsCount: comments,
         likeCount: likes,
@@ -127,7 +129,7 @@ class FeedRepository {
   Future<Post?> fetchPostById(String postId) async {
     final row = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url), post_comments(count), post_likes(count)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, video_url, youtube_url, caption, fish_type, length, weight, catch_count, is_lunker, is_personal_record, review_status, location, created_at, users(username, avatar_url, user_key), post_comments(count), post_likes(count)')
         .eq('id', postId)
         .or('is_deleted.is.null,is_deleted.eq.false')
         .maybeSingle();
@@ -141,6 +143,9 @@ class FeedRepository {
         : 'Unknown';
     final String avatarUrl = (usersData != null && usersData is Map)
         ? usersData['avatar_url'] ?? ''
+        : '';
+    final String userKey = (usersData != null && usersData is Map)
+        ? usersData['user_key'] ?? ''
         : '';
 
     final commentsData = row['post_comments'];
@@ -157,6 +162,7 @@ class FeedRepository {
 
     return post.copyWith(
       username: username,
+      userKey: userKey,
       avatarUrl: avatarUrl,
       commentsCount: comments,
       likeCount: likes,
@@ -172,10 +178,23 @@ class FeedRepository {
     });
   }
 
+  /// 댓글 삭제. RLS(auth.uid() = user_id)가 본인 댓글만 허용한다.
+  Future<void> deleteComment(String commentId) async {
+    await _supabase.from('post_comments').delete().eq('id', commentId);
+  }
+
+  /// 댓글 수정. RLS(auth.uid() = user_id)가 본인 댓글만 허용한다.
+  Future<void> updateComment(String commentId, String content) async {
+    await _supabase
+        .from('post_comments')
+        .update({'content': content})
+        .eq('id', commentId);
+  }
+
   Future<List<Map<String, dynamic>>> getComments(String postId) async {
     final response = await _supabase
         .from('post_comments')
-        .select('id, user_id, content, created_at, users(username, avatar_url)')
+        .select('id, user_id, content, created_at, users(username, avatar_url, user_key)')
         .eq('post_id', postId)
         .order('created_at', ascending: true)
         .limit(50);

@@ -46,6 +46,7 @@ abstract class Post with _$Post {
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // Joined user data (can be populated after fetch)
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('Unknown') String username,
+    @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String userKey,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int commentsCount,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String avatarUrl,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default(0) int likeCount,
