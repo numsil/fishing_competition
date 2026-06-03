@@ -1214,16 +1214,38 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
 
-    // 수정 모드: 새 댓글이 아니라 기존 댓글 본문을 갱신
+    // 수정 모드: 해당 댓글만 로컬에서 즉시 교체(낙관적) → 서버 반영 → 실패 시 롤백.
+    // (전체 재조회 _loadComments를 없애 ap-south-1 왕복 1회로 단축, 즉시 반영)
     if (_editingId != null) {
       final id = _editingId!;
-      setState(() => _editingId = null);
+      final idx = _localComments.indexWhere((c) => c.id == id);
+      final prev = idx != -1 ? _localComments[idx] : null;
+
+      setState(() {
+        if (idx != -1 && prev != null) {
+          _localComments[idx] = _Comment(
+            id: prev.id,
+            user: prev.user,
+            text: text,
+            timeAgo: prev.timeAgo,
+            isMe: prev.isMe,
+            userId: prev.userId,
+            userKey: prev.userKey,
+            avatarUrl: prev.avatarUrl,
+          );
+        }
+        _editingId = null;
+      });
       _ctrl.clear();
       _focusNode.unfocus();
+
       try {
         await ref.read(feedRepositoryProvider).updateComment(id, text);
-        await _loadComments();
       } catch (e) {
+        // 실패 시 원래 댓글로 롤백
+        if (mounted && idx != -1 && prev != null) {
+          setState(() => _localComments[idx] = prev);
+        }
         if (await handleIfBanned(e)) return;
         if (mounted) AppSnackBar.error(context, '댓글 수정 실패: $e');
       }
