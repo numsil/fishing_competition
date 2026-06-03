@@ -227,41 +227,47 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             // 액션 버튼
             Container(
               color: bgColor,
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
               child: Row(children: [
-                IconButton(
-                  onPressed: _toggleLike,
-                  icon: Icon(
-                    _isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: _isLiked ? AppColors.error : iconColor,
-                    size: 24,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleLike,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? AppColors.error : iconColor,
+                      size: 22,
+                    ),
                   ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
                 ),
                 if (_likeCount > 0) ...[
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   Text('$_likeCount',
                       style: TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600, color: iconColor)),
                 ],
-                const SizedBox(width: 10),
-                IconButton(
-                  onPressed: _openComments,
-                  icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+                const SizedBox(width: 16),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openComments,
+                  child: Icon(LucideIcons.messageCircle, color: iconColor, size: 22),
                 ),
-                const SizedBox(width: 4),
-                IconButton(
-                  onPressed: () {
+                if (p.commentsCount > 0) ...[
+                  const SizedBox(width: 4),
+                  Text('${p.commentsCount}',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: iconColor)),
+                ],
+                const SizedBox(width: 16),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
                     final link = 'https://nakstar.app/post/${p.id}';
                     Clipboard.setData(ClipboardData(text: link));
-                                        AppSnackBar.info(context, '링크가 복사되었습니다');
+                    AppSnackBar.info(context, '링크가 복사되었습니다');
                   },
-                  icon: Icon(LucideIcons.send, color: iconColor, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+                  child: Icon(LucideIcons.send, color: iconColor, size: 22),
                 ),
               ]),
             ),

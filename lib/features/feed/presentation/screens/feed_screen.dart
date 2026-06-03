@@ -830,48 +830,56 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
         // ── 액션 버튼 ──
         Container(
           color: bgColor,
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
           child: Row(
             children: [
               // 좋아요
-              IconButton(
-                onPressed: () =>
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () =>
                     ref.read(feedPostsProvider.notifier).toggleLike(p.id),
-                icon: Icon(
-                  p.isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: p.isLiked ? AppColors.error : iconColor,
-                  size: 24,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Icon(
+                    p.isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: p.isLiked ? AppColors.error : iconColor,
+                    size: 22,
+                  ),
                 ),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
               ),
               if (p.likeCount > 0) ...[
-                const SizedBox(width: 2),
+                const SizedBox(width: 4),
                 Text(
                   '${p.likeCount}',
                   style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600, color: iconColor),
                 ),
               ],
-              const SizedBox(width: 10),
+              const SizedBox(width: 16),
               // 댓글
-              IconButton(
-                onPressed: _openComments,
-                icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _openComments,
+                child: Icon(LucideIcons.messageCircle, color: iconColor, size: 22),
               ),
-              const SizedBox(width: 4),
+              if (commentCount > 0) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '$commentCount',
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: iconColor),
+                ),
+              ],
+              const SizedBox(width: 16),
               // 공유
-              IconButton(
-                onPressed: () {
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
                   final link = 'https://nakstar.app/post/${p.id}';
                   Clipboard.setData(ClipboardData(text: link));
-                                    AppSnackBar.info(context, '링크가 복사되었습니다');
+                  AppSnackBar.info(context, '링크가 복사되었습니다');
                 },
-                icon: Icon(LucideIcons.share2, color: iconColor, size: 24),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
+                child: Icon(LucideIcons.share2, color: iconColor, size: 22),
               ),
             ],
           ),
