@@ -17,9 +17,12 @@ class FeedVideoPlayer extends ConsumerStatefulWidget {
     this.thumbnailUrlOverride,
     this.keyIdOverride,
     this.onTapFullscreen,
+    this.fit = BoxFit.contain,
   });
   final Post post;
   final Color accent;
+  // 영상 맞춤 방식. 단일 영상=contain(여백), 묶음 캐러셀=cover(꽉 채움) 용도.
+  final BoxFit fit;
   // 혼합 미디어 캐러셀에서 특정 미디어 항목을 재생할 때 사용 (없으면 post.videoUrl 사용)
   final String? videoUrlOverride;
   final String? thumbnailUrlOverride;
@@ -221,7 +224,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
           if (_initialized && _controller != null)
             ClipRect(
               child: FittedBox(
-                fit: BoxFit.contain,
+                fit: widget.fit,
                 child: SizedBox(
                   width: _controller!.value.size.width,
                   height: _controller!.value.size.height,
@@ -232,7 +235,7 @@ class _FeedVideoPlayerState extends ConsumerState<FeedVideoPlayer> {
           else if (_thumbUrl.isNotEmpty)
             CachedNetworkImage(
               imageUrl: _thumbUrl,
-              fit: BoxFit.contain,
+              fit: widget.fit,
               errorWidget: (_, __, ___) => Container(color: const Color(0xFF1A1A1A)),
             )
           else
