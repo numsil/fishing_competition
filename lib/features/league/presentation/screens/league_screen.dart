@@ -339,7 +339,12 @@ class _LeagueItem extends StatelessWidget {
               children: [
                 Icon(LucideIcons.mapPin, size: 12, color: sub),
                 const SizedBox(width: 4),
-                Text(location, style: TextStyle(fontSize: 12, color: sub)),
+                Flexible(
+                  child: Text(location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: sub)),
+                ),
                 const SizedBox(width: 12),
                 Icon(LucideIcons.calendar, size: 12, color: sub),
                 const SizedBox(width: 4),
@@ -348,7 +353,12 @@ class _LeagueItem extends StatelessWidget {
                   const SizedBox(width: 12),
                   Icon(LucideIcons.user, size: 12, color: sub),
                   const SizedBox(width: 4),
-                  Text(hostUsername, style: TextStyle(fontSize: 12, color: sub)),
+                  Flexible(
+                    child: Text(hostUsername,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: sub)),
+                  ),
                 ],
               ],
             ),
