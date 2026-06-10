@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -206,30 +208,90 @@ class _AdCarousel extends StatefulWidget {
 }
 
 class _AdCarouselState extends State<_AdCarousel> {
-  final _ctrl = PageController();
-  int _page = 0;
+  static const _autoInterval = Duration(milliseconds: 2800);
+  static const _firstDelay = Duration(milliseconds: 2200);
+  static const _pauseAfterUser = Duration(seconds: 4);
+  static const _slideDuration = Duration(milliseconds: 600);
+  static const _initialOffset = 10000; // 무한 스크롤용 가상 시작점
+
+  late final PageController _ctrl =
+      PageController(initialPage: _initialOffset);
+  int _page = _initialOffset;
+  Timer? _timer;
+  Timer? _firstTimer;
+  DateTime? _userInteractedAt;
+  bool _visible = false;
 
   @override
   void dispose() {
+    _timer?.cancel();
+    _firstTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
 
+  void _slideNext() {
+    if (!mounted || !_visible || !_ctrl.hasClients) return;
+    final pausedUntil = _userInteractedAt?.add(_pauseAfterUser);
+    if (pausedUntil != null && DateTime.now().isBefore(pausedUntil)) return;
+    _ctrl.animateToPage(
+      _page + 1,
+      duration: _slideDuration,
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _firstTimer?.cancel();
+    if (widget.urls.length <= 1) return;
+    _firstTimer = Timer(_firstDelay, () {
+      _slideNext();
+      _timer = Timer.periodic(_autoInterval, (_) => _slideNext());
+    });
+  }
+
+  void _onVisibility(VisibilityInfo info) {
+    final v = info.visibleFraction >= 0.5;
+    if (v == _visible) return;
+    _visible = v;
+    if (_visible) {
+      _startTimer();
+    } else {
+      _timer?.cancel();
+      _timer = null;
+      _firstTimer?.cancel();
+      _firstTimer = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return VisibilityDetector(
+      key: Key('ad_carousel_${widget.urls.first.hashCode}'),
+      onVisibilityChanged: _onVisibility,
+      child: Stack(
       fit: StackFit.expand,
       children: [
-        PageView.builder(
+        NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n is ScrollStartNotification &&
+                n.dragDetails != null) {
+              _userInteractedAt = DateTime.now();
+            }
+            return false;
+          },
+          child: PageView.builder(
           controller: _ctrl,
-          itemCount: widget.urls.length,
+          itemCount: null,
           onPageChanged: (i) => setState(() => _page = i),
           itemBuilder: (_, i) => CachedNetworkImage(
-            imageUrl: widget.urls[i],
+            imageUrl: widget.urls[i % widget.urls.length],
             fit: BoxFit.cover,
             errorWidget: (_, __, ___) =>
                 Container(color: const Color(0xFF1A1A1A)),
           ),
+        ),
         ),
         // 페이지 인디케이터
         Positioned(
@@ -239,7 +301,7 @@ class _AdCarouselState extends State<_AdCarousel> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(widget.urls.length, (i) {
-              final selected = i == _page;
+              final selected = i == _page % widget.urls.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 width: selected ? 8 : 6,
@@ -255,6 +317,7 @@ class _AdCarouselState extends State<_AdCarousel> {
           ),
         ),
       ],
+    ),
     );
   }
 }

@@ -28,6 +28,7 @@ class UserProfile {
   final int followerCount;
   final int followingCount;
   final bool isFollowing; // 현재 로그인 유저가 이 프로필을 팔로우 중인지
+  final int totalLikesReceived; // 내 게시물이 받은 총 좋아요 수
 
   UserProfile({
     required this.id,
@@ -48,6 +49,7 @@ class UserProfile {
     this.followerCount = 0,
     this.followingCount = 0,
     this.isFollowing = false,
+    this.totalLikesReceived = 0,
   });
 }
 
@@ -99,6 +101,7 @@ class ProfileRepository {
       followerCount: (data['follower_count'] as num?)?.toInt() ?? 0,
       followingCount: (data['following_count'] as num?)?.toInt() ?? 0,
       isFollowing: (data['is_following'] as bool?) ?? false,
+      totalLikesReceived: (data['total_likes_received'] as num?)?.toInt() ?? 0,
     );
   }
 

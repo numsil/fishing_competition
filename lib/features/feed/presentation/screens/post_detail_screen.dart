@@ -33,6 +33,30 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final List<_Comment> _comments = [];
+  late bool _isLiked = widget.post.isLiked;
+  late int _likeCount = widget.post.likeCount;
+
+  /// 좋아요 토글 — 낙관적 업데이트 + 실패 시 롤백.
+  Future<void> _toggleLike() async {
+    final prevLiked = _isLiked;
+    final prevCount = _likeCount;
+    setState(() {
+      _isLiked = !prevLiked;
+      _likeCount = _isLiked ? prevCount + 1 : (prevCount > 0 ? prevCount - 1 : 0);
+    });
+    try {
+      await ref.read(feedRepositoryProvider).toggleLike(widget.post.id, _isLiked);
+      ref.invalidate(feedPostsProvider);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLiked = prevLiked;
+          _likeCount = prevCount;
+        });
+      }
+      await handleIfBanned(e);
+    }
+  }
 
   String _stripHashtags(String caption) {
     return caption.split(RegExp(r'\s+')).where((w) => !w.startsWith('#')).join(' ').trim();
@@ -185,6 +209,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         Text(p.username,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                       ]),
+                      if (p.userKey.isNotEmpty)
+                        Text('@${p.userKey}', style: TextStyle(fontSize: 11, color: subColor)),
                       if (p.location != null)
                         Text(p.location!, style: TextStyle(fontSize: 11, color: subColor)),
                     ]),
@@ -203,24 +229,47 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             // 액션 버튼
             Container(
               color: bgColor,
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
               child: Row(children: [
-                IconButton(
-                  onPressed: _openComments,
-                  icon: Icon(LucideIcons.messageCircle, color: iconColor, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleLike,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? AppColors.error : iconColor,
+                      size: 22,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 4),
-                IconButton(
-                  onPressed: () {
+                if (_likeCount > 0) ...[
+                  const SizedBox(width: 4),
+                  Text('$_likeCount',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: iconColor)),
+                ],
+                const SizedBox(width: 16),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openComments,
+                  child: Icon(LucideIcons.messageCircle, color: iconColor, size: 22),
+                ),
+                if (p.commentsCount > 0) ...[
+                  const SizedBox(width: 4),
+                  Text('${p.commentsCount}',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: iconColor)),
+                ],
+                const SizedBox(width: 16),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
                     final link = 'https://nakstar.app/post/${p.id}';
                     Clipboard.setData(ClipboardData(text: link));
-                                        AppSnackBar.info(context, '링크가 복사되었습니다');
+                    AppSnackBar.info(context, '링크가 복사되었습니다');
                   },
-                  icon: Icon(LucideIcons.send, color: iconColor, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
+                  child: Icon(LucideIcons.send, color: iconColor, size: 22),
                 ),
               ]),
             ),

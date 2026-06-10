@@ -504,9 +504,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           accent: context.accentColor),
                       const SizedBox(width: 8),
                       StatBox(
-                          icon: LucideIcons.barChart2,
-                          value: '-',
-                          label: '점수',
+                          icon: LucideIcons.heart,
+                          value: '${profile.totalLikesReceived}',
+                          label: '받은좋아요',
                           isDark: context.isDark,
                           accent: context.accentColor),
                     ]),

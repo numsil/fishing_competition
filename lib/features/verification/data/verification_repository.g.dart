@@ -26,7 +26,7 @@ final verificationRepositoryProvider =
 // ignore: unused_element
 typedef VerificationRepositoryRef =
     AutoDisposeProviderRef<VerificationRepository>;
-String _$isAdminUserHash() => r'12a0ca8f795fa5a273a3f05889e2e255055d30a8';
+String _$isAdminUserHash() => r'79b33dc4f7197e27a9beaf2eaf7b38e612bed0e6';
 
 /// See also [isAdminUser].
 @ProviderFor(isAdminUser)

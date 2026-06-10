@@ -16,8 +16,13 @@ const _reasons = <String>[
 ];
 
 class ReportReasonSheet extends ConsumerStatefulWidget {
-  const ReportReasonSheet({super.key, required this.postId});
-  final String postId;
+  const ReportReasonSheet({super.key, this.postId, this.commentId, this.parentPostId})
+      : assert(postId != null || commentId != null);
+  final String? postId;
+  final String? commentId;     // 댓글 신고 대상
+  final String? parentPostId;  // 댓글 신고 시 부모 게시물(맥락용)
+
+  bool get isComment => commentId != null;
 
   static Future<void> show(BuildContext context, String postId) {
     return showModalBottomSheet(
@@ -25,6 +30,19 @@ class ReportReasonSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ReportReasonSheet(postId: postId),
+    );
+  }
+
+  static Future<void> showForComment(
+    BuildContext context,
+    String commentId, {
+    String? postId,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReportReasonSheet(commentId: commentId, parentPostId: postId),
     );
   }
 
@@ -41,17 +59,25 @@ class _ReportReasonSheetState extends ConsumerState<ReportReasonSheet> {
     if (reason == null) return;
     setState(() => _submitting = true);
     try {
-      await ref.read(reportRepositoryProvider).reportPost(
-            postId: widget.postId,
-            reason: reason,
-          );
+      if (widget.isComment) {
+        await ref.read(reportRepositoryProvider).reportComment(
+              commentId: widget.commentId!,
+              postId: widget.parentPostId,
+              reason: reason,
+            );
+      } else {
+        await ref.read(reportRepositoryProvider).reportPost(
+              postId: widget.postId!,
+              reason: reason,
+            );
+      }
       if (!mounted) return;
       Navigator.pop(context);
       AppSnackBar.success(context, '신고가 접수되었습니다');
     } on AlreadyReportedException {
       if (!mounted) return;
       Navigator.pop(context);
-      AppSnackBar.warning(context, '이미 신고한 게시물입니다');
+      AppSnackBar.warning(context, widget.isComment ? '이미 신고한 댓글입니다' : '이미 신고한 게시물입니다');
     } on NotAuthenticatedException {
       if (!mounted) return;
       AppSnackBar.error(context, '로그인이 필요합니다');
