@@ -27,6 +27,8 @@ import '../../../ads/data/ad_repository.dart';
 import '../../../ads/presentation/widgets/ad_card.dart';
 import '../utils/feed_search_utils.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
+import '../../../marketplace/presentation/screens/marketplace_screen.dart';
+import '../../../marketplace/presentation/screens/marketplace_upload_screen.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -35,7 +37,8 @@ class FeedScreen extends ConsumerStatefulWidget {
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends ConsumerState<FeedScreen> {
+class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   bool _isSearching = false;
   String _searchQuery = '';
   late final TextEditingController _searchCtrl;
@@ -49,12 +52,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _searchCtrl = TextEditingController();
     _scrollCtrl = ScrollController()..addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchCtrl.dispose();
     _scrollCtrl
       ..removeListener(_onScroll)
@@ -186,10 +191,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final accent = context.accentColor;
     return Scaffold(
       appBar: _FeedAppBar(
-        isDark: context.isDark,
-        accent: context.accentColor,
+        isDark: isDark,
+        accent: accent,
         isSearching: _isSearching,
         searchQuery: _searchQuery,
         searchCtrl: _searchCtrl,
@@ -197,8 +204,27 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onSearchChanged: _onSearchChanged,
         onSearchCancel: _onSearchCancel,
         onSearchClear: _onSearchClear,
+        tabController: _tabController,
       ),
-      body: RefreshIndicator(
+      floatingActionButton: ListenableBuilder(
+        listenable: _tabController,
+        builder: (_, __) => _tabController.index == 1
+            ? FloatingActionButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MarketplaceUploadScreen()),
+                ),
+                backgroundColor: accent,
+                child: Icon(Icons.add, color: isDark ? Colors.black : Colors.white),
+              )
+            : const SizedBox.shrink(),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          // 탭 1: 조과 피드
+          RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(feedPostsProvider);
           ref.invalidate(myFollowingsForFeedProvider);
@@ -320,6 +346,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         ),
         ),
       ),
+          // 탭 2: 중고거래
+          const MarketplaceScreen(),
+        ],
+      ),
     );
   }
 }
@@ -359,6 +389,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onSearchChanged,
     required this.onSearchCancel,
     required this.onSearchClear,
+    required this.tabController,
   });
 
   final bool isDark, isSearching;
@@ -367,9 +398,10 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchCtrl;
   final VoidCallback onSearchToggle, onSearchCancel, onSearchClear;
   final ValueChanged<String> onSearchChanged;
+  final TabController tabController;
 
   @override
-  Size get preferredSize => Size.fromHeight(isSearching ? 56 : 44);
+  Size get preferredSize => Size.fromHeight(isSearching ? 56 : 44 + 40);
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +477,18 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: isDark ? AppColors.darkBg : Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
+      bottom: TabBar(
+        controller: tabController,
+        indicatorColor: accent,
+        indicatorWeight: 2,
+        labelColor: accent,
+        unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        tabs: const [
+          Tab(text: '조과'),
+          Tab(text: '중고거래'),
+        ],
+      ),
       title: SvgPicture.asset(
         'assets/images/nakstar.svg',
         height: 26,

@@ -37,6 +37,8 @@ import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/dm/data/dm_repository.dart';
 import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
+import '../../features/marketplace/data/marketplace_model.dart';
+import '../../features/marketplace/presentation/screens/marketplace_detail_screen.dart';
 import '../../features/units/presentation/screens/units_unit_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
@@ -146,6 +148,15 @@ GoRouter appRouter(Ref ref) {
           final posts = (state.extra as List).cast<Post>();
           return MaterialPage(child: AlbumBundleShareScreen(posts: posts));
         },
+      ),
+      // 중고거래 상세: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: '/marketplace/:id',
+        pageBuilder: (context, state) => MaterialPage(
+          child: MarketplaceDetailScreen(
+            item: state.extra as MarketplaceItem,
+          ),
+        ),
       ),
       // 단위 변환: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
