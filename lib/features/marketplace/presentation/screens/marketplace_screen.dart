@@ -125,12 +125,25 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             error: (e, _) => Center(child: Text('불러오기 실패: $e')),
             data: (list) {
               if (list.isEmpty) {
-                return EmptyState(
-                  icon: LucideIcons.shoppingBag,
-                  message: widget.searchQuery.trim().isNotEmpty
-                      ? '검색 결과가 없습니다.'
-                      : '등록된 중고거래 상품이 없습니다.',
-                  subColor: Colors.grey,
+                // 빈 상태에서도 당겨서 새로고침 가능하게 스크롤 가능 영역으로 감쌈
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(marketplaceListProvider.notifier).refresh(),
+                  child: LayoutBuilder(
+                    builder: (context, c) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: c.maxHeight,
+                        child: EmptyState(
+                          icon: LucideIcons.shoppingBag,
+                          message: widget.searchQuery.trim().isNotEmpty
+                              ? '검색 결과가 없습니다.'
+                              : '등록된 중고거래 상품이 없습니다.',
+                          subColor: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
                 );
               }
 
@@ -139,6 +152,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
                     ref.read(marketplaceListProvider.notifier).refresh(),
                 child: GridView.builder(
                   controller: _scrollCtrl,
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(12),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
