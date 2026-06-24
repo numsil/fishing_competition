@@ -7,6 +7,6 @@
 		<string>applinks:nakstar.app</string>
 	</array>
 	<key>aps-environment</key>
-	<string>production</string>
+	<string>development</string>
 </dict>
 </plist>

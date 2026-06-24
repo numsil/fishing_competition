@@ -219,7 +219,7 @@ class DmRepository {
     return controller.stream;
   }
 
-  Future<void> sendMessage(String conversationId, String content) async {
+  Future<DmMessage> sendMessage(String conversationId, String content) async {
     final myId = _myId;
     if (myId == null) throw Exception('로그인이 필요합니다');
 
@@ -240,17 +240,23 @@ class DmRepository {
       }
     }
 
-    await _supabase.from('messages').insert({
-      'conversation_id': conversationId,
-      'sender_id': myId,
-      'content': content,
-    });
+    final row = await _supabase
+        .from('messages')
+        .insert({
+          'conversation_id': conversationId,
+          'sender_id': myId,
+          'content': content,
+        })
+        .select('id, conversation_id, sender_id, content, is_read, created_at')
+        .single();
 
     await _supabase.rpc('on_dm_sent', params: {
       'p_conv_id': conversationId,
       'p_sender_id': myId,
       'p_content': content,
     });
+
+    return DmMessage.fromJson(row);
   }
 
   Future<void> markAsRead(String conversationId) async {

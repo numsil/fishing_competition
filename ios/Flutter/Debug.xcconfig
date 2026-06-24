@@ -1,2 +1,5 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+
+// 개발/테스트 빌드: APNs sandbox 환경 (flutter run)
+CODE_SIGN_ENTITLEMENTS = Runner/RunnerDebug.entitlements

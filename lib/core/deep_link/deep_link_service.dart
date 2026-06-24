@@ -4,6 +4,20 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+/// 푸시 알림 payload(type/target_id)를 앱 내부 라우트로 변환. 실패 시 null.
+String? routeFromNotification(String type, String? targetId, {String? actorId}) {
+  switch (type) {
+    case 'comment':
+      return targetId != null ? '/post/$targetId' : null;
+    case 'dm':
+      return '/dm';
+    case 'follow':
+      return actorId != null ? '/user/$actorId' : null;
+    default:
+      return null;
+  }
+}
+
 /// nakstar:// 커스텀 스킴 + https://nakstar.app 유니버설 링크를 수신해서
 /// go_router 경로로 변환·이동시킨다.
 ///
@@ -87,6 +101,8 @@ class DeepLinkService {
           if (_isUuid(id)) return '/post/$id';
         }
         return null;
+      case 'dm':
+        return '/dm';
       case 'user':
         if (segments.length >= 2) {
           final id = segments[1];

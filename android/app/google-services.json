@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "241611104059",
+    "project_id": "nakstar-dd1aa",
+    "storage_bucket": "nakstar-dd1aa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:241611104059:android:7708458eb941578c5a611e",
+        "android_client_info": {
+          "package_name": "com.glution.nakstar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoUX6TchDFNMbeAxxRnAZPWY0hHIcTtQI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
