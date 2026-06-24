@@ -276,6 +276,9 @@ class FeedRepository {
           ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+        try {
+          await compressed.delete();
+        } catch (_) {}
       }
       updates['image_url'] = urls.first;
       updates['image_urls'] = urls;
@@ -393,6 +396,10 @@ class FeedRepository {
           );
           final url = _supabase.storage.from('post_images').getPublicUrl(storagePath);
           imgUrls.add(url);
+          // 업로드 후 로컬 압축본 정리 (디스크 누수 방지)
+          try {
+            await compressed.delete();
+          } catch (_) {}
           media.add({
             'type': 'image',
             'url': url,
@@ -485,6 +492,9 @@ class FeedRepository {
           ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+        try {
+          await compressed.delete();
+        } catch (_) {}
       }
       imageUrl = urls.first;
       imageUrls = urls;
@@ -501,6 +511,9 @@ class FeedRepository {
         ),
       );
       imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
+      try {
+        await compressed.delete();
+      } catch (_) {}
     } else {
       throw Exception('이미지 또는 동영상을 선택해주세요');
     }

@@ -93,6 +93,10 @@ class MarketplaceRepository {
         fileOptions: const FileOptions(contentType: 'image/jpeg', cacheControl: '31536000'),
       );
       urls.add(_supabase.storage.from('post_images').getPublicUrl(path));
+      // 업로드 후 로컬 압축본 정리 (디스크 누수 방지)
+      try {
+        await compressed.delete();
+      } catch (_) {}
     }
 
     await _supabase.from('marketplace_items').insert({

@@ -837,6 +837,11 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             : '업로드 실패: $e';
         AppSnackBar.error(context, msg);
       }
+    } finally {
+      // 압축된 임시 영상 캐시 정리 (디스크 누수 방지)
+      try {
+        await VideoCompress.deleteAllCache();
+      } catch (_) {}
     }
   }
 
