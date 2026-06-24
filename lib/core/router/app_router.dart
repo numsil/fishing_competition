@@ -37,6 +37,7 @@ import '../../features/legal/presentation/screens/legal_document_screen.dart';
 import '../../features/dm/data/dm_repository.dart';
 import '../../features/dm/presentation/screens/dm_list_screen.dart';
 import '../../features/dm/presentation/screens/dm_chat_screen.dart';
+import '../../features/notifications/presentation/screens/notification_screen.dart';
 import '../../features/units/presentation/screens/units_unit_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
@@ -157,6 +158,11 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.dm,
         pageBuilder: (context, state) => const MaterialPage(child: DmListScreen()),
+      ),
+      // 알림함: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationScreen(),
       ),
       // DM 채팅: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -302,6 +308,7 @@ class AppRoutes {
   static const String postDetail = '/post';
   static const String userProfile = '/user';
   static const String dm = '/dm';
+  static const String notifications = '/notifications';
   static const String units = '/units';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
