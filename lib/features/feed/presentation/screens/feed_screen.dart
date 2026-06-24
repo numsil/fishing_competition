@@ -27,6 +27,7 @@ import '../../../ads/data/ad_repository.dart';
 import '../../../ads/presentation/widgets/ad_card.dart';
 import '../utils/feed_search_utils.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
+import '../../../notifications/data/notification_repository.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -463,6 +464,36 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Icon(LucideIcons.ruler,
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final hasUnread =
+                ref.watch(hasUnreadNotificationsProvider).valueOrNull ?? false;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: () => context.push(AppRoutes.notifications),
+                  icon: Icon(LucideIcons.bell,
+                      color: isDark ? Colors.white : Colors.black, size: 22),
+                  visualDensity: VisualDensity.compact,
+                ),
+                if (hasUnread)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         Consumer(
           builder: (context, ref, _) {
