@@ -25,6 +25,7 @@ import '../../../ads/data/ad_model.dart';
 import '../../../ads/data/ad_repository.dart';
 import '../../../ads/presentation/widgets/ad_card.dart';
 import '../utils/feed_search_utils.dart';
+import '../providers/feed_tab_provider.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
 import '../../../marketplace/presentation/screens/marketplace_screen.dart';
 import '../../../marketplace/presentation/screens/marketplace_upload_screen.dart';
@@ -63,6 +64,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
     if (_tabController.indexIsChanging) {
       FocusManager.instance.primaryFocus?.unfocus();
       if (_searchQuery.isNotEmpty) _onSearchClear();
+    }
+    // 현재 탭을 공유 상태에 반영 (하단 홈 버튼 토글과 동기화)
+    if (ref.read(feedSubTabProvider) != _tabController.index) {
+      ref.read(feedSubTabProvider.notifier).state = _tabController.index;
     }
   }
 
@@ -244,6 +249,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     final accent = context.accentColor;
+    // 하단 홈 버튼이 하위 탭을 토글하면 TabController도 따라 전환
+    ref.listen<int>(feedSubTabProvider, (prev, next) {
+      if (mounted && _tabController.index != next) {
+        _tabController.animateTo(next);
+      }
+    });
     return Scaffold(
       appBar: _FeedAppBar(
         isDark: isDark,

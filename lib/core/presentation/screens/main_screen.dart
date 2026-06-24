@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../router/app_router.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../extensions/theme_extensions.dart';
+import '../../../features/feed/presentation/providers/feed_tab_provider.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends ConsumerWidget {
   const MainScreen({super.key, required this.child});
   final Widget child;
 
@@ -21,7 +23,7 @@ class MainScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final idx = _tabIndex(context);
     final inactive = context.isDark ? const Color(0xFF555555) : const Color(0xFFAAAAAA);
     final navBg = context.isDark ? const Color(0xFF111111) : Colors.white;
@@ -104,7 +106,18 @@ class MainScreen extends StatelessWidget {
                                 active: idx == 0,
                                 accent: context.accentColor,
                                 inactive: inactive,
-                                onTap: () => context.go(AppRoutes.feed),
+                                onTap: () {
+                                  if (idx == 0) {
+                                    // 이미 피드 화면 → 하위 탭 토글 (피드 ↔ 중고거래)
+                                    final cur = ref.read(feedSubTabProvider);
+                                    ref.read(feedSubTabProvider.notifier).state =
+                                        cur == 0 ? 1 : 0;
+                                  } else {
+                                    // 다른 탭에서 진입 → 피드(조과)부터 표시
+                                    ref.read(feedSubTabProvider.notifier).state = 0;
+                                    context.go(AppRoutes.feed);
+                                  }
+                                },
                               ),
                               // 리그
                               _Tab(
