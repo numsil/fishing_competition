@@ -114,10 +114,15 @@ class MarketplaceRepository {
   }
 
   Future<void> deleteItem(String itemId) async {
-    await _supabase
+    // .select()로 영향받은 행 확인 → RLS로 0행이면(권한/미존재) 예외로 표면화
+    final res = await _supabase
         .from('marketplace_items')
         .update({'is_deleted': true})
-        .eq('id', itemId);
+        .eq('id', itemId)
+        .select('id');
+    if ((res as List).isEmpty) {
+      throw Exception('삭제할 수 없습니다 (권한 없음 또는 이미 삭제됨)');
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/utils/time_ago.dart' show formatTimeAgo;
 import '../../../auth/data/auth_repository.dart';
@@ -34,22 +35,29 @@ class MarketplaceDetailScreen extends ConsumerWidget {
               icon: const Icon(LucideIcons.moreVertical),
               onSelected: (v) async {
                 if (v == 'delete') {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text('삭제'),
-                      content: const Text('게시글을 삭제할까요?'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
-                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제', style: TextStyle(color: Colors.red))),
-                      ],
-                    ),
+                  showDeleteConfirmSheet(
+                    context,
+                    title: '매물 삭제',
+                    content: '이 매물을 삭제할까요?',
+                    onConfirmed: () async {
+                      try {
+                        await ref
+                            .read(marketplaceRepositoryProvider)
+                            .deleteItem(item.id);
+                        await ref
+                            .read(marketplaceListProvider.notifier)
+                            .refresh();
+                        if (context.mounted) {
+                          AppSnackBar.info(context, '삭제됐습니다.');
+                          context.pop();
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          AppSnackBar.error(context, '삭제 실패: $e');
+                        }
+                      }
+                    },
                   );
-                  if (confirm == true && context.mounted) {
-                    await ref.read(marketplaceRepositoryProvider).deleteItem(item.id);
-                    ref.read(marketplaceListProvider.notifier).refresh();
-                    if (context.mounted) context.pop();
-                  }
                 } else {
                   await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
                   ref.read(marketplaceListProvider.notifier).refresh();
