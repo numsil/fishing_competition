@@ -478,7 +478,11 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             width: 30,
             height: 30,
             margin: const EdgeInsets.only(left: 4, right: 12),
-            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(9),
+            ),
             child: Icon(
               LucideIcons.plus,
               color: isDark ? Colors.black : Colors.white,
