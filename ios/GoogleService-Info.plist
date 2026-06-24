@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyCAoIxwFhe8XVuGTo0YkaIcpOwGj3IyI-M</string>
+	<key>GCM_SENDER_ID</key>
+	<string>241611104059</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.glution.nakstar</string>
+	<key>PROJECT_ID</key>
+	<string>nakstar-dd1aa</string>
+	<key>STORAGE_BUCKET</key>
+	<string>nakstar-dd1aa.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:241611104059:ios:a45af2117418bf3a5a611e</string>
+</dict>
+</plist>
