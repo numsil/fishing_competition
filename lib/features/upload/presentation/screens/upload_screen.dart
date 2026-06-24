@@ -800,6 +800,15 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     }
   }
 
+  // 로컬 이미지 풀스크린 다이얼로그
+  void _openLocalFullscreen(BuildContext context, _PickedItem item, Color accent) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (_) => _LocalImageFullscreen(file: File(item.file.path)),
+    );
+  }
+
   // 미디어 한 항목 썸네일
   Widget _thumbFor(_PickedItem item) {
     if (item.isVideo) {
@@ -974,24 +983,35 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor),
                   ),
                   const SizedBox(width: 6),
-                  Text('(길게 눌러 삭제)', style: TextStyle(fontSize: 11, color: sub)),
+                  Text('(드래그로 순서 변경 · X로 삭제 · 탭하면 크게)', style: TextStyle(fontSize: 11, color: sub)),
                 ]),
               ),
               SizedBox(
-                height: 96,
-                child: ListView.builder(
+                height: 116,
+                child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  buildDefaultDragHandles: true,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex--;
+                      final it = _items.removeAt(oldIndex);
+                      _items.insert(newIndex, it);
+                    });
+                  },
                   itemCount: _items.length,
                   itemBuilder: (_, i) {
                     final item = _items[i];
                     return GestureDetector(
-                      onLongPress: () => _removeItem(i),
+                      key: ValueKey(item.file.path),
+                      onTap: item.isImage
+                          ? () => _openLocalFullscreen(context, item, accent)
+                          : null,
                       child: Stack(
                         children: [
                           Container(
-                            width: 60,
-                            height: 75,
+                            width: 84,
+                            height: 100,
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
@@ -1165,6 +1185,47 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
             _SettingRow(label: '공개 범위', value: '전체 공개', sub: sub, textColor: textColor, divColor: divColor),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 로컬 파일 이미지를 풀스크린으로 띄우는 단순 다이얼로그 위젯
+class _LocalImageFullscreen extends StatelessWidget {
+  const _LocalImageFullscreen({required this.file});
+  final File file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 5.0,
+            child: Center(
+              child: Image.file(file, fit: BoxFit.contain),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

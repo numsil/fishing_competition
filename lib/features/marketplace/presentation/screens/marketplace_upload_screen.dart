@@ -38,14 +38,32 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  /// 사진 추가 (최대 5장까지 append)
+  Future<void> _addImages() async {
+    if (_images.length >= 5) {
+      AppSnackBar.info(context, '사진은 최대 5장까지 추가할 수 있습니다.');
+      return;
+    }
     final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(limit: 5);
+    final remaining = 5 - _images.length;
+    final picked = await picker.pickMultiImage(limit: remaining);
     if (picked.isEmpty) return;
     setState(() {
-      _images.clear();
       _images.addAll(picked.map((x) => File(x.path)));
+      if (_images.length > 5) _images.length = 5;
     });
+  }
+
+  void _removeImage(int index) {
+    setState(() => _images.removeAt(index));
+  }
+
+  void _openFullscreen(int index) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (_) => _LocalImageFullscreen(file: _images[index]),
+    );
   }
 
   Future<void> _submit() async {
@@ -99,7 +117,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 사진 개수
+            // 사진 개수 헤더
             Row(
               children: [
                 const Icon(LucideIcons.image, size: 14, color: Colors.grey),
@@ -114,42 +132,149 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                         : (isDark ? Colors.white : Colors.black87),
                   ),
                 ),
+                if (_images.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '(드래그로 순서 변경 · X로 삭제 · 탭하면 크게)',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 8),
-            // 사진 추가
-            GestureDetector(
-              onTap: _pickImages,
-              child: Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+
+            // 사진 영역
+            if (_images.isEmpty)
+              // 빈 상태: 추가 버튼
+              GestureDetector(
+                onTap: _addImages,
+                child: Container(
+                  height: 116,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.camera, color: Colors.grey),
+                        SizedBox(height: 4),
+                        Text('사진 추가 (최대 5장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
                 ),
-                child: _images.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(LucideIcons.camera, color: Colors.grey),
-                            SizedBox(height: 4),
-                            Text('사진 추가 (최대 5장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
+              )
+            else
+              // 사진 있을 때: 드래그 재정렬 가능한 가로 스트립
+              SizedBox(
+                height: 116,
+                child: ReorderableListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(right: 8),
+                  buildDefaultDragHandles: true,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      // "추가" 타일이 포함된 가상 인덱스 범위이므로
+                      // 실제 이미지 범위 안에서만 처리
+                      if (oldIndex >= _images.length || newIndex > _images.length) return;
+                      if (newIndex > oldIndex) newIndex--;
+                      final img = _images.removeAt(oldIndex);
+                      _images.insert(newIndex, img);
+                    });
+                  },
+                  itemCount: _images.length + (_images.length < 5 ? 1 : 0),
+                  itemBuilder: (ctx, i) {
+                    // 마지막 아이템: "+ 사진 추가" 타일
+                    if (i == _images.length) {
+                      return GestureDetector(
+                        key: const ValueKey('__add_tile__'),
+                        onTap: _addImages,
+                        child: Container(
+                          width: 84,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD),
+                            ),
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(LucideIcons.plus, color: Colors.grey, size: 20),
+                              SizedBox(height: 4),
+                              Text('사진 추가', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                            ],
+                          ),
                         ),
-                      )
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _images.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(_images[i], width: 80, height: 80, fit: BoxFit.cover),
-                        ),
+                      );
+                    }
+
+                    // 실제 이미지 타일
+                    final file = _images[i];
+                    final accentColor = context.accentColor;
+                    final divColor = isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD);
+                    return GestureDetector(
+                      key: ValueKey(file.path),
+                      onTap: () => _openFullscreen(i),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 84,
+                            height: 100,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: i == 0 ? accentColor : divColor,
+                                width: i == 0 ? 2 : 1,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(7),
+                              child: Image.file(file, fit: BoxFit.cover),
+                            ),
+                          ),
+                          if (i == 0)
+                            Positioned(
+                              bottom: 4, left: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: accentColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '대표',
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.black),
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: 2, right: 10,
+                            child: GestureDetector(
+                              onTap: () => _removeImage(i),
+                              child: Container(
+                                width: 18, height: 18,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    );
+                  },
+                ),
               ),
-            ),
             const SizedBox(height: 16),
 
             // 제목
@@ -196,6 +321,47 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 로컬 파일 이미지를 풀스크린으로 띄우는 단순 다이얼로그 위젯
+class _LocalImageFullscreen extends StatelessWidget {
+  const _LocalImageFullscreen({required this.file});
+  final File file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 5.0,
+            child: Center(
+              child: Image.file(file, fit: BoxFit.contain),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
