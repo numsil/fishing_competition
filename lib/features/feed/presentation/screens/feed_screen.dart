@@ -350,7 +350,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         ),
       ),
           // 탭 2: 중고거래
-          MarketplaceScreen(searchQuery: _searchQuery),
+          Column(
+            children: [
+              if (!_isSearching) _buildSearchEntryBar(context),
+              Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
+            ],
+          ),
         ],
       ),
     );
@@ -478,13 +483,6 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
 
     // 탭별로 공유/전용 액션 빌더
-    Widget searchBtn() => IconButton(
-          onPressed: onSearchToggle,
-          icon: Icon(LucideIcons.search,
-              color: isDark ? Colors.white : Colors.black, size: 22),
-          visualDensity: VisualDensity.compact,
-        );
-
     Widget unitsBtn() => IconButton(
           onPressed: () => context.push(AppRoutes.units),
           icon: Icon(LucideIcons.ruler,
@@ -608,9 +606,8 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: isMarket
-                  // 중고거래: 검색 · DM · 등록(+)
+                  // 중고거래: DM · 등록(+)  (검색은 탭 상단 바)
                   ? [
-                      searchBtn(),
                       dmBtn(),
                       plusBtn(() => Navigator.push(
                             context,
