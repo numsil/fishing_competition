@@ -76,17 +76,7 @@ class MarketplaceDetailScreen extends ConsumerWidget {
           children: [
             // 이미지
             if (item.imageUrls.isNotEmpty)
-              SizedBox(
-                height: 300,
-                child: PageView.builder(
-                  itemCount: item.imageUrls.length,
-                  itemBuilder: (_, i) => Image.network(
-                    item.imageUrls[i],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
+              _ImageCarousel(images: item.imageUrls),
 
             Padding(
               padding: const EdgeInsets.all(16),
@@ -104,21 +94,61 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // 제목
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // 시간
-                  Text(
-                    formatTimeAgo(item.createdAt),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  // 제목 + 등록자
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              formatTimeAgo(item.createdAt),
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // 등록자 (탭 → 프로필 보기)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => context.push('/user/${item.userId}'),
+                        child: SizedBox(
+                          width: 64,
+                          child: Column(
+                            children: [
+                              UserAvatar(
+                                username: item.username,
+                                avatarUrl: item.avatarUrl,
+                                radius: 20,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item.username,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -156,39 +186,38 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                       ),
                     ),
 
-                  const Divider(height: 32),
-
-                  // 판매자
-                  Row(
-                    children: [
-                      UserAvatar(username: item.username, avatarUrl: item.avatarUrl, radius: 20),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.username,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            '@${item.userKey}',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
 
                   // DM 문의 버튼
                   if (!isOwner)
                     AppButton(
-                      label: 'DM으로 문의하기',
+                      label: '문의하기',
                       onPressed: () async {
-                        final repo = ref.read(dmRepositoryProvider);
-                        final conv = await repo.getOrCreateConversation(item.userId);
-                        if (context.mounted) {
-                          context.push('/dm/chat', extra: conv);
+                        try {
+                          final conversationId = await ref
+                              .read(dmRepositoryProvider)
+                              .getOrCreateConversation(item.userId);
+                          if (context.mounted) {
+                            context.push(
+                              '/dm/chat',
+                              extra: DmConversation(
+                                id: conversationId,
+                                otherUserId: item.userId,
+                                otherUsername: item.username,
+                                otherAvatarUrl: item.avatarUrl,
+                                lastMessageAt: DateTime.now(),
+                                hasUnread: false,
+                              ),
+                            );
+                          }
+                        } on DmBlockedException {
+                          if (context.mounted) {
+                            AppSnackBar.error(context, '차단된 사용자입니다');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
+                          }
                         }
                       },
                     ),
@@ -196,6 +225,185 @@ class MarketplaceDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 상세 이미지 캐러셀 (카운터 + 좌우 화살표 + 탭하면 전체화면) ──
+class _ImageCarousel extends StatefulWidget {
+  const _ImageCarousel({required this.images});
+  final List<String> images;
+
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  final PageController _controller = PageController();
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _go(int index) => _controller.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.images;
+    final multi = images.length > 1;
+    return SizedBox(
+      height: 300,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemCount: images.length,
+            itemBuilder: (_, i) => GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (_) => _FullScreenGallery(
+                    images: images,
+                    initialIndex: i,
+                  ),
+                ),
+              ),
+              child: Image.network(
+                images[i],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 300,
+              ),
+            ),
+          ),
+          if (multi) ...[
+            // 장수 카운터
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_current + 1} / ${images.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            // 왼쪽 화살표
+            if (_current > 0)
+              Positioned(
+                left: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _ArrowButton(
+                    icon: LucideIcons.chevronLeft,
+                    onTap: () => _go(_current - 1),
+                  ),
+                ),
+              ),
+            // 오른쪽 화살표
+            if (_current < images.length - 1)
+              Positioned(
+                right: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _ArrowButton(
+                    icon: LucideIcons.chevronRight,
+                    onTap: () => _go(_current + 1),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.4),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+}
+
+class _FullScreenGallery extends StatefulWidget {
+  const _FullScreenGallery({required this.images, required this.initialIndex});
+  final List<String> images;
+  final int initialIndex;
+
+  @override
+  State<_FullScreenGallery> createState() => _FullScreenGalleryState();
+}
+
+class _FullScreenGalleryState extends State<_FullScreenGallery> {
+  late final PageController _controller = PageController(initialPage: widget.initialIndex);
+  late int _current = widget.initialIndex;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: widget.images.length > 1
+            ? Text('${_current + 1} / ${widget.images.length}',
+                style: const TextStyle(fontSize: 14, color: Colors.white))
+            : null,
+      ),
+      body: PageView.builder(
+        controller: _controller,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemCount: widget.images.length,
+        itemBuilder: (_, i) => InteractiveViewer(
+          minScale: 1,
+          maxScale: 4,
+          child: Center(
+            child: Image.network(widget.images[i], fit: BoxFit.contain),
+          ),
         ),
       ),
     );

@@ -45,5 +45,25 @@ final marketplaceItemsProvider =
 // ignore: unused_element
 typedef MarketplaceItemsRef =
     AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
+String _$myMarketplaceItemsHash() =>
+    r'554dd1b8412215101963fe606011f7ab3476d07a';
+
+/// See also [myMarketplaceItems].
+@ProviderFor(myMarketplaceItems)
+final myMarketplaceItemsProvider =
+    AutoDisposeFutureProvider<List<MarketplaceItem>>.internal(
+      myMarketplaceItems,
+      name: r'myMarketplaceItemsProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$myMarketplaceItemsHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef MyMarketplaceItemsRef =
+    AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -121,3 +121,8 @@ MarketplaceRepository marketplaceRepository(MarketplaceRepositoryRef ref) {
 Future<List<MarketplaceItem>> marketplaceItems(MarketplaceItemsRef ref) async {
   return ref.read(marketplaceRepositoryProvider).getItems();
 }
+
+@riverpod
+Future<List<MarketplaceItem>> myMarketplaceItems(MyMarketplaceItemsRef ref) async {
+  return ref.read(marketplaceRepositoryProvider).getMyItems();
+}

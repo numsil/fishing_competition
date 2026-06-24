@@ -206,19 +206,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         onSearchClear: _onSearchClear,
         tabController: _tabController,
       ),
-      floatingActionButton: ListenableBuilder(
-        listenable: _tabController,
-        builder: (_, __) => _tabController.index == 1
-            ? FloatingActionButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MarketplaceUploadScreen()),
-                ),
-                backgroundColor: accent,
-                child: Icon(Icons.add, color: isDark ? Colors.black : Colors.white),
-              )
-            : const SizedBox.shrink(),
-      ),
       body: TabBarView(
         controller: _tabController,
         physics: const NeverScrollableScrollPhysics(),
@@ -347,7 +334,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         ),
       ),
           // 탭 2: 중고거래
-          const MarketplaceScreen(),
+          MarketplaceScreen(searchQuery: _searchQuery),
         ],
       ),
     );
@@ -425,7 +412,9 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                   color: isDark ? Colors.white : Colors.black,
                 ),
                 decoration: InputDecoration(
-                  hintText: '유저명 또는 #태그 검색...',
+                  hintText: tabController.index == 1
+                      ? '상품명 검색...'
+                      : '유저명 또는 #태그 검색...',
                   hintStyle: TextStyle(
                     fontSize: 14,
                     color: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
@@ -472,43 +461,22 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    return AppBar(
-      toolbarHeight: 44,
-      backgroundColor: isDark ? AppColors.darkBg : Colors.white,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      bottom: TabBar(
-        controller: tabController,
-        indicatorColor: accent,
-        indicatorWeight: 2,
-        labelColor: accent,
-        unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        tabs: const [
-          Tab(text: '조과'),
-          Tab(text: '중고거래'),
-        ],
-      ),
-      title: SvgPicture.asset(
-        'assets/images/nakstar.svg',
-        height: 26,
-        fit: BoxFit.contain,
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-      ),
-      actions: [
-        IconButton(
+    // 탭별로 공유/전용 액션 빌더
+    Widget searchBtn() => IconButton(
           onPressed: onSearchToggle,
           icon: Icon(LucideIcons.search,
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
-        ),
-        IconButton(
+        );
+
+    Widget unitsBtn() => IconButton(
           onPressed: () => context.push(AppRoutes.units),
           icon: Icon(LucideIcons.ruler,
               color: isDark ? Colors.white : Colors.black, size: 22),
           visualDensity: VisualDensity.compact,
-        ),
-        Consumer(
+        );
+
+    Widget dmBtn() => Consumer(
           builder: (context, ref, _) {
             final hasUnread =
                 ref.watch(hasUnreadDmsProvider).valueOrNull ?? false;
@@ -537,9 +505,10 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             );
           },
-        ),
-        GestureDetector(
-          onTap: () => context.push(AppRoutes.upload),
+        );
+
+    Widget plusBtn(VoidCallback onTap) => GestureDetector(
+          onTap: onTap,
           child: Container(
             width: 30,
             height: 30,
@@ -551,6 +520,59 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
               size: 18,
             ),
           ),
+        );
+
+    return AppBar(
+      toolbarHeight: 44,
+      backgroundColor: isDark ? AppColors.darkBg : Colors.white,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      bottom: TabBar(
+        controller: tabController,
+        indicatorColor: accent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorWeight: 2,
+        labelColor: accent,
+        unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        tabs: const [
+          Tab(text: '조과'),
+          Tab(text: '중고거래'),
+        ],
+      ),
+      title: SvgPicture.asset(
+        'assets/images/nakstar.svg',
+        height: 26,
+        fit: BoxFit.contain,
+        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+      ),
+      actions: [
+        ListenableBuilder(
+          listenable: tabController,
+          builder: (context, _) {
+            final isMarket = tabController.index == 1;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: isMarket
+                  // 중고거래: 검색 · DM · 등록(+)
+                  ? [
+                      searchBtn(),
+                      dmBtn(),
+                      plusBtn(() => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MarketplaceUploadScreen()),
+                          )),
+                    ]
+                  // 조과: 검색 · 자 · DM · 글쓰기(+)
+                  : [
+                      searchBtn(),
+                      unitsBtn(),
+                      dmBtn(),
+                      plusBtn(() => context.push(AppRoutes.upload)),
+                    ],
+            );
+          },
         ),
       ],
     );

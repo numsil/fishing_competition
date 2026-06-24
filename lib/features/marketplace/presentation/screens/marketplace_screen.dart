@@ -12,7 +12,8 @@ import '../../data/marketplace_repository.dart';
 const _categories = ['전체', '낚시대', '릴', '루어', '소품', '기타'];
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
-  const MarketplaceScreen({super.key});
+  const MarketplaceScreen({super.key, this.searchQuery = ''});
+  final String searchQuery;
 
   @override
   ConsumerState<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -29,9 +30,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
 
     return Column(
       children: [
+        const SizedBox(height: 12),
         // 카테고리 필터
         SizedBox(
-          height: 40,
+          height: 36,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -43,7 +45,8 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedCategory = cat),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: selected ? accent : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
@@ -72,14 +75,27 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('불러오기 실패: $e')),
             data: (list) {
-              final filtered = _selectedCategory == '전체'
+              final q = widget.searchQuery.trim().toLowerCase();
+              var filtered = _selectedCategory == '전체'
                   ? list
                   : list.where((i) => i.category == _selectedCategory).toList();
+              if (q.isNotEmpty) {
+                filtered = filtered.where((i) {
+                  final haystack = [
+                    i.title,
+                    i.description ?? '',
+                    i.location ?? '',
+                  ].join(' ').toLowerCase();
+                  return haystack.contains(q);
+                }).toList();
+              }
 
               if (filtered.isEmpty) {
                 return EmptyState(
                   icon: LucideIcons.shoppingBag,
-                  message: '등록된 중고거래 상품이 없습니다.',
+                  message: q.isNotEmpty
+                      ? '검색 결과가 없습니다.'
+                      : '등록된 중고거래 상품이 없습니다.',
                   subColor: Colors.grey,
                 );
               }
@@ -92,7 +108,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.68,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) => _MarketplaceCard(
@@ -129,15 +145,15 @@ class _MarketplaceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 이미지
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: AspectRatio(
-                aspectRatio: 1,
+            // 이미지 (남는 세로 공간을 채워 비율과 무관하게 오버플로우 방지)
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: item.imageUrls.isNotEmpty
                     ? Image.network(
                         item.imageUrls.first,
                         fit: BoxFit.cover,
+                        width: double.infinity,
                         errorBuilder: (_, __, ___) => Container(
                           color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
                           child: const Icon(LucideIcons.image, color: Colors.grey),

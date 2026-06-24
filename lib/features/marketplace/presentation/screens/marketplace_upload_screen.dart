@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -98,6 +99,24 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 사진 개수
+            Row(
+              children: [
+                const Icon(LucideIcons.image, size: 14, color: Colors.grey),
+                const SizedBox(width: 6),
+                Text(
+                  '사진 ${_images.length}/5',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _images.isEmpty
+                        ? Colors.grey
+                        : (isDark ? Colors.white : Colors.black87),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             // 사진 추가
             GestureDetector(
               onTap: _pickImages,
@@ -142,6 +161,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
               controller: _priceCtrl,
               hint: '가격 (원)',
               keyboardType: TextInputType.number,
+              inputFormatters: [_ThousandsFormatter()],
             ),
             const SizedBox(height: 12),
 
@@ -177,6 +197,31 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 숫자 입력에 천단위 콤마를 실시간으로 넣는 포매터.
+class _ThousandsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return const TextEditingValue();
+
+    final number = int.parse(digits);
+    final s = number.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    final formatted = buf.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
