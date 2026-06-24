@@ -8,7 +8,6 @@ import '../widgets/post_image_carousel.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
-import '../../../../core/widgets/tier_avatar.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/feed_repository.dart';
 import '../../data/post_model.dart';
@@ -190,6 +189,30 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
     setState(() => _searchQuery = '');
   }
 
+  // 피드 상단 검색 진입 바 (탭하면 검색 모드 활성화). 즐겨찾기 바를 대체.
+  Widget _buildSearchEntryBar(BuildContext context) {
+    final isDark = context.isDark;
+    final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
+    return GestureDetector(
+      onTap: _onSearchToggle,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(LucideIcons.search, size: 18, color: hint),
+            const SizedBox(width: 8),
+            Text('검색', style: TextStyle(fontSize: 14, color: hint)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
@@ -222,18 +245,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         child: CustomScrollView(
           controller: _scrollCtrl,
           slivers: [
-            if (!_isSearching) ...[
+            if (!_isSearching)
               SliverToBoxAdapter(
-                child: _FollowingBar(),
+                child: _buildSearchEntryBar(context),
               ),
-              SliverToBoxAdapter(
-                child: Divider(
-                  height: 0.5,
-                  thickness: 0.5,
-                  color: context.isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
-                ),
-              ),
-            ],
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
@@ -572,11 +587,18 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           Tab(text: '중고거래'),
         ],
       ),
-      title: SvgPicture.asset(
-        'assets/images/nakstar.svg',
-        height: 26,
-        fit: BoxFit.contain,
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+      titleSpacing: 12,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset(
+            'assets/images/nakstar.svg',
+            height: 26,
+            fit: BoxFit.contain,
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          ),
+          notiBtn(),
+        ],
       ),
       actions: [
         ListenableBuilder(
@@ -586,10 +608,9 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: isMarket
-                  // 중고거래: 검색 · 알림 · DM · 등록(+)
+                  // 중고거래: 검색 · DM · 등록(+)
                   ? [
                       searchBtn(),
-                      notiBtn(),
                       dmBtn(),
                       plusBtn(() => Navigator.push(
                             context,
@@ -597,11 +618,9 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 builder: (_) => const MarketplaceUploadScreen()),
                           )),
                     ]
-                  // 조과: 검색 · 자 · 알림 · DM · 글쓰기(+)
+                  // 조과: 자 · DM · 글쓰기(+)  (검색은 피드 상단 바, 알림은 로고 옆)
                   : [
-                      searchBtn(),
                       unitsBtn(),
-                      notiBtn(),
                       dmBtn(),
                       plusBtn(() => context.push(AppRoutes.upload)),
                     ],
@@ -612,112 +631,6 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
-
-// ── 팔로우 바 ──────────────────────────────────────────
-// 내가 팔로우한 유저 중 랜덤 8명을 노출. 30초마다 셔플.
-class _FollowingBar extends ConsumerWidget {
-  const _FollowingBar();
-
-  static const int _maxVisible = 8;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = context.isDark;
-    final asyncFollowings = ref.watch(myFollowingsForFeedProvider);
-    final sub = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF888888);
-
-    return asyncFollowings.maybeWhen(
-      data: (followings) {
-        if (followings.isEmpty) return const SizedBox.shrink();
-
-        // RPC에서 이미 last_post_at DESC 정렬됨 → 앞 8명만 표시
-        final list = followings.take(_maxVisible).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 0, 8),
-              child: Row(
-                children: [
-                  Icon(LucideIcons.star, size: 14, color: sub),
-                  const SizedBox(width: 4),
-                  Text(
-                    '즐겨찾기',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: sub,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 96,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                itemCount: list.length,
-                itemBuilder: (_, i) => _FollowingStoryItem(
-                  user: list[i],
-                  isDark: isDark,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-          ],
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
-    );
-  }
-}
-
-class _FollowingStoryItem extends StatelessWidget {
-  const _FollowingStoryItem({required this.user, required this.isDark});
-  final FollowUser user;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push('/user/${user.userId}'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          children: [
-            TierAvatar(
-              username: user.username,
-              avatarUrl: user.avatarUrl,
-              score: user.maxScore,
-              radius: 32,
-              isDark: isDark,
-              borderWidth: 2.5,
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: 64,
-              child: Text(
-                user.username,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.white : const Color(0xFF111111),
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 
 // ── 인스타그램 스타일 포스트 ──────────────────────────────
 class _InstaPost extends ConsumerStatefulWidget {
