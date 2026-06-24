@@ -11,7 +11,7 @@ import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../data/marketplace_repository.dart';
 
-const _categories = ['낚시대', '릴', '루어', '소품', '기타'];
+const _categories = ['낚시대', '릴', '루어/채비', '보팅', '기타'];
 
 class MarketplaceUploadScreen extends ConsumerStatefulWidget {
   const MarketplaceUploadScreen({super.key});

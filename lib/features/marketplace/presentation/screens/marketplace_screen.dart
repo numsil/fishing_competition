@@ -10,7 +10,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../data/marketplace_model.dart';
 import '../../data/marketplace_repository.dart';
 
-const _categories = ['전체', '낚시대', '릴', '루어', '소품', '기타'];
+const _categories = ['전체', '낚시대', '릴', '루어/채비', '보팅', '기타'];
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key, this.searchQuery = ''});
