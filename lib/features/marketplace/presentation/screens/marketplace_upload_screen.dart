@@ -170,7 +170,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
             else
               // 사진 있을 때: 드래그 재정렬 가능한 가로 스트립
               SizedBox(
-                height: 116,
+                height: 146,
                 child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.only(right: 8),
@@ -193,8 +193,8 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                         key: const ValueKey('__add_tile__'),
                         onTap: _addImages,
                         child: Container(
-                          width: 84,
-                          height: 100,
+                          width: 110,
+                          height: 130,
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
@@ -225,8 +225,8 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                       child: Stack(
                         children: [
                           Container(
-                            width: 84,
-                            height: 100,
+                            width: 110,
+                            height: 130,
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
@@ -256,16 +256,16 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                               ),
                             ),
                           Positioned(
-                            top: 2, right: 10,
+                            top: 4, right: 12,
                             child: GestureDetector(
                               onTap: () => _removeImage(i),
                               child: Container(
-                                width: 18, height: 18,
+                                width: 28, height: 28,
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.6),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
                               ),
                             ),
                           ),

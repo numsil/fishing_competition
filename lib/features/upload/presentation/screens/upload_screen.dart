@@ -1030,7 +1030,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 ]),
               ),
               SizedBox(
-                height: 116,
+                height: 146,
                 child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -1052,8 +1052,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                         key: const ValueKey('__add_tile__'),
                         onTap: _addingMedia ? null : _addMedia,
                         child: Container(
-                          width: 84,
-                          height: 100,
+                          width: 110,
+                          height: 130,
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
@@ -1087,8 +1087,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                       child: Stack(
                         children: [
                           Container(
-                            width: 84,
-                            height: 100,
+                            width: 110,
+                            height: 130,
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
@@ -1127,16 +1127,16 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                               ),
                             ),
                           Positioned(
-                            top: 2, right: 10,
+                            top: 4, right: 12,
                             child: GestureDetector(
                               onTap: () => _removeItem(i),
                               child: Container(
-                                width: 18, height: 18,
+                                width: 28, height: 28,
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.6),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
                               ),
                             ),
                           ),
