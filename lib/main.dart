@@ -157,6 +157,7 @@ class _FishingCompetitionAppState extends ConsumerState<FishingCompetitionApp> {
     // 라우터 인스턴스가 바뀌면(ProviderScope 재생성 등) 딥링크 서비스 재바인딩
     if (_attachedRouter != router) {
       _deepLinkService?.dispose();
+      _pushService?.dispose();
       _deepLinkService = DeepLinkService(router)..start();
       _pushService = PushService(router)..start();
       _attachedRouter = router;
