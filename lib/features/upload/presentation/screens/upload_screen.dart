@@ -588,6 +588,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
 
   late List<_PickedItem> _items;
   bool _imageReplaced = false; // edit 모드에서 이미지를 교체했는지
+  final _picker = ImagePicker();
+  bool _addingMedia = false; // 추가 선택 중복 탭 방지
 
   @override
   void initState() {
@@ -620,6 +622,44 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   void _removeItem(int index) {
     if (_items.length <= 1) return; // 최소 1개 유지
     setState(() => _items.removeAt(index));
+  }
+
+  /// 보관함에서 미디어를 추가로 선택해 기존 목록에 누적 (사진+동영상 혼합)
+  Future<void> _addMedia() async {
+    if (_addingMedia || _items.length >= _kMaxMedia) return;
+    final remaining = _kMaxMedia - _items.length;
+    setState(() => _addingMedia = true);
+    try {
+      final picked = await _picker.pickMultipleMedia(
+        imageQuality: 80,
+        maxWidth: 1080,
+        maxHeight: 1080,
+        limit: remaining,
+      );
+      if (picked.isEmpty) return;
+      // 이미 담긴 경로는 제외 (ReorderableListView 키 중복 방지)
+      final existing = _items.map((e) => e.file.path).toSet();
+      final added = <_PickedItem>[];
+      for (final f in picked) {
+        if (_items.length + added.length >= _kMaxMedia) break;
+        if (existing.contains(f.path)) continue;
+        existing.add(f.path);
+        if (_isVideoPath(f.path)) {
+          final bytes = await VideoCompress.getByteThumbnail(f.path, quality: 80);
+          added.add(_PickedItem(type: 'video', file: f, thumbnailBytes: bytes));
+        } else {
+          added.add(_PickedItem(type: 'image', file: f));
+        }
+      }
+      if (!mounted || added.isEmpty) return;
+      setState(() => _items.addAll(added));
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.error(context, '미디어 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _addingMedia = false);
+    }
   }
 
   Future<void> _saveEdit() async {
@@ -884,6 +924,9 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     final textColor = isDark ? Colors.white : Colors.black;
     final isMulti = _items.length > 1;
     final hasAnyVideo = _items.any((m) => m.isVideo);
+    // 새 게시물 작성 시: 미디어가 1개 이상이고 최대치 미만이면 "추가" 가능
+    final canAddMore =
+        widget.editPost == null && _items.isNotEmpty && _items.length < _kMaxMedia;
     final hasOnlyImagesEditable =
         widget.editPost != null && !widget.isEditingYoutube && widget.editPost!.videoUrl == null;
 
@@ -973,8 +1016,8 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 ),
               ),
 
-            // ── 다중 미디어 스트립 (2개 이상) ──
-            if (isMulti) ...[
+            // ── 다중 미디어 스트립 (2개 이상이거나, 추가 가능 시) ──
+            if (isMulti || canAddMore) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 0, 8),
                 child: Row(children: [
@@ -994,13 +1037,47 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                   buildDefaultDragHandles: true,
                   onReorder: (oldIndex, newIndex) {
                     setState(() {
+                      // "추가" 타일은 실제 미디어 범위 밖이므로 제외
+                      if (oldIndex >= _items.length || newIndex > _items.length) return;
                       if (newIndex > oldIndex) newIndex--;
                       final it = _items.removeAt(oldIndex);
                       _items.insert(newIndex, it);
                     });
                   },
-                  itemCount: _items.length,
+                  itemCount: _items.length + (canAddMore ? 1 : 0),
                   itemBuilder: (_, i) {
+                    // 마지막: "+ 추가" 타일
+                    if (i == _items.length) {
+                      return GestureDetector(
+                        key: const ValueKey('__add_tile__'),
+                        onTap: _addingMedia ? null : _addMedia,
+                        child: Container(
+                          width: 84,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: divColor),
+                          ),
+                          child: _addingMedia
+                              ? Center(
+                                  child: SizedBox(
+                                    width: 18, height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_rounded, color: sub, size: 22),
+                                    const SizedBox(height: 4),
+                                    Text('추가', style: TextStyle(fontSize: 10, color: sub)),
+                                  ],
+                                ),
+                        ),
+                      );
+                    }
                     final item = _items[i];
                     return GestureDetector(
                       key: ValueKey(item.file.path),
