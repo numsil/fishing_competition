@@ -477,7 +477,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           visualDensity: VisualDensity.compact,
         );
 
-    Widget dmBtn() => Consumer(
+    Widget notiBtn() => Consumer(
           builder: (context, ref, _) {
             final hasUnread =
                 ref.watch(hasUnreadNotificationsProvider).valueOrNull ?? false;
@@ -506,8 +506,9 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             );
           },
-        ),
-        Consumer(
+        );
+
+    Widget dmBtn() => Consumer(
           builder: (context, ref, _) {
             final hasUnread =
                 ref.watch(hasUnreadDmsProvider).valueOrNull ?? false;
@@ -585,9 +586,10 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: isMarket
-                  // 중고거래: 검색 · DM · 등록(+)
+                  // 중고거래: 검색 · 알림 · DM · 등록(+)
                   ? [
                       searchBtn(),
+                      notiBtn(),
                       dmBtn(),
                       plusBtn(() => Navigator.push(
                             context,
@@ -595,10 +597,11 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 builder: (_) => const MarketplaceUploadScreen()),
                           )),
                     ]
-                  // 조과: 검색 · 자 · DM · 글쓰기(+)
+                  // 조과: 검색 · 자 · 알림 · DM · 글쓰기(+)
                   : [
                       searchBtn(),
                       unitsBtn(),
+                      notiBtn(),
                       dmBtn(),
                       plusBtn(() => context.push(AppRoutes.upload)),
                     ],
