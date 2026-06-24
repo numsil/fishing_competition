@@ -75,13 +75,15 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
   }
 
   void _scrollToBottom() {
+    // 변동 높이(날짜 구분선·아바타) 때문에 maxScrollExtent가 첫 프레임엔 부정확.
+    // 한 프레임 뒤 한 번 더 보정해 항상 정확히 맨 아래로 내린다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollCtrl.hasClients) return;
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
+      _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollCtrl.hasClients) return;
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      });
     });
   }
 
