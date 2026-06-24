@@ -217,9 +217,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                     fontSize: 14, color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
                   isCollapsed: true,
+                  filled: false,
                   hintText: '검색',
                   hintStyle: TextStyle(fontSize: 14, color: hint),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 textInputAction: TextInputAction.search,
