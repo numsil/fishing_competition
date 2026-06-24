@@ -172,43 +172,51 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
     });
   }
 
-  void _onSearchToggle() => setState(() => _isSearching = true);
-
-  void _onSearchCancel() {
-    setState(() {
-      _isSearching = false;
-      _searchQuery = '';
-    });
-    _searchCtrl.clear();
-  }
-
-  void _onSearchChanged(String value) => setState(() => _searchQuery = value);
+  void _onSearchChanged(String value) => setState(() {
+        _searchQuery = value;
+        _isSearching = value.isNotEmpty;
+      });
 
   void _onSearchClear() {
     _searchCtrl.clear();
-    setState(() => _searchQuery = '');
+    setState(() {
+      _searchQuery = '';
+      _isSearching = false;
+    });
   }
 
-  // 피드 상단 검색 진입 바 (탭하면 검색 모드 활성화). 즐겨찾기 바를 대체.
-  Widget _buildSearchEntryBar(BuildContext context) {
+  // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력). 즐겨찾기 바를 대체.
+  Widget _buildSearchBar(BuildContext context, {required bool marketplace}) {
     final isDark = context.isDark;
+    final accent = context.accentColor;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
-    return GestureDetector(
-      onTap: _onSearchToggle,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: _onSearchChanged,
+        style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
+        decoration: InputDecoration(
+          hintText: marketplace ? '상품명 검색...' : '유저명·내용·#태그 검색...',
+          hintStyle: TextStyle(fontSize: 14, color: hint),
+          prefixIcon: Icon(LucideIcons.search, size: 18, color: accent),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  onPressed: _onSearchClear,
+                  icon: Icon(LucideIcons.x, size: 16, color: hint),
+                  visualDensity: VisualDensity.compact,
+                )
+              : null,
+          filled: true,
+          fillColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          isDense: true,
         ),
-        child: Row(
-          children: [
-            Icon(LucideIcons.search, size: 18, color: hint),
-            const SizedBox(width: 8),
-            Text('검색', style: TextStyle(fontSize: 14, color: hint)),
-          ],
-        ),
+        textInputAction: TextInputAction.search,
       ),
     );
   }
@@ -221,13 +229,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
       appBar: _FeedAppBar(
         isDark: isDark,
         accent: accent,
-        isSearching: _isSearching,
-        searchQuery: _searchQuery,
-        searchCtrl: _searchCtrl,
-        onSearchToggle: _onSearchToggle,
-        onSearchChanged: _onSearchChanged,
-        onSearchCancel: _onSearchCancel,
-        onSearchClear: _onSearchClear,
         tabController: _tabController,
       ),
       body: TabBarView(
@@ -245,10 +246,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         child: CustomScrollView(
           controller: _scrollCtrl,
           slivers: [
-            if (!_isSearching)
-              SliverToBoxAdapter(
-                child: _buildSearchEntryBar(context),
-              ),
+            SliverToBoxAdapter(
+              child: _buildSearchBar(context, marketplace: false),
+            ),
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
@@ -352,7 +352,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
           // 탭 2: 중고거래
           Column(
             children: [
-              if (!_isSearching) _buildSearchEntryBar(context),
+              _buildSearchBar(context, marketplace: true),
               Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
             ],
           ),
@@ -390,97 +390,18 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _FeedAppBar({
     required this.isDark,
     required this.accent,
-    required this.isSearching,
-    required this.searchQuery,
-    required this.searchCtrl,
-    required this.onSearchToggle,
-    required this.onSearchChanged,
-    required this.onSearchCancel,
-    required this.onSearchClear,
     required this.tabController,
   });
 
-  final bool isDark, isSearching;
-  final String searchQuery;
+  final bool isDark;
   final Color accent;
-  final TextEditingController searchCtrl;
-  final VoidCallback onSearchToggle, onSearchCancel, onSearchClear;
-  final ValueChanged<String> onSearchChanged;
   final TabController tabController;
 
   @override
-  Size get preferredSize => Size.fromHeight(isSearching ? 56 : 44 + 40);
+  Size get preferredSize => const Size.fromHeight(44 + 40);
 
   @override
   Widget build(BuildContext context) {
-    if (isSearching) {
-      return AppBar(
-        toolbarHeight: 56,
-        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 12,
-        title: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: searchCtrl,
-                autofocus: true,
-                onChanged: onSearchChanged,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-                decoration: InputDecoration(
-                  hintText: tabController.index == 1
-                      ? '상품명 검색...'
-                      : '유저명·내용·#태그 검색...',
-                  hintStyle: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
-                  ),
-                  prefixIcon: Icon(LucideIcons.search, size: 18, color: accent),
-                  suffixIcon: searchQuery.isNotEmpty
-                      ? IconButton(
-                          onPressed: onSearchClear,
-                          icon: Icon(
-                            LucideIcons.x,
-                            size: 16,
-                            color: isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA),
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  isDense: true,
-                ),
-                textInputAction: TextInputAction.search,
-              ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: onSearchCancel,
-              child: Text(
-                '취소',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: accent,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-          ],
-        ),
-      );
-    }
 
     // 탭별로 공유/전용 액션 빌더
     Widget unitsBtn() => IconButton(
