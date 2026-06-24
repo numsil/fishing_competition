@@ -16,6 +16,7 @@ class MarketplaceRepository {
     int limit = kMarketplacePageSize,
     DateTime? before,
     String? category,
+    String? search,
   }) async {
     var query = _supabase
         .from('marketplace_items')
@@ -23,6 +24,13 @@ class MarketplaceRepository {
         .eq('is_deleted', false);
 
     if (category != null) query = query.eq('category', category);
+    if (search != null && search.trim().isNotEmpty) {
+      // PostgREST or 필터가 깨지는 특수문자 제거 후 제목·설명 부분일치 검색
+      final s = search.trim().replaceAll(RegExp(r'[,()*%]'), ' ').trim();
+      if (s.isNotEmpty) {
+        query = query.or('title.ilike.*$s*,description.ilike.*$s*');
+      }
+    }
     if (before != null) query = query.lt('created_at', before.toUtc().toIso8601String());
 
     final response = await query
@@ -49,7 +57,8 @@ class MarketplaceRepository {
         .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, user_key, avatar_url)')
         .eq('user_id', uid)
         .eq('is_deleted', false)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(100);
 
     return (response as List).map((data) {
       final item = MarketplaceItem.fromJson(data as Map<String, dynamic>);
@@ -117,9 +126,64 @@ MarketplaceRepository marketplaceRepository(MarketplaceRepositoryRef ref) {
   return MarketplaceRepository(Supabase.instance.client);
 }
 
+// 중고거래 목록: 서버 검색·카테고리 필터 + 커서 페이지네이션
 @riverpod
-Future<List<MarketplaceItem>> marketplaceItems(MarketplaceItemsRef ref) async {
-  return ref.read(marketplaceRepositoryProvider).getItems();
+class MarketplaceList extends _$MarketplaceList {
+  bool _hasMore = true;
+  bool _loading = false;
+  DateTime? _lastCreatedAt;
+  String _category = '전체';
+  String _search = '';
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<MarketplaceItem>> build() async {
+    return _fetch(reset: true);
+  }
+
+  Future<List<MarketplaceItem>> _fetch({required bool reset}) async {
+    final items = await ref.read(marketplaceRepositoryProvider).getItems(
+          limit: kMarketplacePageSize,
+          before: reset ? null : _lastCreatedAt,
+          category: _category == '전체' ? null : _category,
+          search: _search.trim().isEmpty ? null : _search.trim(),
+        );
+    _hasMore = items.length >= kMarketplacePageSize;
+    if (items.isNotEmpty) _lastCreatedAt = items.last.createdAt;
+    return items;
+  }
+
+  // 카테고리/검색어 변경 시 처음부터 다시 조회
+  Future<void> setFilter({required String category, required String search}) async {
+    if (category == _category && search == _search) return;
+    _category = category;
+    _search = search;
+    _hasMore = true;
+    _lastCreatedAt = null;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetch(reset: true));
+  }
+
+  Future<void> loadMore() async {
+    if (_loading || !_hasMore) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    _loading = true;
+    try {
+      final more = await _fetch(reset: false);
+      state = AsyncData([...current, ...more]);
+    } finally {
+      _loading = false;
+    }
+  }
+
+  Future<void> refresh() async {
+    _hasMore = true;
+    _lastCreatedAt = null;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetch(reset: true));
+  }
 }
 
 @riverpod

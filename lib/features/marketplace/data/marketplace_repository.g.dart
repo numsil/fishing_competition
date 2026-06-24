@@ -26,25 +26,6 @@ final marketplaceRepositoryProvider =
 // ignore: unused_element
 typedef MarketplaceRepositoryRef =
     AutoDisposeProviderRef<MarketplaceRepository>;
-String _$marketplaceItemsHash() => r'2a071b8dad95c75a8486914394cbf5dde1ebf381';
-
-/// See also [marketplaceItems].
-@ProviderFor(marketplaceItems)
-final marketplaceItemsProvider =
-    AutoDisposeFutureProvider<List<MarketplaceItem>>.internal(
-      marketplaceItems,
-      name: r'marketplaceItemsProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$marketplaceItemsHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef MarketplaceItemsRef =
-    AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
 String _$myMarketplaceItemsHash() =>
     r'554dd1b8412215101963fe606011f7ab3476d07a';
 
@@ -65,5 +46,24 @@ final myMarketplaceItemsProvider =
 // ignore: unused_element
 typedef MyMarketplaceItemsRef =
     AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
+String _$marketplaceListHash() => r'9f2839e3cd6186025872530cc870e136ccf61271';
+
+/// See also [MarketplaceList].
+@ProviderFor(MarketplaceList)
+final marketplaceListProvider =
+    AutoDisposeAsyncNotifierProvider<
+      MarketplaceList,
+      List<MarketplaceItem>
+    >.internal(
+      MarketplaceList.new,
+      name: r'marketplaceListProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$marketplaceListHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$MarketplaceList = AutoDisposeAsyncNotifier<List<MarketplaceItem>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

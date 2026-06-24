@@ -76,7 +76,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
         category: _category,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
       );
-      ref.invalidate(marketplaceItemsProvider);
+      ref.read(marketplaceListProvider.notifier).refresh();
       if (mounted) {
         AppSnackBar.success(context, '등록됐습니다!');
         context.pop();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,12 +22,60 @@ class MarketplaceScreen extends ConsumerStatefulWidget {
 
 class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   String _selectedCategory = '전체';
+  final _scrollCtrl = ScrollController();
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(MarketplaceScreen old) {
+    super.didUpdateWidget(old);
+    // 공유 검색어 변경 시 디바운스 후 서버 재조회
+    if (old.searchQuery != widget.searchQuery) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 350), () {
+        ref.read(marketplaceListProvider.notifier).setFilter(
+              category: _selectedCategory,
+              search: widget.searchQuery,
+            );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _scrollCtrl
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) {
+      ref.read(marketplaceListProvider.notifier).loadMore();
+    }
+  }
+
+  void _selectCategory(String cat) {
+    setState(() => _selectedCategory = cat);
+    ref.read(marketplaceListProvider.notifier).setFilter(
+          category: cat,
+          search: widget.searchQuery,
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     final accent = context.accentColor;
-    final items = ref.watch(marketplaceItemsProvider);
+    final items = ref.watch(marketplaceListProvider);
 
     return Column(
       children: [
@@ -43,7 +92,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               final cat = _categories[i];
               final selected = cat == _selectedCategory;
               return GestureDetector(
-                onTap: () => setState(() => _selectedCategory = cat),
+                onTap: () => _selectCategory(cat),
                 child: Container(
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -75,25 +124,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('불러오기 실패: $e')),
             data: (list) {
-              final q = widget.searchQuery.trim().toLowerCase();
-              var filtered = _selectedCategory == '전체'
-                  ? list
-                  : list.where((i) => i.category == _selectedCategory).toList();
-              if (q.isNotEmpty) {
-                filtered = filtered.where((i) {
-                  final haystack = [
-                    i.title,
-                    i.description ?? '',
-                    i.location ?? '',
-                  ].join(' ').toLowerCase();
-                  return haystack.contains(q);
-                }).toList();
-              }
-
-              if (filtered.isEmpty) {
+              if (list.isEmpty) {
                 return EmptyState(
                   icon: LucideIcons.shoppingBag,
-                  message: q.isNotEmpty
+                  message: widget.searchQuery.trim().isNotEmpty
                       ? '검색 결과가 없습니다.'
                       : '등록된 중고거래 상품이 없습니다.',
                   subColor: Colors.grey,
@@ -101,8 +135,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               }
 
               return RefreshIndicator(
-                onRefresh: () async => ref.invalidate(marketplaceItemsProvider),
+                onRefresh: () =>
+                    ref.read(marketplaceListProvider.notifier).refresh(),
                 child: GridView.builder(
+                  controller: _scrollCtrl,
                   padding: const EdgeInsets.all(12),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -110,9 +146,9 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
                     crossAxisSpacing: 12,
                     childAspectRatio: 0.68,
                   ),
-                  itemCount: filtered.length,
+                  itemCount: list.length,
                   itemBuilder: (_, i) => _MarketplaceCard(
-                    item: filtered[i],
+                    item: list[i],
                     isDark: isDark,
                   ),
                 ),

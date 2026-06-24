@@ -46,12 +46,12 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                   );
                   if (confirm == true && context.mounted) {
                     await ref.read(marketplaceRepositoryProvider).deleteItem(item.id);
-                    ref.invalidate(marketplaceItemsProvider);
+                    ref.read(marketplaceListProvider.notifier).refresh();
                     if (context.mounted) context.pop();
                   }
                 } else {
                   await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
-                  ref.invalidate(marketplaceItemsProvider);
+                  ref.read(marketplaceListProvider.notifier).refresh();
                   if (context.mounted) {
                     AppSnackBar.info(context, '상태가 변경됐습니다.');
                     context.pop();
