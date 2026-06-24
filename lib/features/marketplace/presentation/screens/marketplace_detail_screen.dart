@@ -47,6 +47,7 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                         await ref
                             .read(marketplaceListProvider.notifier)
                             .refresh();
+                        ref.invalidate(myMarketplaceItemsProvider);
                         if (context.mounted) {
                           AppSnackBar.info(context, '삭제됐습니다.');
                           context.pop();
@@ -61,6 +62,7 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                 } else {
                   await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
                   ref.read(marketplaceListProvider.notifier).refresh();
+                  ref.invalidate(myMarketplaceItemsProvider);
                   if (context.mounted) {
                     AppSnackBar.info(context, '상태가 변경됐습니다.');
                     context.pop();

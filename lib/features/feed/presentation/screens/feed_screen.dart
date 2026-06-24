@@ -40,7 +40,6 @@ class FeedScreen extends ConsumerStatefulWidget {
 
 class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  bool _isSearching = false;
   String _searchQuery = '';
   late final TextEditingController _searchCtrl;
   late final ScrollController _scrollCtrl;
@@ -82,7 +81,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   }
 
   void _onScroll() {
-    if (_isSearching) return;
+    if (_searchQuery.isNotEmpty) return;
     if (!_scrollCtrl.hasClients) return;
     final pos = _scrollCtrl.position;
     if (pos.pixels >= pos.maxScrollExtent - 300) {
@@ -121,7 +120,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   }
 
   bool _onScrollNotification(ScrollNotification notif) {
-    // 자식 스크롤(즐겨찾기 가로 리스트 등)의 알림은 무시
+    // 자식(중첩) 스크롤의 알림은 무시하고 최상위 세로 스크롤만 처리
     if (notif.depth != 0) return false;
     if (notif.metrics.axis != Axis.vertical) return false;
     if (notif is ScrollEndNotification) {
@@ -136,7 +135,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
 
   /// 영상 게시물 중 viewport 상단 근처에 있는 것을 찾아 정렬.
   void _maybeSnapToVideo() {
-    if (_isSearching) return;
+    if (_searchQuery.isNotEmpty) return;
     if (!_scrollCtrl.hasClients) return;
     if (!mounted) return;
 
@@ -188,18 +187,16 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
 
   void _onSearchChanged(String value) => setState(() {
         _searchQuery = value;
-        _isSearching = value.isNotEmpty;
       });
 
   void _onSearchClear() {
     _searchCtrl.clear();
     setState(() {
       _searchQuery = '';
-      _isSearching = false;
     });
   }
 
-  // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력). 즐겨찾기 바를 대체.
+  // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력)
   Widget _buildSearchBar(BuildContext context) {
     final isDark = context.isDark;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
@@ -284,13 +281,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
-                final showLoadMore = !_isSearching &&
-                    _searchQuery.isEmpty &&
+                final showLoadMore = _searchQuery.isEmpty &&
                     ref.read(feedPostsProvider.notifier).hasMore &&
                     posts.isNotEmpty;
 
                 // 검색 중이 아닐 때만 광고 인터리브
-                final rawAds = (_isSearching || _searchQuery.isNotEmpty)
+                final rawAds = _searchQuery.isNotEmpty
                     ? const <AdFeed>[]
                     : (ref.watch(activeFeedAdsProvider).valueOrNull ?? const []);
                 // 유저×날짜 시드로 셔플 → 사용자별로 광고 노출 분포 균등화.
@@ -311,7 +307,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                 );
 
                 return [
-                  if (_isSearching && _searchQuery.isNotEmpty)
+                  if (_searchQuery.isNotEmpty)
                     SliverToBoxAdapter(
                       child: _SearchResultBanner(
                         count: filtered.length,
