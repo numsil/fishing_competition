@@ -776,7 +776,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
           for (int attempt = 0; attempt < 2; attempt++) {
             info = await VideoCompress.compressVideo(
               item.file.path,
-              quality: VideoQuality.MediumQuality,
+              quality: VideoQuality.Res1280x720Quality, // 720p: 선명함·용량 균형
               deleteOrigin: false,
               includeAudio: true,
             );
