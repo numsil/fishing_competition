@@ -58,10 +58,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
     _scrollCtrl = ScrollController()..addListener(_onScroll);
   }
 
-  // 탭 전환 시 검색어 초기화 (탭마다 검색이 따로 남지 않게)
+  // 탭 전환 시 키보드 닫기 + 검색어 초기화 (탭마다 검색이 따로 남지 않게)
   void _onTabChanged() {
-    if (_tabController.indexIsChanging && _searchQuery.isNotEmpty) {
-      _onSearchClear();
+    if (_tabController.indexIsChanging) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      if (_searchQuery.isNotEmpty) _onSearchClear();
     }
   }
 
@@ -267,6 +268,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         onNotification: _onScrollNotification,
         child: CustomScrollView(
           controller: _scrollCtrl,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
