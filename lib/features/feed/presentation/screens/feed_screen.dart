@@ -249,10 +249,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         accent: accent,
         tabController: _tabController,
       ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(),
+      body: Column(
         children: [
+          _buildSearchBar(context),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
           // 탭 1: 조과 피드
           RefreshIndicator(
         onRefresh: () async {
@@ -264,9 +268,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         child: CustomScrollView(
           controller: _scrollCtrl,
           slivers: [
-            SliverToBoxAdapter(
-              child: _buildSearchBar(context),
-            ),
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
@@ -368,11 +369,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         ),
       ),
           // 탭 2: 중고거래
-          Column(
-            children: [
-              _buildSearchBar(context),
-              Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
-            ],
+          MarketplaceScreen(searchQuery: _searchQuery),
+              ],
+            ),
           ),
         ],
       ),
