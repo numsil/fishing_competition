@@ -70,6 +70,33 @@ class ReportRepository {
       'reason': reason,
     });
   }
+
+  Future<void> reportMarketplaceItem({
+    required String itemId,
+    required String reason,
+  }) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) throw const NotAuthenticatedException();
+
+    final existing = await _supabase
+        .from('reports')
+        .select('id')
+        .eq('marketplace_item_id', itemId)
+        .eq('reporter_id', uid)
+        .eq('status', 'pending')
+        .limit(1)
+        .maybeSingle();
+
+    if (existing != null) {
+      throw const AlreadyReportedException();
+    }
+
+    await _supabase.from('reports').insert({
+      'marketplace_item_id': itemId,
+      'reporter_id': uid,
+      'reason': reason,
+    });
+  }
 }
 
 @riverpod

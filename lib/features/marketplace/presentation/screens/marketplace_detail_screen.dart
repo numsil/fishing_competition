@@ -10,6 +10,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/utils/time_ago.dart' show formatTimeAgo;
 import '../../../auth/data/auth_repository.dart';
 import '../../../dm/data/dm_repository.dart';
+import '../../../report/presentation/widgets/report_reason_sheet.dart';
 import '../../data/marketplace_model.dart';
 import '../../data/marketplace_repository.dart';
 
@@ -66,6 +67,20 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                 if (item.status != 'sold')
                   const PopupMenuItem(value: 'sold', child: Text('판매완료로 변경')),
                 const PopupMenuItem(value: 'delete', child: Text('삭제', style: TextStyle(color: Colors.red))),
+              ],
+            ),
+          if (!isOwner)
+            PopupMenuButton<String>(
+              icon: const Icon(LucideIcons.moreVertical),
+              onSelected: (v) {
+                if (v == 'report') {
+                  ReportReasonSheet.showForMarketplace(context, item.id);
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                    value: 'report',
+                    child: Text('신고하기', style: TextStyle(color: Colors.red))),
               ],
             ),
         ],
