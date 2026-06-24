@@ -198,32 +198,40 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
     final isDark = context.isDark;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-      child: TextField(
-        controller: _searchCtrl,
-        onChanged: _onSearchChanged,
-        style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
-        decoration: InputDecoration(
-          hintText: '검색',
-          hintStyle: TextStyle(fontSize: 14, color: hint),
-          prefixIcon: Icon(LucideIcons.search, size: 18, color: hint),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  onPressed: _onSearchClear,
-                  icon: Icon(LucideIcons.x, size: 16, color: hint),
-                  visualDensity: VisualDensity.compact,
-                )
-              : null,
-          filled: true,
-          fillColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          isDense: true,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(20),
         ),
-        textInputAction: TextInputAction.search,
+        child: Row(
+          children: [
+            Icon(LucideIcons.search, size: 18, color: hint),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: _onSearchChanged,
+                style: TextStyle(
+                    fontSize: 14, color: isDark ? Colors.white : Colors.black),
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  hintText: '검색',
+                  hintStyle: TextStyle(fontSize: 14, color: hint),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                textInputAction: TextInputAction.search,
+              ),
+            ),
+            if (_searchQuery.isNotEmpty)
+              GestureDetector(
+                onTap: _onSearchClear,
+                child: Icon(LucideIcons.x, size: 16, color: hint),
+              ),
+          ],
+        ),
       ),
     );
   }
