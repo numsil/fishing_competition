@@ -56,6 +56,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
     }
 
+    // 앱 아이콘 배지용 안읽음 알림 개수
+    const { count: unread } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user_id)
+      .eq("is_read", false);
+    const badge = unread ?? 0;
+
     const accessToken = await getAccessToken(sa);
     const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
     const strData: Record<string, string> = {};
@@ -67,7 +75,13 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: { token, notification: { title, body }, data: strData },
+          message: {
+            token,
+            notification: { title, body },
+            data: strData,
+            apns: { payload: { aps: { badge } } },
+            android: { notification: { notification_count: badge } },
+          },
         }),
       });
       if (r.ok) sent++;

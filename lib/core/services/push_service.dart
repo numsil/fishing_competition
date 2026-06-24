@@ -16,6 +16,7 @@ class PushService {
 
   StreamSubscription<String>? _tokenRefreshSub;
   StreamSubscription<RemoteMessage>? _messageOpenedSub;
+  StreamSubscription<AuthState>? _authSub;
 
   Future<void> start() async {
     final messaging = FirebaseMessaging.instance;
@@ -25,6 +26,13 @@ class PushService {
 
     await _registerToken(messaging);
     _tokenRefreshSub = messaging.onTokenRefresh.listen((t) => _saveToken(t));
+
+    // 로그인 시점에 토큰 등록 (앱 시작 때 로그아웃 상태였다가 로그인하는 경우 대응)
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) {
+        _registerToken(messaging);
+      }
+    });
 
     // 종료 상태에서 알림 탭으로 앱이 열린 경우
     final initial = await messaging.getInitialMessage();
@@ -38,6 +46,7 @@ class PushService {
   void dispose() {
     _tokenRefreshSub?.cancel();
     _messageOpenedSub?.cancel();
+    _authSub?.cancel();
   }
 
   Future<void> _registerToken(FirebaseMessaging messaging) async {

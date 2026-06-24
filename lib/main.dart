@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -96,7 +97,26 @@ class _AppRootWidgetState extends State<AppRootWidget>
     if (state == AppLifecycleState.resumed) {
       _verifyNotBanned();
       LastSeenTracker.ping();
+      _syncAppBadge();
     }
+  }
+
+  /// 앱 복귀 시 안읽음 알림 수로 앱 아이콘 배지 동기화.
+  Future<void> _syncAppBadge() async {
+    final supabase = Supabase.instance.client;
+    final uid = supabase.auth.currentUser?.id;
+    try {
+      if (uid == null) {
+        await AppBadgePlus.updateBadge(0);
+        return;
+      }
+      final rows = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('is_read', false);
+      await AppBadgePlus.updateBadge((rows as List).length);
+    } catch (_) {/* 배지 미지원 기기/네트워크 오류 무시 */}
   }
 
   /// 앱이 포그라운드로 돌아올 때 banned/삭제 상태를 재확인.

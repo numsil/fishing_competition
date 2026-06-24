@@ -1,3 +1,4 @@
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,9 +21,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    // 진입 시 전체 읽음 처리
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationRepositoryProvider).markAllRead();
+    // 진입 시 전체 읽음 처리 + 앱 아이콘 배지 초기화
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(notificationRepositoryProvider).markAllRead();
+      try {
+        await AppBadgePlus.updateBadge(0);
+      } catch (_) {/* 배지 미지원 기기 무시 */}
     });
   }
 
