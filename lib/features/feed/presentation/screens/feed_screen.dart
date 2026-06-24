@@ -186,20 +186,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   }
 
   // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력). 즐겨찾기 바를 대체.
-  Widget _buildSearchBar(BuildContext context, {required bool marketplace}) {
+  Widget _buildSearchBar(BuildContext context) {
     final isDark = context.isDark;
-    final accent = context.accentColor;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
       child: TextField(
         controller: _searchCtrl,
         onChanged: _onSearchChanged,
         style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black),
         decoration: InputDecoration(
-          hintText: marketplace ? '상품명 검색...' : '유저명·내용·#태그 검색...',
+          hintText: '검색',
           hintStyle: TextStyle(fontSize: 14, color: hint),
-          prefixIcon: Icon(LucideIcons.search, size: 18, color: accent),
+          prefixIcon: Icon(LucideIcons.search, size: 18, color: hint),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   onPressed: _onSearchClear,
@@ -247,7 +246,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
           controller: _scrollCtrl,
           slivers: [
             SliverToBoxAdapter(
-              child: _buildSearchBar(context, marketplace: false),
+              child: _buildSearchBar(context),
             ),
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
@@ -352,7 +351,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
           // 탭 2: 중고거래
           Column(
             children: [
-              _buildSearchBar(context, marketplace: true),
+              _buildSearchBar(context),
               Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
             ],
           ),
