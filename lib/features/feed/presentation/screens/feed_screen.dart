@@ -275,7 +275,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                       child: Center(
                         child: Text(
                           _searchQuery.isEmpty
-                              ? '아직 올라온 조과가 없습니다.\n첫 조과를 자랑해보세요!'
+                              ? '아직 올라온 피드가 없습니다.\n첫 사진을 올려보세요!'
                               : '검색 결과가 없습니다.',
                         ),
                       ),
@@ -414,7 +414,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                 decoration: InputDecoration(
                   hintText: tabController.index == 1
                       ? '상품명 검색...'
-                      : '유저명 또는 #태그 검색...',
+                      : '유저명·내용·#태그 검색...',
                   hintStyle: TextStyle(
                     fontSize: 14,
                     color: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
@@ -536,7 +536,7 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
         unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         tabs: const [
-          Tab(text: '조과'),
+          Tab(text: '피드'),
           Tab(text: '중고거래'),
         ],
       ),
