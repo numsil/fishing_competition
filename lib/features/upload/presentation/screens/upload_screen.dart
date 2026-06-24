@@ -185,22 +185,20 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
   Future<void> _pickFromGallery() async {
     setState(() => _loadingMedia = true);
     try {
-      // 사진 + 동영상 혼합 선택 (image_picker 1.0+)
-      final picked = await _picker.pickMultipleMedia(
+      // 사진 여러 장 선택 (중고거래와 동일한 표준 사진 picker)
+      final picked = await _picker.pickMultiImage(
         imageQuality: 80,
         maxWidth: 1080,
         maxHeight: 1080,
         limit: _kMaxMedia,
       );
       if (picked.isEmpty) return;
-      final limited = picked.take(_kMaxMedia).toList();
-      final hasVideo = limited.any((f) => _isVideoPath(f.path));
-      if (hasVideo) widget.onProcessing(true);
-      final items = await _buildItems(limited);
-      widget.onProcessing(false);
+      final items = picked
+          .take(_kMaxMedia)
+          .map((f) => _PickedItem(type: 'image', file: f))
+          .toList();
       await widget.onMediaPicked(items);
     } catch (e) {
-      widget.onProcessing(false);
       if (mounted) {
         AppSnackBar.error(context, '미디어 보관함에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.');
       }
