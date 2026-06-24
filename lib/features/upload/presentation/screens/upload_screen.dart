@@ -1030,7 +1030,7 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
                 ]),
               ),
               SizedBox(
-                height: 146,
+                height: 130,
                 child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),

@@ -170,7 +170,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
             else
               // 사진 있을 때: 드래그 재정렬 가능한 가로 스트립
               SizedBox(
-                height: 146,
+                height: 130,
                 child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.only(right: 8),
