@@ -38,6 +38,10 @@ class NotificationRepository {
         .eq('is_read', false);
   }
 
+  Future<void> deleteNotification(String id) async {
+    await _supabase.from('notifications').delete().eq('id', id);
+  }
+
   Future<void> upsertDeviceToken(String token, String platform) async {
     final myId = _myId;
     if (myId == null) return;

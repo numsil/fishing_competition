@@ -1,6 +1,7 @@
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -82,7 +83,33 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   itemCount: items.length,
                   itemBuilder: (context, i) {
                     final n = items[i];
-                    return InkWell(
+                    return Slidable(
+                      key: ValueKey(n.id),
+                      endActionPane: ActionPane(
+                        motion: const DrawerMotion(),
+                        extentRatio: 0.22,
+                        children: [
+                          CustomSlidableAction(
+                            onPressed: (_) => ref
+                                .read(notificationRepositoryProvider)
+                                .deleteNotification(n.id),
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.delete_outline, size: 22),
+                                SizedBox(height: 4),
+                                Text('삭제',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      child: InkWell(
                       onTap: () {
                         final route = routeFromNotification(n.type, n.targetId,
                             actorId: n.actorId);
@@ -121,6 +148,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                                 style: TextStyle(fontSize: 11, color: sub)),
                           ],
                         ),
+                      ),
                       ),
                     );
                   },
