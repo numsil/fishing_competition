@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +11,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/deep_link/deep_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/services/last_seen_tracker.dart';
+import 'core/services/push_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_repository.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseBgHandler(RemoteMessage message) async {
+  // 백그라운드 수신: OS가 알림 표시. 추가 처리 불필요.
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +41,14 @@ void main() async {
     );
   } else {
     debugPrint('Supabase URL 또는 Anon Key가 설정되지 않았습니다.');
+  }
+
+  // Firebase 초기화 및 백그라운드 핸들러 등록
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseBgHandler);
+  } catch (e) {
+    debugPrint('Firebase 초기화 실패: $e');
   }
 
   runApp(const AppRootWidget());
@@ -124,11 +140,13 @@ class FishingCompetitionApp extends ConsumerStatefulWidget {
 
 class _FishingCompetitionAppState extends ConsumerState<FishingCompetitionApp> {
   DeepLinkService? _deepLinkService;
+  PushService? _pushService;
   GoRouter? _attachedRouter;
 
   @override
   void dispose() {
     _deepLinkService?.dispose();
+    _pushService?.dispose();
     super.dispose();
   }
 
@@ -140,6 +158,7 @@ class _FishingCompetitionAppState extends ConsumerState<FishingCompetitionApp> {
     if (_attachedRouter != router) {
       _deepLinkService?.dispose();
       _deepLinkService = DeepLinkService(router)..start();
+      _pushService = PushService(router)..start();
       _attachedRouter = router;
     }
 
