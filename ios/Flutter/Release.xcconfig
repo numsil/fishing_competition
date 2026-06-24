@@ -1,2 +1,5 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// 배포 빌드(CI/앱스토어): APNs production 환경
+CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements

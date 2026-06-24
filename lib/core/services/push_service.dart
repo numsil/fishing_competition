@@ -27,9 +27,11 @@ class PushService {
     await _registerToken(messaging);
     _tokenRefreshSub = messaging.onTokenRefresh.listen((t) => _saveToken(t));
 
-    // 로그인 시점에 토큰 등록 (앱 시작 때 로그아웃 상태였다가 로그인하는 경우 대응)
+    // 세션이 생기는 모든 경우에 토큰 등록.
+    // 자동 로그인(세션 복원)은 signedIn 이 아니라 initialSession 이벤트라서
+    // session != null 전체를 처리해야 토큰이 누락되지 않는다.
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn) {
+      if (data.session != null) {
         _registerToken(messaging);
       }
     });
@@ -51,6 +53,20 @@ class PushService {
 
   Future<void> _registerToken(FirebaseMessaging messaging) async {
     try {
+      // iOS: FCM 토큰은 APNs 토큰이 준비된 뒤에야 발급된다. 준비될 때까지 대기.
+      if (Platform.isIOS) {
+        var apns = await messaging.getAPNSToken();
+        var tries = 0;
+        while (apns == null && tries < 15) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          apns = await messaging.getAPNSToken();
+          tries++;
+        }
+        if (apns == null) {
+          if (kDebugMode) debugPrint('[Push] APNS token 아직 없음 → 등록 보류');
+          return;
+        }
+      }
       final token = await messaging.getToken();
       if (token != null) await _saveToken(token);
     } catch (e) {
