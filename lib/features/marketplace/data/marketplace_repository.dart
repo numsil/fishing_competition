@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/image_compress.dart';
+import '../../../core/utils/storage_cleanup.dart';
 import 'marketplace_model.dart';
 
 part 'marketplace_repository.g.dart';
@@ -129,13 +130,30 @@ class MarketplaceRepository {
   }
 
   Future<void> deleteItem(String itemId) async {
-    // is_deleted=true 로 소프트 삭제. (RLS: 본인 행만 update 가능)
-    // .select() 로 되읽지 않음 — SELECT 정책이 is_deleted=false 만 허용해
-    // 방금 삭제한 행은 안 읽혀 거짓 0행이 되기 때문.
-    await _supabase
+    // 스토리지 이미지 정리를 위해 먼저 이미지 URL 조회 (필요 컬럼만)
+    final row = await _supabase
         .from('marketplace_items')
-        .update({'is_deleted': true})
-        .eq('id', itemId);
+        .select('image_urls')
+        .eq('id', itemId)
+        .maybeSingle();
+
+    // 행 하드 삭제 (RLS: 본인 행만 delete 가능)
+    await _supabase.from('marketplace_items').delete().eq('id', itemId);
+
+    // 스토리지 이미지 best-effort 정리 (마켓 이미지는 post_images 버킷)
+    final urls = (row?['image_urls'] as List?)?.cast<String>();
+    if (urls != null && urls.isNotEmpty) {
+      final paths = <String>{};
+      for (final u in urls) {
+        final p = extractStoragePath(u, 'post_images');
+        if (p != null) paths.add(p);
+      }
+      if (paths.isNotEmpty) {
+        try {
+          await _supabase.storage.from('post_images').remove(paths.toList());
+        } catch (_) {/* swallow */}
+      }
+    }
   }
 }
 
