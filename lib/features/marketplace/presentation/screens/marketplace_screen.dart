@@ -180,8 +180,44 @@ class _MarketplaceCard extends StatelessWidget {
   final MarketplaceItem item;
   final bool isDark;
 
+  Color get _statusColor {
+    switch (item.status) {
+      case 'reserved':
+        return const Color(0xFFFF9500); // 예약중 - 주황
+      case 'sold':
+        return const Color(0xFF8E8E93); // 판매완료 - 회색
+      default:
+        return const Color(0xFF34C759); // 판매중 - 초록
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sold = item.status == 'sold';
+    final placeholder = Container(
+      color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+      child: const Icon(LucideIcons.image, color: Colors.grey),
+    );
+    Widget image = item.imageUrls.isNotEmpty
+        ? Image.network(
+            item.imageUrls.first,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) => placeholder,
+          )
+        : placeholder;
+    // 판매완료는 흑백 처리
+    if (sold) {
+      image = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0, 0, 0, 1, 0,
+        ]),
+        child: image,
+      );
+    }
     return GestureDetector(
       onTap: () => context.push('/marketplace/${item.id}', extra: item),
       child: Container(
@@ -199,20 +235,33 @@ class _MarketplaceCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: item.imageUrls.isNotEmpty
-                    ? Image.network(
-                        item.imageUrls.first,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-                          child: const Icon(LucideIcons.image, color: Colors.grey),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    image,
+                    if (sold) Container(color: Colors.black.withValues(alpha: 0.22)),
+                    // 판매 상태 배지
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _statusColor.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      )
-                    : Container(
-                        color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
-                        child: const Icon(LucideIcons.image, color: Colors.grey),
+                        child: Text(
+                          item.statusLabel,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -220,20 +269,6 @@ class _MarketplaceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 상태 배지
-                  if (!item.isSelling)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        item.statusLabel,
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
-                      ),
-                    ),
                   Text(
                     item.title,
                     maxLines: 2,
