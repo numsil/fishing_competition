@@ -22,8 +22,9 @@ List<Post> filterPosts(List<Post> posts, String query) {
           .any((t) => t.toLowerCase().replaceAll('#', '').contains(q));
     }
 
-    // Otherwise, match both username and hashtags
+    // Otherwise, match username, caption body, and hashtags
     if (p.username.toLowerCase().contains(q)) return true;
+    if ((p.caption ?? '').toLowerCase().contains(q)) return true;
     return extractHashtags(p.caption)
         .any((t) => t.toLowerCase().replaceAll('#', '').contains(q));
   }).toList();

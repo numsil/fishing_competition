@@ -18,6 +18,8 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
+import '../../../marketplace/data/marketplace_model.dart';
+import '../../../marketplace/data/marketplace_repository.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -476,7 +478,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     indicatorSize: TabBarIndicatorSize.tab,
                     tabs: const [
                       Tab(icon: Icon(LucideIcons.layoutGrid, size: 20)),
-                      Tab(icon: Icon(LucideIcons.list, size: 20)),
+                      Tab(icon: Icon(LucideIcons.shoppingBag, size: 20)),
                     ],
                   ),
                 ],
@@ -488,7 +490,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               controller: _tab,
               children: [
                 _Grid(isDark: context.isDark),
-                _History(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg),
+                _MyMarketplace(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg),
               ],
             ),
           ),
@@ -598,90 +600,83 @@ class _Grid extends ConsumerWidget {
   }
 }
 
-class _History extends ConsumerWidget {
-  const _History({required this.isDark, required this.accent, required this.sub, required this.cardBg});
+class _MyMarketplace extends ConsumerWidget {
+  const _MyMarketplace({required this.isDark, required this.accent, required this.sub, required this.cardBg});
   final bool isDark;
   final Color accent, sub, cardBg;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(myLeaguesProvider).when(
-      data: (myLeaguesMap) {
-        final participated = [...(myLeaguesMap['participated'] ?? [])];
-        participated.sort((a, b) => b.startTime.compareTo(a.startTime));
-
-        if (participated.isEmpty) {
+    return ref.watch(myMarketplaceItemsProvider).when(
+      data: (items) {
+        if (items.isEmpty) {
           return Center(
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(LucideIcons.fish, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
+              Icon(LucideIcons.shoppingBag, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
               const SizedBox(height: 12),
-              Text('참가한 리그가 없어요', style: TextStyle(color: sub, fontSize: 14)),
+              Text('등록한 중고거래 상품이 없어요', style: TextStyle(color: sub, fontSize: 14)),
             ]),
           );
         }
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: participated.length,
+          itemCount: items.length,
           itemBuilder: (_, i) {
-            final league = participated[i];
-            final isCompleted = league.status == 'completed';
-            final isLive = league.status == 'in_progress';
-            final statusLabel = isLive ? '진행중' : isCompleted ? '종료' : '모집중';
-            final statusColor = isLive ? AppColors.liveRed : isCompleted ? sub : accent;
+            final item = items[i];
+            final statusColor = item.isSelling ? accent : sub;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isLive
-                      ? accent.withValues(alpha: 0.3)
-                      : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+            return GestureDetector(
+              onTap: () => context.push('/marketplace/${item.id}', extra: item),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                  ),
                 ),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 38, height: 38,
-                  decoration: BoxDecoration(
-                    color: isCompleted
-                        ? (isDark ? AppColors.darkSurface2 : AppColors.lightBg)
-                        : accent.withValues(alpha: 0.1),
+                child: Row(children: [
+                  // 썸네일
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      isCompleted ? LucideIcons.award : LucideIcons.trophy,
-                      size: 18,
-                      color: isCompleted ? sub : accent,
+                    child: SizedBox(
+                      width: 52, height: 52,
+                      child: item.imageUrls.isNotEmpty
+                          ? Image.network(
+                              item.imageUrls.first,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
+                                child: Icon(LucideIcons.image, size: 18, color: sub),
+                              ),
+                            )
+                          : Container(
+                              color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
+                              child: Icon(LucideIcons.image, size: 18, color: sub),
+                            ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(league.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 3),
-                  Row(children: [
-                    Icon(LucideIcons.mapPin, size: 11, color: sub),
-                    const SizedBox(width: 3),
-                    Text(league.location, style: TextStyle(fontSize: 11, color: sub)),
-                  ]),
-                ])),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text(item.formattedPrice, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? AppColors.neonGreen : AppColors.navy)),
+                  ])),
+                  // 판매중이 아니면 상태 배지 (예약중/판매완료)
+                  if (!item.isSelling)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(item.statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
                     ),
-                    child: Text(statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('${league.participantsCount}명 참가', style: TextStyle(fontSize: 11, color: sub)),
                 ]),
-              ]),
+              ),
             );
           },
         );

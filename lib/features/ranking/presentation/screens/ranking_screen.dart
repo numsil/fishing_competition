@@ -59,8 +59,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
                 unselectedLabelStyle: const TextStyle(
                     fontWeight: FontWeight.w400, fontSize: 13),
                 tabs: [
-                  const Tab(text: '리그'),
                   const Tab(text: '개인'),
+                  const Tab(text: '리그'),
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -89,14 +89,14 @@ class _RankingScreenState extends ConsumerState<RankingScreen>
       body: TabBarView(
         controller: _tab,
         children: [
-          _LeagueScoreTab(
+          _PersonalScoreTab(
             isDark: context.isDark,
             accent: context.accentColor,
             selectedYear: _selectedYear,
             selectableYears: _selectableYears,
             onYearChanged: (y) => setState(() => _selectedYear = y),
           ),
-          _PersonalScoreTab(
+          _LeagueScoreTab(
             isDark: context.isDark,
             accent: context.accentColor,
             selectedYear: _selectedYear,
@@ -128,7 +128,7 @@ class _LeagueScoreTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final myId = ref.watch(currentUserProvider)?.id;
+    final myId = ref.watch(currentUserProvider.select((u) => u?.id));
 
     return ref.watch(leagueScoreRankingProvider(selectedYear)).when(
       data: (entries) {
@@ -202,7 +202,7 @@ class _PersonalScoreTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final myId = ref.watch(currentUserProvider)?.id;
+    final myId = ref.watch(currentUserProvider.select((u) => u?.id));
 
     return ref.watch(personalScoreRankingProvider(selectedYear)).when(
       data: (entries) {

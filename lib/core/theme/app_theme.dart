@@ -90,6 +90,7 @@ class AppTheme {
           labelColor: AppColors.neonGreen,
           unselectedLabelColor: AppColors.darkTextSub,
           indicatorColor: AppColors.neonGreen,
+          indicatorSize: TabBarIndicatorSize.tab,
         ),
         chipTheme: ChipThemeData(
           backgroundColor: AppColors.darkSurface2,
@@ -221,6 +222,7 @@ class AppTheme {
           labelColor: AppColors.navy,
           unselectedLabelColor: AppColors.lightTextSub,
           indicatorColor: AppColors.navy,
+          indicatorSize: TabBarIndicatorSize.tab,
         ),
         dialogTheme: DialogThemeData(
           backgroundColor: AppColors.lightSurface,

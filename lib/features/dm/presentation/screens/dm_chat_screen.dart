@@ -27,6 +27,9 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
   final _scrollCtrl = ScrollController();
   bool _sending = false;
   List<DmMessage> _messages = [];
+  // 내가 보낸 메시지 낙관적 표시용 (Realtime 에코가 늦거나 누락돼도 즉시 보이게).
+  // 스트림(서버)에 반영되면 제거된다.
+  final List<DmMessage> _localSent = [];
   bool _isLoading = true;
   StreamSubscription<List<DmMessage>>? _sub;
 
@@ -43,10 +46,14 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
         .streamMessages(widget.conversation.id)
         .listen((msgs) {
       if (!mounted) return;
-      final hasNew = msgs.length > _messages.length;
+      // 서버에 반영된 메시지는 낙관적 목록에서 제거 후 병합
+      final ids = msgs.map((m) => m.id).toSet();
+      _localSent.removeWhere((m) => ids.contains(m.id));
+      final merged = _mergeMessages(msgs, _localSent);
+      final hasNew = merged.length > _messages.length;
       final shouldScroll = _isNearBottom || hasNew;
       setState(() {
-        _messages = msgs;
+        _messages = merged;
         _isLoading = false;
       });
       if (shouldScroll) _scrollToBottom();
@@ -68,6 +75,15 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
     super.dispose();
   }
 
+  // 스트림 메시지 + 낙관적 메시지 병합 (id 중복 제거, 시간순 정렬)
+  List<DmMessage> _mergeMessages(List<DmMessage> base, List<DmMessage> extra) {
+    if (extra.isEmpty) return base;
+    final ids = base.map((m) => m.id).toSet();
+    final result = [...base, ...extra.where((m) => !ids.contains(m.id))];
+    result.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return result;
+  }
+
   bool get _isNearBottom {
     if (!_scrollCtrl.hasClients) return true;
     final pos = _scrollCtrl.position;
@@ -75,13 +91,15 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
   }
 
   void _scrollToBottom() {
+    // 변동 높이(날짜 구분선·아바타) 때문에 maxScrollExtent가 첫 프레임엔 부정확.
+    // 한 프레임 뒤 한 번 더 보정해 항상 정확히 맨 아래로 내린다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollCtrl.hasClients) return;
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
+      _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollCtrl.hasClients) return;
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      });
     });
   }
 
@@ -93,9 +111,17 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
     _ctrl.clear();
 
     try {
-      await ref
+      final sent = await ref
           .read(dmRepositoryProvider)
           .sendMessage(widget.conversation.id, text);
+      // 보낸 메시지 즉시 표시 (Realtime 에코를 기다리지 않음)
+      if (mounted && !_messages.any((m) => m.id == sent.id)) {
+        _localSent.add(sent);
+        setState(() {
+          _messages = _mergeMessages(_messages, _localSent);
+        });
+        _scrollToBottom();
+      }
     } on DmBlockedException catch (e) {
       if (mounted) {
         AppSnackBar.warning(context, e.toString());

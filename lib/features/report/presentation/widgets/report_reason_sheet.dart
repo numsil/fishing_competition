@@ -16,13 +16,20 @@ const _reasons = <String>[
 ];
 
 class ReportReasonSheet extends ConsumerStatefulWidget {
-  const ReportReasonSheet({super.key, this.postId, this.commentId, this.parentPostId})
-      : assert(postId != null || commentId != null);
+  const ReportReasonSheet(
+      {super.key,
+      this.postId,
+      this.commentId,
+      this.parentPostId,
+      this.marketplaceItemId})
+      : assert(postId != null || commentId != null || marketplaceItemId != null);
   final String? postId;
   final String? commentId;     // 댓글 신고 대상
   final String? parentPostId;  // 댓글 신고 시 부모 게시물(맥락용)
+  final String? marketplaceItemId; // 중고거래 매물 신고 대상
 
   bool get isComment => commentId != null;
+  bool get isMarketplace => marketplaceItemId != null;
 
   static Future<void> show(BuildContext context, String postId) {
     return showModalBottomSheet(
@@ -30,6 +37,15 @@ class ReportReasonSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ReportReasonSheet(postId: postId),
+    );
+  }
+
+  static Future<void> showForMarketplace(BuildContext context, String itemId) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReportReasonSheet(marketplaceItemId: itemId),
     );
   }
 
@@ -59,7 +75,12 @@ class _ReportReasonSheetState extends ConsumerState<ReportReasonSheet> {
     if (reason == null) return;
     setState(() => _submitting = true);
     try {
-      if (widget.isComment) {
+      if (widget.isMarketplace) {
+        await ref.read(reportRepositoryProvider).reportMarketplaceItem(
+              itemId: widget.marketplaceItemId!,
+              reason: reason,
+            );
+      } else if (widget.isComment) {
         await ref.read(reportRepositoryProvider).reportComment(
               commentId: widget.commentId!,
               postId: widget.parentPostId,
@@ -77,7 +98,13 @@ class _ReportReasonSheetState extends ConsumerState<ReportReasonSheet> {
     } on AlreadyReportedException {
       if (!mounted) return;
       Navigator.pop(context);
-      AppSnackBar.warning(context, widget.isComment ? '이미 신고한 댓글입니다' : '이미 신고한 게시물입니다');
+      AppSnackBar.warning(
+          context,
+          widget.isMarketplace
+              ? '이미 신고한 매물입니다'
+              : widget.isComment
+                  ? '이미 신고한 댓글입니다'
+                  : '이미 신고한 게시물입니다');
     } on NotAuthenticatedException {
       if (!mounted) return;
       AppSnackBar.error(context, '로그인이 필요합니다');

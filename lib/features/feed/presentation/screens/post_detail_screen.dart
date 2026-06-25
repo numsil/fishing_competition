@@ -549,6 +549,24 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
     }
   }
 
+  /// 댓글 본문의 @멘션을 accent 색으로 구분해 렌더 (나머지는 기본색)
+  List<InlineSpan> _buildContentSpans(String text, Color mentionColor) {
+    final spans = <InlineSpan>[];
+    final re = RegExp(r'@[^\s]+');
+    var last = 0;
+    for (final m in re.allMatches(text)) {
+      if (m.start > last) spans.add(TextSpan(text: text.substring(last, m.start)));
+      spans.add(TextSpan(
+        text: m.group(0),
+        style: TextStyle(color: mentionColor, fontWeight: FontWeight.w600),
+      ));
+      last = m.end;
+    }
+    if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+    if (spans.isEmpty) spans.add(TextSpan(text: text));
+    return spans;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
@@ -619,7 +637,10 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
                                     ),
                                   ),
                                   const TextSpan(text: '  '),
-                                  TextSpan(text: c.text, style: const TextStyle(fontSize: 13)),
+                                  TextSpan(
+                                    style: const TextStyle(fontSize: 13),
+                                    children: _buildContentSpans(c.text, context.accentColor),
+                                  ),
                                 ]))),
                               ]),
                             );
