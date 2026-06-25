@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,12 +16,13 @@ class MarketplaceRepository {
   Future<List<MarketplaceItem>> getItems({
     int limit = kMarketplacePageSize,
     DateTime? before,
+    String? beforeId,
     String? category,
     String? search,
   }) async {
     var query = _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, user_key, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, avatar_url)')
         .eq('is_deleted', false);
 
     if (category != null) query = query.eq('category', category);
@@ -31,10 +33,19 @@ class MarketplaceRepository {
         query = query.or('title.ilike.*$s*,description.ilike.*$s*');
       }
     }
-    if (before != null) query = query.lt('created_at', before.toUtc().toIso8601String());
+    if (before != null) {
+      final c = before.toUtc().toIso8601String();
+      // keyset (created_at, id) 복합 커서: 동일 created_at이 페이지 경계에 걸려도 누락 없음
+      if (beforeId != null) {
+        query = query.or('created_at.lt.$c,and(created_at.eq.$c,id.lt.$beforeId)');
+      } else {
+        query = query.lt('created_at', c);
+      }
+    }
 
     final response = await query
         .order('created_at', ascending: false)
+        .order('id', ascending: false)
         .limit(limit);
 
     return (response as List).map((data) {
@@ -54,7 +65,7 @@ class MarketplaceRepository {
 
     final response = await _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, user_key, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, avatar_url)')
         .eq('user_id', uid)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
@@ -139,6 +150,7 @@ class MarketplaceList extends _$MarketplaceList {
   bool _hasMore = true;
   bool _loading = false;
   DateTime? _lastCreatedAt;
+  String? _lastId;
   String _category = '전체';
   String _search = '';
 
@@ -146,6 +158,9 @@ class MarketplaceList extends _$MarketplaceList {
 
   @override
   Future<List<MarketplaceItem>> build() async {
+    // 리스트 5분 TTL 캐시 (피드 패턴과 동일)
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
     return _fetch(reset: true);
   }
 
@@ -153,11 +168,15 @@ class MarketplaceList extends _$MarketplaceList {
     final items = await ref.read(marketplaceRepositoryProvider).getItems(
           limit: kMarketplacePageSize,
           before: reset ? null : _lastCreatedAt,
+          beforeId: reset ? null : _lastId,
           category: _category == '전체' ? null : _category,
           search: _search.trim().isEmpty ? null : _search.trim(),
         );
     _hasMore = items.length >= kMarketplacePageSize;
-    if (items.isNotEmpty) _lastCreatedAt = items.last.createdAt;
+    if (items.isNotEmpty) {
+      _lastCreatedAt = items.last.createdAt;
+      _lastId = items.last.id;
+    }
     return items;
   }
 
@@ -168,6 +187,7 @@ class MarketplaceList extends _$MarketplaceList {
     _search = search;
     _hasMore = true;
     _lastCreatedAt = null;
+    _lastId = null;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetch(reset: true));
   }
@@ -188,6 +208,7 @@ class MarketplaceList extends _$MarketplaceList {
   Future<void> refresh() async {
     _hasMore = true;
     _lastCreatedAt = null;
+    _lastId = null;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetch(reset: true));
   }
@@ -195,5 +216,8 @@ class MarketplaceList extends _$MarketplaceList {
 
 @riverpod
 Future<List<MarketplaceItem>> myMarketplaceItems(MyMarketplaceItemsRef ref) async {
+  // 내 매물 목록도 5분 TTL 캐시
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
   return ref.read(marketplaceRepositoryProvider).getMyItems();
 }
