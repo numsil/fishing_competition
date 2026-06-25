@@ -128,7 +128,7 @@ class _LeagueScoreTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final myId = ref.watch(currentUserProvider)?.id;
+    final myId = ref.watch(currentUserProvider.select((u) => u?.id));
 
     return ref.watch(leagueScoreRankingProvider(selectedYear)).when(
       data: (entries) {
@@ -202,7 +202,7 @@ class _PersonalScoreTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final myId = ref.watch(currentUserProvider)?.id;
+    final myId = ref.watch(currentUserProvider.select((u) => u?.id));
 
     return ref.watch(personalScoreRankingProvider(selectedYear)).when(
       data: (entries) {

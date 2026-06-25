@@ -292,7 +292,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                 // 유저×날짜 시드로 셔플 → 사용자별로 광고 노출 분포 균등화.
                 // 같은 사용자가 같은 날 안에선 순서 일정 (스크롤 안정성).
                 final myId =
-                    ref.watch(currentUserProvider)?.id ?? 'anon';
+                    ref.watch(currentUserProvider.select((u) => u?.id)) ?? 'anon';
                 final today = DateTime.now().toUtc();
                 final dayKey = '${today.year}-${today.month}-${today.day}';
                 final seed = ('$myId|$dayKey').hashCode;

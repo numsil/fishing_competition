@@ -259,7 +259,19 @@ class FeedRepository {
       'score': calculateFishScore(length),
     };
 
+    String? oldImageUrl;
+    List<String>? oldImageUrls;
     if (newImageFiles != null && newImageFiles.isNotEmpty) {
+      // 교체 전 기존 이미지 URL 조회 (업로드 후 고아 파일 정리용, 필요한 2컬럼만)
+      final prev = await _supabase
+          .from('posts')
+          .select('image_url, image_urls')
+          .eq('id', postId)
+          .maybeSingle();
+      if (prev != null) {
+        oldImageUrl = prev['image_url'] as String?;
+        oldImageUrls = (prev['image_urls'] as List?)?.cast<String>();
+      }
       final userId = _supabase.auth.currentUser?.id ?? '';
       final ts = DateTime.now().millisecondsSinceEpoch;
       final urls = <String>[];
@@ -285,6 +297,16 @@ class FeedRepository {
     }
 
     await _supabase.from('posts').update(updates).eq('id', postId);
+
+    // 교체된 옛 이미지를 best-effort로 정리 (새 파일과 경로·ts가 달라 충돌 없음)
+    if (oldImageUrl != null ||
+        (oldImageUrls != null && oldImageUrls.isNotEmpty)) {
+      await removePostStorageFiles(
+        _supabase,
+        imageUrl: oldImageUrl,
+        imageUrls: oldImageUrls,
+      );
+    }
   }
 
   /// 조과 앨범에서 선택한 여러 Post를 하나의 피드 포스트로 공유.
