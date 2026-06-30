@@ -67,12 +67,13 @@ class AppMenuDivider extends StatelessWidget {
     final color =
         context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Divider(
         height: 1,
         thickness: 1,
-        indent: 20,
-        endIndent: 20,
+        // 아이콘 타일(16+40+14) 다음, 라벨 시작선에 맞춤
+        indent: 70,
+        endIndent: 16,
         color: color,
       ),
     );
