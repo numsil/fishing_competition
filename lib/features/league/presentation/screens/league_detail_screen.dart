@@ -912,39 +912,30 @@ class _BottomBar extends ConsumerWidget {
                   ],
                   // 카메라 버튼
                   Expanded(
-                    child: SizedBox(
-                      height: 54,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          File? captured;
-                          try {
-                            final picked = await ImagePicker().pickImage(
-                              source: ImageSource.camera,
-                            );
-                            if (picked != null) captured = File(picked.path);
-                          } catch (e) {
-                            if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
-                            return;
-                          }
-                          if (captured == null || !context.mounted) return;
-                          final result = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              fullscreenDialog: true,
-                              builder: (_) => LeagueCatchScreen(league: league, initialImage: captured),
-                            ),
+                    child: AppButton(
+                      label: '조과 사진 등록',
+                      icon: Icons.camera_alt_rounded,
+                      onPressed: () async {
+                        File? captured;
+                        try {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.camera,
                           );
-                          if (result == true) ref.invalidate(leagueRankingProvider(league.id));
-                        },
-                        icon: const Icon(Icons.camera_alt_rounded, size: 22),
-                        label: const Text('조과 사진 등록',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          foregroundColor: isDark ? Colors.black : Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
+                          if (picked != null) captured = File(picked.path);
+                        } catch (e) {
+                          if (context.mounted) AppSnackBar.error(context, '카메라 실행 실패: $e');
+                          return;
+                        }
+                        if (captured == null || !context.mounted) return;
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            fullscreenDialog: true,
+                            builder: (_) => LeagueCatchScreen(league: league, initialImage: captured),
+                          ),
+                        );
+                        if (result == true) ref.invalidate(leagueRankingProvider(league.id));
+                      },
                     ),
                   ),
                 ],
@@ -1030,23 +1021,13 @@ class _BottomBar extends ConsumerWidget {
             }
             if (status == 'approved') {
               // 참가 완료 상태 → 취소 버튼
-              return SizedBox(
-                height: 54,
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: !cancelling ? onCancelJoin : null,
-                  icon: cancelling
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(LucideIcons.userMinus, size: 18),
-                  label: Text(cancelling ? '처리 중...' : '참가 취소'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
+              return AppButton(
+                label: '참가 취소',
+                onPressed: cancelling ? null : onCancelJoin,
+                variant: AppButtonVariant.outline,
+                tone: AppButtonTone.error,
+                icon: LucideIcons.userMinus,
+                loading: cancelling,
               );
             }
             // 미참가 → 비공개 리그는 초대 전용 안내 (위에서 invite는 이미 처리됨)
@@ -1095,47 +1076,21 @@ class _BottomBar extends ConsumerWidget {
                     isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
               );
             }
-            return SizedBox(
-              height: 54,
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: !joining ? onJoin : null,
-                icon: joining
-                    ? const SizedBox(
-                        width: 18, height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.how_to_reg_rounded),
-                label: Text(joining ? '신청 중...' : '참가 신청하기',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
+            return AppButton(
+              label: '참가 신청하기',
+              onPressed: joining ? null : onJoin,
+              icon: Icons.how_to_reg_rounded,
+              loading: joining,
             );
           },
-          loading: () => SizedBox(
-            height: 54,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: null,
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const SizedBox(
-                width: 18, height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-            ),
+          loading: () => const AppButton(
+            label: '참가 신청하기',
+            onPressed: null,
+            loading: true,
           ),
-          error: (_, __) => SizedBox(
-            height: 54,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onJoin,
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('참가 신청하기'),
-            ),
+          error: (_, __) => AppButton(
+            label: '참가 신청하기',
+            onPressed: onJoin,
           ),
         ),
       ),
@@ -1223,7 +1178,6 @@ class _InviteResponseSectionState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
     final accent = context.accentColor;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1254,54 +1208,23 @@ class _InviteResponseSectionState
         Row(
           children: [
             Expanded(
-              child: SizedBox(
-                height: 54,
-                child: OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _respond(false),
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(LucideIcons.x, size: 18),
-                  label: const Text('거절'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
+              child: AppButton(
+                label: '거절',
+                onPressed: _busy ? null : () => _respond(false),
+                variant: AppButtonVariant.outline,
+                tone: AppButtonTone.error,
+                icon: LucideIcons.x,
+                loading: _busy,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
-              child: SizedBox(
-                height: 54,
-                child: ElevatedButton.icon(
-                  onPressed: _busy ? null : () => _respond(true),
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.how_to_reg_rounded),
-                  label: Text(
-                    _busy ? '처리 중...' : '수락하고 참가',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
+              child: AppButton(
+                label: '수락하고 참가',
+                onPressed: _busy ? null : () => _respond(true),
+                icon: Icons.how_to_reg_rounded,
+                loading: _busy,
               ),
             ),
           ],
