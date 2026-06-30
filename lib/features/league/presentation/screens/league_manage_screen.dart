@@ -720,7 +720,7 @@ class _StatusCard extends StatelessWidget {
           if (status == LeagueManageStatus.upcoming)
             _StartButton(onPressed: onStart)
           else if (status == LeagueManageStatus.live)
-            _EndButton(onPressed: onEnd, sub: sub, divColor: divColor)
+            _EndButton(onPressed: onEnd)
           else
             Container(
               width: double.infinity,
@@ -1222,10 +1222,8 @@ class _StartButton extends StatelessWidget {
 
 // ── 대회 종료 버튼 ────────────────────────────────────────
 class _EndButton extends StatelessWidget {
-  const _EndButton({required this.onPressed, required this.sub, required this.divColor});
+  const _EndButton({required this.onPressed});
   final VoidCallback onPressed;
-  final Color sub;
-  final Color divColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1233,8 +1231,9 @@ class _EndButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: sub,
-          side: BorderSide(color: divColor),
+          foregroundColor: AppColors.error,
+          backgroundColor: AppColors.error.withValues(alpha: 0.14),
+          side: BorderSide(color: AppColors.error.withValues(alpha: 0.6)),
           padding: const EdgeInsets.symmetric(vertical: 13),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -1242,13 +1241,13 @@ class _EndButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.x, size: 16, color: sub),
+            const Icon(LucideIcons.x, size: 16, color: AppColors.error),
             const SizedBox(width: 8),
-            Text('대회 종료',
+            const Text('대회 종료',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: sub,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.error,
                 )),
           ],
         ),
