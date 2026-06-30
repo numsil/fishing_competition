@@ -139,8 +139,6 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       firstKey = _nameKey;
     } else if (_dateRange == null) {
       firstKey = _dateKey;
-    } else if (_locationCtrl.text.trim().isEmpty) {
-      firstKey = _locationKey;
     } else {
       final m = _maxCtrl.text.trim();
       if (m.isEmpty || int.tryParse(m) == null || (int.tryParse(m) ?? 0) < 1) {
@@ -178,7 +176,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
           shortDescription: _shortDescCtrl.text.trim().isEmpty ? null : _shortDescCtrl.text.trim(),
           clearShortDescription: _shortDescCtrl.text.trim().isEmpty,
-          location: _locationCtrl.text.trim(),
+          location: _locationCtrl.text.trim().isEmpty ? '미정' : _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
           startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
@@ -212,7 +210,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           title: _nameCtrl.text.trim(),
           description: _introCtrl.text.trim().isEmpty ? null : _introCtrl.text.trim(),
           shortDescription: _shortDescCtrl.text.trim().isEmpty ? null : _shortDescCtrl.text.trim(),
-          location: _locationCtrl.text.trim(),
+          location: _locationCtrl.text.trim().isEmpty ? '미정' : _locationCtrl.text.trim(),
           lat: _selectedLatLng?.latitude,
           lng: _selectedLatLng?.longitude,
           startTime: _dateRange != null ? _applyTime(_dateRange!.start, _startTimeCtrl.text) : null,
@@ -872,7 +870,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
             _Section(
-              title: '장소',
+              title: '장소 (선택)',
               accent: context.accentColor,
               child: Column(
                 children: [
@@ -887,7 +885,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                         tooltip: '지도에서 선택',
                       ),
                     ),
-                    validator: (v) => v?.trim().isEmpty == true ? '장소를 입력해주세요' : null,
+                    // 장소는 선택값. 비우면 저장 시 '미정'으로 처리.
                   ),
                   if (_selectedLatLng != null) ...[
                     const SizedBox(height: 10),
