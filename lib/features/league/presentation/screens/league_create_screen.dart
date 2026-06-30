@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/location_consent_service.dart';
 import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -54,6 +56,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
 
   // 장소 좌표
   LatLng? _selectedLatLng;
+  bool _fetchingLocation = false;
 
   // 상금/상품
   String _prizeType = '기타';
@@ -114,7 +117,83 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
     } else {
       // 생성 모드 기본값
       _prizeType = '상금';
+      // 장소 디폴트: 현재 위치로 자동 채움(이미 권한 있을 때만, 조용히). 이후 수정 가능.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _autoFillCurrentLocation());
     }
+  }
+
+  /// 권한이 이미 있을 때만 조용히 현재 위치로 장소를 채운다(화면 진입 시 자동).
+  /// 권한이 없으면 묻지 않고 패스 — 사용자는 '현재 위치' 버튼/지도로 직접 설정.
+  Future<void> _autoFillCurrentLocation() async {
+    if (_locationCtrl.text.trim().isNotEmpty) return;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return;
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.always &&
+          perm != LocationPermission.whileInUse) {
+        return;
+      }
+      await _fillCurrentLocation();
+    } catch (_) {/* 자동 단계 실패는 무시 */}
+  }
+
+  /// '현재 위치' 버튼: 앱 동의 + 권한 요청까지 진행 후 장소 채움.
+  Future<void> _useCurrentLocation() async {
+    if (_fetchingLocation) return;
+    final agreed = await LocationConsentService.ensureAgreed(context);
+    if (!agreed) return;
+    setState(() => _fetchingLocation = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) AppSnackBar.warning(context, '위치 서비스를 켜주세요');
+        return;
+      }
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (mounted) AppSnackBar.warning(context, '위치 권한이 거부되었습니다');
+        return;
+      }
+      await _fillCurrentLocation();
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, '위치 가져오기 실패: $e');
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
+  }
+
+  /// 현재 GPS 좌표를 가져와 역지오코딩 → 장소 텍스트/좌표 설정.
+  Future<void> _fillCurrentLocation() async {
+    final pos = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+    String? address;
+    try {
+      final placemarks =
+          await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final rawParts = [
+          p.administrativeArea,
+          p.locality,
+          p.subLocality,
+          p.thoroughfare
+        ].where((s) => s != null && s.isNotEmpty).toList();
+        final parts = <String>[];
+        for (final part in rawParts) {
+          if (parts.isEmpty || parts.last != part) parts.add(part!);
+        }
+        if (parts.isNotEmpty) address = dedupeAddress(parts.join(' '));
+      }
+    } catch (_) {/* 역지오코딩 실패 시 좌표만 저장 */}
+    if (!mounted) return;
+    setState(() {
+      _selectedLatLng = LatLng(pos.latitude, pos.longitude);
+      if (address != null) _locationCtrl.text = address;
+    });
   }
 
   @override
@@ -873,20 +952,44 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
               title: '장소 (선택)',
               accent: context.accentColor,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextFormField(
                     controller: _locationCtrl,
                     readOnly: _isEnded,
                     decoration: InputDecoration(
-                      hintText: '지도에서 선택하거나 직접 입력',
+                      hintText: '현재 위치가 기본값 · 직접 수정 가능',
                       suffixIcon: _isEnded ? null : IconButton(
                         onPressed: _openMapPicker,
                         icon: Icon(Icons.map_outlined, color: context.accentColor, size: 22),
                         tooltip: '지도에서 선택',
                       ),
                     ),
-                    // 장소는 선택값. 비우면 저장 시 '미정'으로 처리.
+                    // 장소는 선택값. 기본은 현재 위치, 비우면 저장 시 '미정'으로 처리.
                   ),
+                  if (!_isEnded) ...[
+                    const SizedBox(height: 6),
+                    TextButton.icon(
+                      onPressed: _fetchingLocation ? null : _useCurrentLocation,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: context.accentColor,
+                      ),
+                      icon: _fetchingLocation
+                          ? SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: context.accentColor),
+                            )
+                          : const Icon(LucideIcons.locateFixed, size: 16),
+                      label: Text(_fetchingLocation ? '가져오는 중…' : '현재 위치로',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
                   if (_selectedLatLng != null) ...[
                     const SizedBox(height: 10),
                     GestureDetector(
