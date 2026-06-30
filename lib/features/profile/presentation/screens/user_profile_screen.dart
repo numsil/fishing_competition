@@ -7,6 +7,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/score_card.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -443,14 +444,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
                     // 런커 기록
                     if (profile.maxFishLength != null)
-                      Container(
+                      AppCard(
+                        variant: AppCardVariant.tinted,
+                        tintColor: AppColors.gold,
+                        tintAlpha: 0.05,
+                        borderColor: AppColors.gold.withValues(alpha: 0.2),
+                        radius: 14,
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.2)),
-                        ),
                         child: Row(children: [
                           Icon(LucideIcons.award,
                               size: 32, color: AppColors.gold),

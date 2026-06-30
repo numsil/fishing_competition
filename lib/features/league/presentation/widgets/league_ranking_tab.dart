@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../screens/league_participant_detail_screen.dart';
@@ -128,7 +129,6 @@ class LeagueRankCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
     return GestureDetector(
@@ -136,18 +136,16 @@ class LeagueRankCard extends StatelessWidget {
         '/league/participant/$leagueId/${entry.userId}',
         extra: LeagueParticipantArgs(entry: entry, rule: rule, catchLimit: catchLimit, rank: rank),
       ),
-      child: Container(
+      child: AppCard(
+        variant: rank == 1 ? AppCardVariant.tinted : AppCardVariant.surface,
+        tintColor: AppColors.gold,
+        tintAlpha: 0.06,
+        borderColor: rank == 1
+            ? AppColors.gold.withValues(alpha: 0.3)
+            : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+        radius: 14,
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: rank == 1 ? AppColors.gold.withValues(alpha: 0.06) : cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: rank == 1
-                ? AppColors.gold.withValues(alpha: 0.3)
-                : isDark ? AppColors.darkDivider : AppColors.lightDivider,
-          ),
-        ),
         child: Row(children: [
           GestureDetector(
             onTap: () => context.push('${AppRoutes.userProfile}/${entry.userId}'),

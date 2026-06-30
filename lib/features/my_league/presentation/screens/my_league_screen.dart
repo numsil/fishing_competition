@@ -417,17 +417,13 @@ class _ActiveLeagueCard extends StatelessWidget {
       onTap: () => context.push(
         '${AppRoutes.myLeagueDetail}/${league.id}?type=$type',
       ),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isLive ? accent.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-          width: isLive ? 1.5 : 1,
-        ),
-      ),
-      child: Column(
+      child: AppCard(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.zero,
+        radius: 16,
+        borderColor: isLive ? accent.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+        borderWidth: isLive ? 1.5 : 1,
+        child: Column(
         children: [
           // 헤더
           Padding(
@@ -1252,16 +1248,12 @@ class _MyLeagueCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => context.push('${AppRoutes.leagueManage}/${league.id}'),
-      child: Container(
+      child: AppCard(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-            width: isLive ? 1.5 : 1,
-          ),
-        ),
+        padding: EdgeInsets.zero,
+        radius: 16,
+        borderColor: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+        borderWidth: isLive ? 1.5 : 1,
         child: Column(
           children: [
             Padding(
