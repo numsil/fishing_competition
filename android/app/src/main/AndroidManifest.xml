@@ -30,6 +30,11 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Flutter 내장 딥링크 비활성화: 딥링크는 app_links(DeepLinkService)가 단독 처리.
+                 활성화 시 원본 URI(nakstar://post/<id>)가 GoRouter로 직접 넘어가 라우트 매칭 실패함. -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
