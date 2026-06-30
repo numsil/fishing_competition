@@ -195,11 +195,13 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
         children: [
           // ── 사진 ───────────────────────────────
           GestureDetector(
-            onTap: () => FullscreenImageViewer.open(
-              context,
-              urls: [post.imageUrl],
-              initialIndex: 0,
-            ),
+            onTap: post.imageUrl.isEmpty
+                ? null
+                : () => FullscreenImageViewer.open(
+                      context,
+                      urls: [post.imageUrl],
+                      initialIndex: 0,
+                    ),
             child: AspectRatio(
               aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
               child: Container(

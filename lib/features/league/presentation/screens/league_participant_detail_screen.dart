@@ -407,11 +407,13 @@ class _CatchCard extends StatelessWidget {
             Stack(
               children: [
                 GestureDetector(
-                  onTap: () => FullscreenImageViewer.open(
-                    context,
-                    urls: [post.imageUrl],
-                    initialIndex: 0,
-                  ),
+                  onTap: post.imageUrl.isEmpty
+                      ? null
+                      : () => FullscreenImageViewer.open(
+                            context,
+                            urls: [post.imageUrl],
+                            initialIndex: 0,
+                          ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
                     child: AspectRatio(
