@@ -22,6 +22,8 @@ import '../../../marketplace/data/marketplace_model.dart';
 import '../../../marketplace/data/marketplace_repository.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -51,39 +53,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Future<void> _pickAndUploadAvatar() async {
 
     // 카메라 / 갤러리 선택
-    final choice = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: context.isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: context.isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Icon(Icons.camera_alt_rounded, color: context.accentColor),
-              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library_rounded, color: context.accentColor),
-              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
+    final choice = await showAppActionSheet<ImageSource>(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.camera,
+          label: '카메라로 촬영',
+          onTap: () => Navigator.pop(context, ImageSource.camera),
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.image,
+          label: '갤러리에서 선택',
+          onTap: () => Navigator.pop(context, ImageSource.gallery),
+        ),
+      ],
     );
 
     if (choice == null) return;
@@ -150,93 +133,69 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Future<void> _showSettingsSheet(BuildContext rootContext, UserProfile profile) async {
-    final isDark = context.isDark;
-    await showModalBottomSheet<void>(
-      context: rootContext,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF444444)
-                    : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('프로필 수정'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.profileEdit, extra: profile);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock_outline),
-              title: const Text('비밀번호 변경'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.passwordChange);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.headset_mic_outlined),
-              title: const Text('관리자에게 문의'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _openAdminDm();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.block_outlined),
-              title: const Text('차단한 사용자'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.blockedUsers);
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('서비스 이용약관'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.terms);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: const Text('개인정보처리방침'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.privacy);
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.logout_rounded,
-                  color: AppColors.error),
-              title: const Text('로그아웃',
-                  style: TextStyle(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _logout();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+    await showAppActionSheet<void>(
+      rootContext,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.pencil,
+          label: '프로필 수정',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.profileEdit, extra: profile);
+          },
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.lock,
+          label: '비밀번호 변경',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.passwordChange);
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.headphones,
+          label: '관리자에게 문의',
+          onTap: () {
+            Navigator.pop(rootContext);
+            _openAdminDm();
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.ban,
+          label: '차단한 사용자',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.blockedUsers);
+          },
+        ),
+        const AppMenuDivider(),
+        AppMenuItem(
+          icon: LucideIcons.fileText,
+          label: '서비스 이용약관',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.terms);
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.shield,
+          label: '개인정보처리방침',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.privacy);
+          },
+        ),
+        const AppMenuDivider(),
+        AppMenuItem(
+          icon: LucideIcons.logOut,
+          label: '로그아웃',
+          destructive: true,
+          onTap: () {
+            Navigator.pop(rootContext);
+            _logout();
+          },
+        ),
+      ],
     );
   }
 
