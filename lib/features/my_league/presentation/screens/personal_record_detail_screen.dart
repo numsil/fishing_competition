@@ -15,6 +15,7 @@ import '../../../../core/widgets/menu_item.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
+import '../../../feed/presentation/widgets/fullscreen_image_viewer.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -217,18 +218,25 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
       body: ListView(
         children: [
           // ── 사진 ───────────────────────────────
-          AspectRatio(
-            aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
-            child: Container(
-              color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
-              child: CachedNetworkImage(
-                imageUrl: post.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Center(
-                  child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
-                ),
-                errorWidget: (_, __, ___) => Center(
-                  child: Icon(LucideIcons.image, size: 60, color: sub),
+          GestureDetector(
+            onTap: () => FullscreenImageViewer.open(
+              context,
+              urls: [post.imageUrl],
+              initialIndex: 0,
+            ),
+            child: AspectRatio(
+              aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
+              child: Container(
+                color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Center(
+                    child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
+                  ),
+                  errorWidget: (_, __, ___) => Center(
+                    child: Icon(LucideIcons.image, size: 60, color: sub),
+                  ),
                 ),
               ),
             ),

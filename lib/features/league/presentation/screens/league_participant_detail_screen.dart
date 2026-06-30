@@ -10,6 +10,7 @@ import '../../data/league_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
+import '../../../feed/presentation/widgets/fullscreen_image_viewer.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -425,17 +426,24 @@ class _CatchCard extends StatelessWidget {
             // ── 사진 ───────────────────────────────────
             Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
-                  child: AspectRatio(
-                    aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
-                    child: CachedNetworkImage(
-                      imageUrl: post.imageUrl,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                        color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                GestureDetector(
+                  onTap: () => FullscreenImageViewer.open(
+                    context,
+                    urls: [post.imageUrl],
+                    initialIndex: 0,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                    child: AspectRatio(
+                      aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
+                      child: CachedNetworkImage(
+                        imageUrl: post.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+                          child: const Center(
+                            child: Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                          ),
                         ),
                       ),
                     ),
