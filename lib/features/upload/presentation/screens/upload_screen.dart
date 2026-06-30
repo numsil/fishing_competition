@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../core/widgets/app_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
@@ -257,11 +257,10 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
             shape: BoxShape.circle,
           ),
           child: Center(
-            child: SvgPicture.asset(
+            child: AppSvg(
               'assets/images/nakstar.svg',
               width: 56,
-              colorFilter: ColorFilter.mode(
-                  Colors.white.withValues(alpha: 0.3), BlendMode.srcIn),
+              color: Colors.white.withValues(alpha: 0.3),
             ),
           ),
         ),

@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../widgets/app_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../features/auth/data/auth_repository.dart';
@@ -229,26 +229,26 @@ class _NakSvgLogo extends StatelessWidget {
         // 외부 글로우 — 크고 투명하게 (맥동)
         Opacity(
           opacity: 0.18 * glowIntensity,
-          child: SvgPicture.asset(
+          child: AppSvg(
             'assets/images/nak_logo.svg',
             width: 272,
-            colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+            color: _neon,
           ),
         ),
         // 내부 글로우 — 중간 크기
         Opacity(
           opacity: 0.40 * glowIntensity,
-          child: SvgPicture.asset(
+          child: AppSvg(
             'assets/images/nak_logo.svg',
             width: 252,
-            colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+            color: _neon,
           ),
         ),
         // 선명한 로고
-        SvgPicture.asset(
+        AppSvg(
           'assets/images/nak_logo.svg',
           width: 240,
-          colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+          color: _neon,
         ),
       ],
     );

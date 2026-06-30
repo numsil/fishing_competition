@@ -14,6 +14,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
@@ -1284,14 +1285,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
             _Section(
               title: '간단 소개',
               accent: context.accentColor,
-              child: TextFormField(
+              child: AppTextField(
                 controller: _shortDescCtrl,
                 maxLength: 40,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  hintText: '한 줄로 대회를 소개해주세요',
-                  counterText: '',
-                ),
+                hint: '한 줄로 대회를 소개해주세요',
               ),
             ),
 
