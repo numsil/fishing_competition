@@ -882,8 +882,6 @@ class _BottomBar extends ConsumerWidget {
                           try {
                             final img = await ImagePicker().pickImage(
                               source: ImageSource.gallery,
-                              imageQuality: 85,
-                              maxWidth: 1280,
                             );
                             if (img != null) picked = File(img.path);
                           } catch (e) {
@@ -921,8 +919,6 @@ class _BottomBar extends ConsumerWidget {
                           try {
                             final picked = await ImagePicker().pickImage(
                               source: ImageSource.camera,
-                              imageQuality: 85,
-                              maxWidth: 1280,
                             );
                             if (picked != null) captured = File(picked.path);
                           } catch (e) {

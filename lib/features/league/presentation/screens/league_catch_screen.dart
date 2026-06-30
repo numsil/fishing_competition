@@ -61,8 +61,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 85,
-      maxWidth: 1280,
     );
     if (picked != null) {
       final file = File(picked.path);
@@ -76,8 +74,6 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
   Future<void> _pickFromGallery() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1280,
     );
     if (picked != null) {
       final file = File(picked.path);
@@ -105,6 +101,7 @@ class _LeagueCatchScreenState extends ConsumerState<LeagueCatchScreen> {
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: _image!,
+        imageMaxDimension: 1280, // 리그 조과: 1280 단일 인코딩
         aspectRatio: _previewRatio,
         leagueId: widget.league.id,
         fishType: _fishType,

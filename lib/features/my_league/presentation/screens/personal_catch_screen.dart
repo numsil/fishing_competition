@@ -114,8 +114,6 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: source,
-      imageQuality: 85,
-      maxWidth: 1280,
     );
     if (picked != null) {
       final file = File(picked.path);
@@ -182,6 +180,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: _image!,
+        imageMaxDimension: 1280, // 개인 조과: 1280 단일 인코딩
         aspectRatio: _previewRatio,
         fishType: _fishType,
         length: lengthVal,

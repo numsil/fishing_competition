@@ -187,9 +187,6 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
     try {
       // 사진 + 동영상 혼합 선택 (image_picker 1.0+)
       final picked = await _picker.pickMultipleMedia(
-        imageQuality: 80,
-        maxWidth: 1080,
-        maxHeight: 1080,
         limit: _kMaxMedia,
       );
       if (picked.isEmpty) return;
@@ -214,9 +211,6 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 80,
-        maxWidth: 1080,
-        maxHeight: 1080,
       );
       if (image == null) return;
       await widget.onMediaPicked([_PickedItem(type: 'image', file: image)]);
@@ -631,9 +625,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
     setState(() => _addingMedia = true);
     try {
       final picked = await _picker.pickMultipleMedia(
-        imageQuality: 80,
-        maxWidth: 1080,
-        maxHeight: 1080,
         limit: remaining,
       );
       if (picked.isEmpty) return;
@@ -903,9 +894,6 @@ class _CaptionStepState extends ConsumerState<_CaptionStep> {
   Future<void> _replaceImages() async {
     // edit 모드: 사진 교체만 지원 (다중 이미지)
     final picked = await ImagePicker().pickMultiImage(
-      imageQuality: 80,
-      maxWidth: 1080,
-      maxHeight: 1080,
       limit: _kMaxMedia,
     );
     if (picked.isNotEmpty && mounted) {

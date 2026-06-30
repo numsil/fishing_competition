@@ -288,8 +288,10 @@ class FeedRepository {
           ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+        // 업로드 후 로컬 임시파일 정리 (압축본 + picker 원본 복사본)
         try {
           await compressed.delete();
+          await newImageFiles[i].delete();
         } catch (_) {}
       }
       updates['image_url'] = urls.first;
@@ -386,6 +388,7 @@ class FeedRepository {
     double? weight,
     int catchCount = 1,
     bool isPersonalRecord = false,
+    int imageMaxDimension = 1440, // 이미지 긴 변 상한 (리그/개인 조과는 1280 전달)
   }) async {
     final ts = DateTime.now().millisecondsSinceEpoch;
     String imageUrl;
@@ -405,7 +408,7 @@ class FeedRepository {
       for (int i = 0; i < mediaFiles.length; i++) {
         final m = mediaFiles[i];
         if (m.isImage) {
-          final compressed = await compressForUpload(m.file);
+          final compressed = await compressForUpload(m.file, maxDimension: imageMaxDimension);
           final storagePath = 'posts/${userId}_${ts}_$i.jpg';
           await _supabase.storage.from('post_images').upload(
             storagePath,
@@ -418,9 +421,10 @@ class FeedRepository {
           );
           final url = _supabase.storage.from('post_images').getPublicUrl(storagePath);
           imgUrls.add(url);
-          // 업로드 후 로컬 압축본 정리 (디스크 누수 방지)
+          // 업로드 후 로컬 임시파일 정리 (압축본 + picker 원본 복사본)
           try {
             await compressed.delete();
+            await m.file.delete();
           } catch (_) {}
           media.add({
             'type': 'image',
@@ -502,7 +506,7 @@ class FeedRepository {
     } else if (imageFiles != null && imageFiles.isNotEmpty) {
       final urls = <String>[];
       for (int i = 0; i < imageFiles.length; i++) {
-        final compressed = await compressForUpload(imageFiles[i]);
+        final compressed = await compressForUpload(imageFiles[i], maxDimension: imageMaxDimension);
         final storagePath = 'posts/${userId}_${ts}_$i.jpg';
         await _supabase.storage.from('post_images').upload(
           storagePath,
@@ -514,14 +518,16 @@ class FeedRepository {
           ),
         );
         urls.add(_supabase.storage.from('post_images').getPublicUrl(storagePath));
+        // 업로드 후 로컬 임시파일 정리 (압축본 + picker 원본 복사본)
         try {
           await compressed.delete();
+          await imageFiles[i].delete();
         } catch (_) {}
       }
       imageUrl = urls.first;
       imageUrls = urls;
     } else if (imageFile != null) {
-      final compressed = await compressForUpload(imageFile);
+      final compressed = await compressForUpload(imageFile, maxDimension: imageMaxDimension);
       final storagePath = 'posts/${userId}_$ts.jpg';
       await _supabase.storage.from('post_images').upload(
         storagePath,
@@ -533,8 +539,10 @@ class FeedRepository {
         ),
       );
       imageUrl = _supabase.storage.from('post_images').getPublicUrl(storagePath);
+      // 업로드 후 로컬 임시파일 정리 (압축본 + picker 원본 복사본)
       try {
         await compressed.delete();
+        await imageFile.delete();
       } catch (_) {}
     } else {
       throw Exception('이미지 또는 동영상을 선택해주세요');
