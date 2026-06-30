@@ -12,6 +12,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
@@ -995,23 +996,13 @@ class _BottomBar extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    height: 54,
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: !cancelling ? onCancelJoin : null,
-                      icon: cancelling
-                          ? const SizedBox(
-                              width: 18, height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(LucideIcons.userMinus, size: 18),
-                      label: Text(cancelling ? '처리 중...' : '신청 취소'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        side: const BorderSide(color: AppColors.error),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
+                  AppButton(
+                    label: '신청 취소',
+                    onPressed: cancelling ? null : onCancelJoin,
+                    variant: AppButtonVariant.outline,
+                    tone: AppButtonTone.error,
+                    icon: LucideIcons.userMinus,
+                    loading: cancelling,
                   ),
                 ],
               );
@@ -1094,22 +1085,14 @@ class _BottomBar extends ConsumerWidget {
             final isFull = league.maxParticipants > 0 &&
                 league.participantsCount >= league.maxParticipants;
             if (isFull) {
-              return SizedBox(
-                height: 54,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Icons.block_rounded, size: 20),
-                  label: const Text('모집 마감',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
-                    foregroundColor: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
-                    disabledBackgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
-                    disabledForegroundColor: isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
+              return AppButton(
+                label: '모집 마감',
+                onPressed: null,
+                icon: Icons.block_rounded,
+                disabledColor:
+                    isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+                disabledLabelColor:
+                    isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA),
               );
             }
             return SizedBox(
