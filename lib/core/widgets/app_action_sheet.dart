@@ -19,7 +19,6 @@ Future<T?> showAppActionSheet<T>(
   final Color divColor = isDark
       ? Colors.white.withValues(alpha: 0.08)
       : Colors.black.withValues(alpha: 0.08);
-  final Color cancelColor = isDark ? AppColors.darkText : AppColors.lightText;
   final Color titleColor =
       isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
@@ -63,13 +62,25 @@ Future<T?> showAppActionSheet<T>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetCtx) => SafeArea(
+    builder: (_) => SafeArea(
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 그랩 핸들
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.30)
+                      : Colors.black.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               for (var g = 0; g < groups.length; g++) ...[
                 if (g == 0 && title != null)
                   buildCard(
@@ -91,32 +102,8 @@ Future<T?> showAppActionSheet<T>(
                   )
                 else
                   buildCard(groups[g]),
-                const SizedBox(height: 8),
+                if (g != groups.length - 1) const SizedBox(height: 8),
               ],
-              // 취소 버튼 (분리된 카드)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Material(
-                  color: cardColor,
-                  child: InkWell(
-                    onTap: () => Navigator.pop(sheetCtx),
-                    child: SizedBox(
-                      height: 56,
-                      child: Center(
-                        child: Text(
-                          '취소',
-                          style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: cancelColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
