@@ -71,11 +71,11 @@ class MarketplaceDetailScreen extends ConsumerWidget {
               },
               itemBuilder: (_) => [
                 if (item.status != 'selling')
-                  const PopupMenuItem(value: 'selling', child: Text('판매중으로 변경')),
+                  PopupMenuItem(value: 'selling', child: Text(item.isBuy ? '구매중으로 변경' : '판매중으로 변경')),
                 if (item.status != 'reserved')
                   const PopupMenuItem(value: 'reserved', child: Text('예약중으로 변경')),
                 if (item.status != 'sold')
-                  const PopupMenuItem(value: 'sold', child: Text('판매완료로 변경')),
+                  PopupMenuItem(value: 'sold', child: Text(item.isBuy ? '구매완료로 변경' : '판매완료로 변경')),
                 const PopupMenuItem(value: 'delete', child: Text('삭제', style: TextStyle(color: Colors.red))),
               ],
             ),
@@ -177,9 +177,11 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // 가격
+                  // 가격 (삽니다·희망가 미입력이면 '가격 미정')
                   Text(
-                    item.formattedPrice,
+                    item.price <= 0
+                        ? '가격 미정'
+                        : (item.isBuy ? '희망가 ${item.formattedPrice}' : item.formattedPrice),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -246,11 +248,48 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                         }
                       },
                     ),
+
+                  // 개인 간 거래 면책 안내 (판매글·구매글 공통)
+                  const SizedBox(height: 24),
+                  _TradeDisclaimer(isDark: isDark),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 중고거래 상세 하단 면책 안내
+class _TradeDisclaimer extends StatelessWidget {
+  const _TradeDisclaimer({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
+    final fg = isDark ? const Color(0xFF9A9A9A) : const Color(0xFF777777);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(LucideIcons.shieldAlert, size: 15, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '개인 간 거래로 발생한 분쟁·사기·피해에 대해 낚스타는 책임지지 않습니다. 거래 시 주의하세요.',
+              style: TextStyle(fontSize: 12, height: 1.5, color: fg),
+            ),
+          ),
+        ],
       ),
     );
   }

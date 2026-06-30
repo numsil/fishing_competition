@@ -22,6 +22,7 @@ class MarketplaceScreen extends ConsumerStatefulWidget {
 
 class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   String _selectedCategory = '전체';
+  String _tradeType = 'all'; // all | sell(팝니다) | buy(삽니다)
   final _scrollCtrl = ScrollController();
   Timer? _debounce;
 
@@ -41,6 +42,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
         ref.read(marketplaceListProvider.notifier).setFilter(
               category: _selectedCategory,
               search: widget.searchQuery,
+              tradeType: _tradeType,
             );
       });
     }
@@ -68,6 +70,17 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     ref.read(marketplaceListProvider.notifier).setFilter(
           category: cat,
           search: widget.searchQuery,
+          tradeType: _tradeType,
+        );
+  }
+
+  void _selectTradeType(String type) {
+    if (type == _tradeType) return;
+    setState(() => _tradeType = type);
+    ref.read(marketplaceListProvider.notifier).setFilter(
+          category: _selectedCategory,
+          search: widget.searchQuery,
+          tradeType: type,
         );
   }
 
@@ -80,6 +93,16 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     return Column(
       children: [
         const SizedBox(height: 12),
+        // 거래 유형: 전체 / 팝니다 / 삽니다
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+          child: _TradeTypeSegment(
+            value: _tradeType,
+            onChanged: _selectTradeType,
+            isDark: isDark,
+            accent: accent,
+          ),
+        ),
         // 카테고리 필터
         SizedBox(
           height: 36,
@@ -175,17 +198,83 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   }
 }
 
+/// 전체 / 팝니다 / 삽니다 세그먼트
+class _TradeTypeSegment extends StatelessWidget {
+  const _TradeTypeSegment({
+    required this.value,
+    required this.onChanged,
+    required this.isDark,
+    required this.accent,
+  });
+  final String value; // all | sell | buy
+  final ValueChanged<String> onChanged;
+  final bool isDark;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final trackColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0);
+
+    Widget seg(String v, String label) {
+      final selected = v == value;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => onChanged(v),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? (isDark ? Colors.black : Colors.white)
+                    : (isDark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: trackColor,
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        children: [
+          seg('all', '전체'),
+          seg('sell', '팝니다'),
+          seg('buy', '삽니다'),
+        ],
+      ),
+    );
+  }
+}
+
 class _MarketplaceCard extends StatelessWidget {
   const _MarketplaceCard({required this.item, required this.isDark});
   final MarketplaceItem item;
   final bool isDark;
 
   Color get _statusColor {
+    // 삽니다(구매중)는 파랑으로 판매중(초록)과 구분
+    if (item.isBuy && item.status == 'selling') {
+      return const Color(0xFF3B82F6); // 구매중 - 파랑
+    }
     switch (item.status) {
       case 'reserved':
         return const Color(0xFFFF9500); // 예약중 - 주황
       case 'sold':
-        return const Color(0xFF8E8E93); // 판매완료 - 회색
+        return const Color(0xFF8E8E93); // 판매완료/구매완료 - 회색
       default:
         return const Color(0xFF34C759); // 판매중 - 초록
     }
@@ -281,7 +370,7 @@ class _MarketplaceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    item.formattedPrice,
+                    item.price <= 0 ? '가격 미정' : item.formattedPrice,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

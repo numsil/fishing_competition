@@ -27,7 +27,7 @@ final marketplaceRepositoryProvider =
 typedef MarketplaceRepositoryRef =
     AutoDisposeProviderRef<MarketplaceRepository>;
 String _$myMarketplaceItemsHash() =>
-    r'554dd1b8412215101963fe606011f7ab3476d07a';
+    r'4914003af4948357e7a1b1e9775fa68c00127e2c';
 
 /// See also [myMarketplaceItems].
 @ProviderFor(myMarketplaceItems)
@@ -46,7 +46,7 @@ final myMarketplaceItemsProvider =
 // ignore: unused_element
 typedef MyMarketplaceItemsRef =
     AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
-String _$marketplaceListHash() => r'9f2839e3cd6186025872530cc870e136ccf61271';
+String _$marketplaceListHash() => r'f0e24b17e9957c7522917016f1beee4332ea0aa7';
 
 /// See also [MarketplaceList].
 @ProviderFor(MarketplaceList)
