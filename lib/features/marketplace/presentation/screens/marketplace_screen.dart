@@ -366,11 +366,11 @@ class _MarketplaceListCard extends StatelessWidget {
         ? Image.network(
             item.imageUrls.first,
             fit: BoxFit.cover,
-            width: 100,
-            height: 100,
+            width: 76,
+            height: 76,
             errorBuilder: (_, __, ___) => placeholder,
           )
-        : SizedBox(width: 100, height: 100, child: placeholder);
+        : SizedBox(width: 76, height: 76, child: placeholder);
     if (item.status == 'sold') {
       image = ColorFiltered(
         colorFilter: const ColorFilter.matrix(<double>[
@@ -386,7 +386,7 @@ class _MarketplaceListCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/marketplace/${item.id}', extra: item),
       child: Container(
-        height: 100,
+        height: 76,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -398,11 +398,12 @@ class _MarketplaceListCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-              child: SizedBox(width: 100, height: 100, child: image),
+              child: SizedBox(width: 76, height: 76, child: image),
             ),
+            // 가운데: 제목 + 가격
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -426,37 +427,44 @@ class _MarketplaceListCard extends StatelessWidget {
                         color: isDark ? AppColors.neonGreen : AppColors.navy,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.92),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.statusLabel,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            item.username,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
+              ),
+            ),
+            // 우측: 상태 태그 + 판매자 이름
+            Padding(
+              padding: const EdgeInsets.only(right: 10, left: 6),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      item.statusLabel,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 84),
+                    child: Text(
+                      item.username,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
