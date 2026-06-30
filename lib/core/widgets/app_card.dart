@@ -24,20 +24,36 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.variant = AppCardVariant.surface,
     this.padding = AppSpacing.card,
+    this.margin,
     this.radius,
     this.borderColor,
+    this.borderWidth = 1.0,
     this.tintColor,
+    this.tintAlpha,
+    this.boxShadow,
     this.onTap,
   });
 
   final Widget child;
   final AppCardVariant variant;
   final EdgeInsetsGeometry padding;
+
+  /// 카드 바깥 여백. AppCard는 탭 영역 밖에 margin을 적용한다.
+  final EdgeInsetsGeometry? margin;
   final double? radius;
   final Color? borderColor;
 
+  /// 테두리 두께 (기본 1.0). `tinted`에서도 borderColor가 있으면 적용된다.
+  final double borderWidth;
+
   /// `tinted` 변형에서만 의미. accent 색.
   final Color? tintColor;
+
+  /// `tinted` 배경 틴트 투명도 오버라이드 (기본 dark 0.10 / light 0.06).
+  final double? tintAlpha;
+
+  /// 카드 그림자 (옵션).
+  final List<BoxShadow>? boxShadow;
 
   final VoidCallback? onTap;
 
@@ -50,42 +66,52 @@ class AppCard extends StatelessWidget {
         context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
       AppCardVariant.tinted => (tintColor ??
               (context.isDark ? AppColors.neonGreen : AppColors.navy))
-          .withValues(alpha: context.isDark ? 0.10 : 0.06),
+          .withValues(alpha: tintAlpha ?? (context.isDark ? 0.10 : 0.06)),
       AppCardVariant.outlined => Colors.transparent,
     };
 
     final border = switch (variant) {
       AppCardVariant.surface => borderColor != null
-          ? Border.all(color: borderColor!)
+          ? Border.all(color: borderColor!, width: borderWidth)
           : (context.isDark
               ? null
-              : Border.all(color: AppColors.lightDivider)),
+              : Border.all(color: AppColors.lightDivider, width: borderWidth)),
       AppCardVariant.outlined => Border.all(
           color: borderColor ??
               (context.isDark ? AppColors.darkDivider : AppColors.lightDivider),
+          width: borderWidth,
         ),
-      AppCardVariant.tinted => null,
+      AppCardVariant.tinted => borderColor != null
+          ? Border.all(color: borderColor!, width: borderWidth)
+          : null,
     };
 
-    final container = Container(
+    Widget result = Container(
       padding: padding,
       decoration: BoxDecoration(
         color: bg,
         borderRadius: br,
         border: border,
+        boxShadow: boxShadow,
       ),
       child: child,
     );
 
-    if (onTap == null) return container;
+    if (onTap != null) {
+      result = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: br,
+          child: result,
+        ),
+      );
+    }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: br,
-        child: container,
-      ),
-    );
+    if (margin != null) {
+      result = Padding(padding: margin!, child: result);
+    }
+
+    return result;
   }
 }

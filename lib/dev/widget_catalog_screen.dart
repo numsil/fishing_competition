@@ -146,6 +146,39 @@ class _WidgetCatalogScreenState extends State<WidgetCatalogScreen> {
             ),
           ]),
 
+          // ── 카드 — 확장 props ────────────────────────────
+          _Section(label: '카드 — 확장', color: accent, children: [
+            AppCard(
+              variant: AppCardVariant.tinted,
+              tintColor: accent,
+              tintAlpha: 0.06,
+              borderColor: accent.withValues(alpha: 0.3),
+              child: _CardContent(title: 'tinted + borderColor', sub: sub),
+            ),
+            const SizedBox(height: 10),
+            AppCard(
+              borderColor: accent,
+              borderWidth: 1.5,
+              child: _CardContent(title: 'borderWidth 1.5', sub: sub),
+            ),
+            const SizedBox(height: 10),
+            AppCard(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              child: _CardContent(title: 'boxShadow', sub: sub),
+            ),
+            const SizedBox(height: 10),
+            AppCard(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              child: _CardContent(title: 'margin (좌우 24)', sub: sub),
+            ),
+          ]),
+
           // ── 칩 ───────────────────────────────────────────
           _Section(label: '칩', color: accent, children: [
             Wrap(spacing: 12, runSpacing: 10, children: [
