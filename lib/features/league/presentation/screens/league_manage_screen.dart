@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/info_chip.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
@@ -312,35 +313,22 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
               if (status != LeagueManageStatus.ended)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: context.accentColor,
-                        side: BorderSide(color: context.accentColor.withValues(alpha: 0.5)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: Icon(Icons.person_add_outlined, size: 18, color: context.accentColor),
-                      label: Text('+ 유저 초대 (@아이디)',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: context.accentColor)),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LeagueInviteScreen(
-                              leagueId: league.id,
-                              leagueTitle: league.title,
-                              inviterUsername: league.hostUsername,
-                            ),
+                  child: AppButton(
+                    label: '+ 유저 초대 (@아이디)',
+                    variant: AppButtonVariant.outline,
+                    icon: Icons.person_add_outlined,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeagueInviteScreen(
+                            leagueId: league.id,
+                            leagueTitle: league.title,
+                            inviterUsername: league.hostUsername,
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 ),
 
@@ -1132,30 +1120,20 @@ class _PendingTab extends StatelessWidget {
                     ],
                   ),
                 ),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    minimumSize: const Size(64, 38),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                AppButton(
+                  label: '거절',
                   onPressed: () => onReject(p),
-                  child: const Text('거절', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  variant: AppButtonVariant.outline,
+                  tone: AppButtonTone.error,
+                  size: AppButtonSize.sm,
+                  fullWidth: false,
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    minimumSize: const Size(64, 38),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                AppButton(
+                  label: '수락',
                   onPressed: () => onApprove(p),
-                  child: const Text('수락', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                  size: AppButtonSize.sm,
+                  fullWidth: false,
                 ),
               ],
             ),
