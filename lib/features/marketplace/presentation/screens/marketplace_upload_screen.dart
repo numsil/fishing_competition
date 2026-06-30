@@ -25,6 +25,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
   final _priceCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  static const int _kMaxImages = 10; // 등록 가능 최대 사진 수
   String _category = '기타';
   String _tradeType = 'sell'; // sell=팝니다, buy=삽니다
   final List<File> _images = [];
@@ -41,19 +42,19 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     super.dispose();
   }
 
-  /// 사진 추가 (최대 5장까지 append)
+  /// 사진 추가 (최대 _kMaxImages장까지 append)
   Future<void> _addImages() async {
-    if (_images.length >= 5) {
-      AppSnackBar.info(context, '사진은 최대 5장까지 추가할 수 있습니다.');
+    if (_images.length >= _kMaxImages) {
+      AppSnackBar.info(context, '사진은 최대 $_kMaxImages장까지 추가할 수 있습니다.');
       return;
     }
     final picker = ImagePicker();
-    final remaining = 5 - _images.length;
+    final remaining = _kMaxImages - _images.length;
     final picked = await picker.pickMultiImage(limit: remaining);
     if (picked.isEmpty) return;
     setState(() {
       _images.addAll(picked.map((x) => File(x.path)));
-      if (_images.length > 5) _images.length = 5;
+      if (_images.length > _kMaxImages) _images.length = _kMaxImages;
     });
   }
 
@@ -135,7 +136,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                 const Icon(LucideIcons.image, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
                 Text(
-                  '사진 ${_images.length}/5',
+                  '사진 ${_images.length}/$_kMaxImages',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -173,7 +174,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                       children: [
                         Icon(LucideIcons.camera, color: Colors.grey),
                         SizedBox(height: 4),
-                        Text('사진 추가 (최대 5장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('사진 추가 (최대 $_kMaxImages장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ),
