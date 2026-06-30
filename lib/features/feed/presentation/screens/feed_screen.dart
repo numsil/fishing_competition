@@ -198,47 +198,100 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   }
 
   // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력)
-  Widget _buildSearchBar(BuildContext context) {
+  // [trailing]을 주면 검색창을 줄이고 오른쪽에 버튼을 배치(중고거래 보기 토글 등).
+  Widget _buildSearchBar(BuildContext context, {Widget? trailing}) {
     final isDark = context.isDark;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
+    final field = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.search, size: 18, color: hint),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _onSearchChanged,
+              style: TextStyle(
+                  fontSize: 14, color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                filled: false,
+                hintText: '검색',
+                hintStyle: TextStyle(fontSize: 14, color: hint),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              textInputAction: TextInputAction.search,
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: _onSearchClear,
+              child: Icon(LucideIcons.x, size: 16, color: hint),
+            ),
+        ],
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(LucideIcons.search, size: 18, color: hint),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                onChanged: _onSearchChanged,
-                style: TextStyle(
-                    fontSize: 14, color: isDark ? Colors.white : Colors.black),
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  filled: false,
-                  hintText: '검색',
-                  hintStyle: TextStyle(fontSize: 14, color: hint),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                textInputAction: TextInputAction.search,
-              ),
+      child: trailing == null
+          ? field
+          : Row(
+              children: [
+                Expanded(child: field),
+                const SizedBox(width: 8),
+                trailing,
+              ],
             ),
-            if (_searchQuery.isNotEmpty)
-              GestureDetector(
-                onTap: _onSearchClear,
-                child: Icon(LucideIcons.x, size: 16, color: hint),
-              ),
-          ],
+    );
+  }
+
+  // 중고거래 카드(그리드)/리스트 보기 토글 — 검색창 옆에 배치
+  Widget _marketplaceViewToggle() {
+    final isDark = context.isDark;
+    final isList = ref.watch(marketplaceListViewProvider);
+    final track = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0);
+    final activeBg = isDark ? const Color(0xFF3A3A3C) : Colors.white;
+    final activeFg = isDark ? Colors.white : Colors.black;
+    final inactiveFg = isDark ? const Color(0xFF888888) : const Color(0xFF999999);
+
+    Widget btn(IconData icon, bool listMode) {
+      final selected = isList == listMode;
+      return GestureDetector(
+        onTap: () =>
+            ref.read(marketplaceListViewProvider.notifier).state = listMode,
+        child: Container(
+          width: 38,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: selected ? activeFg : inactiveFg),
         ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: track,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          btn(LucideIcons.layoutGrid, false), // 카드(그리드)
+          btn(LucideIcons.list, true), // 리스트
+        ],
       ),
     );
   }
@@ -259,15 +312,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         accent: accent,
         tabController: _tabController,
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          _buildSearchBar(context),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-          // 탭 1: 조과 피드
+          // 탭 1: 조과 피드 — 검색바는 최상단 스크롤 항목(아래로 스크롤하면 사라짐)
           RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(feedPostsProvider);
@@ -279,6 +328,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
           controller: _scrollCtrl,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
+            // 검색바: 피드 최상단에만 (스크롤하면 함께 사라짐)
+            SliverToBoxAdapter(child: _buildSearchBar(context)),
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
@@ -378,10 +429,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         ),
         ),
       ),
-          // 탭 2: 중고거래
-          MarketplaceScreen(searchQuery: _searchQuery),
-              ],
-            ),
+          // 탭 2: 중고거래 — 검색바(축소) + 카드/리스트 보기 토글 상단 고정
+          Column(
+            children: [
+              _buildSearchBar(context, trailing: _marketplaceViewToggle()),
+              Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
+            ],
           ),
         ],
       ),

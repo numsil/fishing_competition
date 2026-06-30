@@ -12,6 +12,9 @@ import '../../data/marketplace_repository.dart';
 
 const _categories = ['전체', '낚시대', '릴', '루어/채비', '보팅', '기타'];
 
+/// 중고거래 목록 보기 모드 (false=카드/그리드, true=리스트). 검색창 옆 토글과 공유.
+final marketplaceListViewProvider = StateProvider<bool>((ref) => false);
+
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key, this.searchQuery = ''});
   final String searchQuery;
@@ -89,6 +92,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     final isDark = context.isDark;
     final accent = context.accentColor;
     final items = ref.watch(marketplaceListProvider);
+    final isList = ref.watch(marketplaceListViewProvider);
 
     return Column(
       children: [
@@ -173,22 +177,35 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               return RefreshIndicator(
                 onRefresh: () =>
                     ref.read(marketplaceListProvider.notifier).refresh(),
-                child: GridView.builder(
-                  controller: _scrollCtrl,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.68,
-                  ),
-                  itemCount: list.length,
-                  itemBuilder: (_, i) => _MarketplaceCard(
-                    item: list[i],
-                    isDark: isDark,
-                  ),
-                ),
+                child: isList
+                    ? ListView.separated(
+                        controller: _scrollCtrl,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(12),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) => _MarketplaceListCard(
+                          item: list[i],
+                          isDark: isDark,
+                        ),
+                      )
+                    : GridView.builder(
+                        controller: _scrollCtrl,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.68,
+                        ),
+                        itemCount: list.length,
+                        itemBuilder: (_, i) => _MarketplaceCard(
+                          item: list[i],
+                          isDark: isDark,
+                        ),
+                      ),
               );
             },
           ),
@@ -393,6 +410,138 @@ class _MarketplaceCard extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 카드/리스트 공통 상태 색 (판매중 초록 / 구매중 파랑 / 예약중 주황 / 완료 회색)
+Color _marketplaceStatusColor(MarketplaceItem item) {
+  if (item.isBuy && item.status == 'selling') {
+    return const Color(0xFF3B82F6); // 구매중 - 파랑
+  }
+  switch (item.status) {
+    case 'reserved':
+      return const Color(0xFFFF9500);
+    case 'sold':
+      return const Color(0xFF8E8E93);
+    default:
+      return const Color(0xFF34C759);
+  }
+}
+
+/// 리스트(가로형) 보기용 카드
+class _MarketplaceListCard extends StatelessWidget {
+  const _MarketplaceListCard({required this.item, required this.isDark});
+  final MarketplaceItem item;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _marketplaceStatusColor(item);
+    final placeholder = Container(
+      color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+      child: const Icon(LucideIcons.image, color: Colors.grey),
+    );
+    Widget image = item.imageUrls.isNotEmpty
+        ? Image.network(
+            item.imageUrls.first,
+            fit: BoxFit.cover,
+            width: 96,
+            height: 96,
+            errorBuilder: (_, __, ___) => placeholder,
+          )
+        : SizedBox(width: 96, height: 96, child: placeholder);
+    if (item.status == 'sold') {
+      image = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0, 0, 0, 1, 0,
+        ]),
+        child: image,
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => context.push('/marketplace/${item.id}', extra: item),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+              child: SizedBox(width: 96, height: 96, child: image),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.price <= 0 ? '가격 미정' : item.formattedPrice,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppColors.neonGreen : AppColors.navy,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.statusLabel,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
