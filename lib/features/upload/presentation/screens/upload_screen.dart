@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/widgets/app_svg.dart';
+import '../../../../core/widgets/app_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
@@ -355,19 +356,9 @@ class _MediaPickerStepState extends State<_MediaPickerStep> {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              onPressed: _submitYoutubeUrl,
-              child: const Text('다음', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            ),
+          AppButton(
+            label: '다음',
+            onPressed: _submitYoutubeUrl,
           ),
         ],
       ),

@@ -896,37 +896,23 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
         Positioned(
           left: 16, right: 16, bottom: 16,
           child: _selectMode
-              ? SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _orderedSelected.isEmpty
-                        ? null
-                        : () async {
-                            final result = await context.push<bool>(
-                              AppRoutes.albumBundleShare,
-                              extra: List<Post>.from(_orderedSelected),
-                            );
-                            if (result == true && mounted) {
-                              _exitSelectMode();
-                              // ignore: use_build_context_synchronously
-                              AppSnackBar.success(context, '피드에 공유되었습니다 🎣');
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _orderedSelected.isEmpty ? null : accent,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text(
-                      _orderedSelected.isEmpty
-                          ? '사진을 선택하세요'
-                          : '${_orderedSelected.length}장 선택됨 · 피드에 공유하기',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+              ? AppButton(
+                  label: _orderedSelected.isEmpty
+                      ? '사진을 선택하세요'
+                      : '${_orderedSelected.length}장 선택됨 · 피드에 공유하기',
+                  onPressed: _orderedSelected.isEmpty
+                      ? null
+                      : () async {
+                          final result = await context.push<bool>(
+                            AppRoutes.albumBundleShare,
+                            extra: List<Post>.from(_orderedSelected),
+                          );
+                          if (result == true && mounted) {
+                            _exitSelectMode();
+                            // ignore: use_build_context_synchronously
+                            AppSnackBar.success(context, '피드에 공유되었습니다 🎣');
+                          }
+                        },
                 )
               : Row(
                   children: [
