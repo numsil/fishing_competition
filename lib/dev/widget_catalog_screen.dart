@@ -95,6 +95,36 @@ class _WidgetCatalogScreenState extends State<WidgetCatalogScreen> {
             const SizedBox(height: 10),
             AppButton(label: 'disabled', onPressed: null),
           ]),
+          _Section(label: '버튼 — 확장', color: accent, children: [
+            AppButton(
+              label: 'outline · accent',
+              onPressed: () {},
+              variant: AppButtonVariant.outline,
+            ),
+            const SizedBox(height: 10),
+            AppButton(
+              label: 'outline · error',
+              onPressed: () {},
+              variant: AppButtonVariant.outline,
+              tone: AppButtonTone.error,
+            ),
+            const SizedBox(height: 10),
+            AppButton(
+              label: 'ghost · error',
+              onPressed: () {},
+              variant: AppButtonVariant.ghost,
+              tone: AppButtonTone.error,
+            ),
+            const SizedBox(height: 10),
+            AppButton(
+              label: 'disabledColor (회색)',
+              onPressed: null,
+              disabledColor: const Color(0xFF2A2A2A),
+              disabledLabelColor: const Color(0xFFEEEEEE),
+            ),
+            const SizedBox(height: 10),
+            AppButton(label: 'elevation 6', onPressed: () {}, elevation: 6),
+          ]),
           _Section(label: '버튼 — size', color: accent, children: [
             Row(children: [
               Expanded(child: AppButton(label: 'sm', onPressed: () {}, size: AppButtonSize.sm)),
