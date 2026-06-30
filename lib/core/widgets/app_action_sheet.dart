@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import '../extensions/theme_extensions.dart';
 import '../theme/app_colors.dart';
 
-/// 앱 공통 옵션 바텀시트.
+/// 앱 공통 옵션 바텀시트 — iOS 네이티브 액션시트 스타일.
 ///
-/// 둥근 상단 + 그랩 핸들 + SafeArea를 자동 적용한다.
-/// [items]에는 보통 [AppMenuItem]들을 넣고, 그룹을 나눌 때만
-/// 사이에 [AppMenuDivider]를 넣는다. (매 항목 구분선은 넣지 않음)
+/// - [items]에는 [AppMenuItem]들을 넣는다. 그룹을 나눌 땐 사이에
+///   [AppMenuDivider]를 넣으면 카드가 분리된다.
+/// - 같은 그룹 안의 항목들은 한 카드에 모이고 사이에 얇은 선이 들어간다.
+/// - 하단에 분리된 "취소" 버튼이 자동으로 붙는다.
 Future<T?> showAppActionSheet<T>(
   BuildContext context, {
   required List<Widget> items,
@@ -14,68 +15,121 @@ Future<T?> showAppActionSheet<T>(
   bool isScrollControlled = false,
 }) {
   final isDark = context.isDark;
+  final Color cardColor = isDark ? AppColors.darkSurface2 : Colors.white;
+  final Color divColor = isDark
+      ? Colors.white.withValues(alpha: 0.08)
+      : Colors.black.withValues(alpha: 0.08);
+  final Color cancelColor = isDark ? AppColors.darkText : AppColors.lightText;
+  final Color titleColor =
+      isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+
+  // items를 AppMenuDivider 기준으로 그룹(카드) 분할
+  final groups = <List<Widget>>[];
+  var current = <Widget>[];
+  for (final it in items) {
+    if (it is AppMenuDivider) {
+      if (current.isNotEmpty) {
+        groups.add(current);
+        current = <Widget>[];
+      }
+    } else {
+      current.add(it);
+    }
+  }
+  if (current.isNotEmpty) groups.add(current);
+
+  Widget buildCard(List<Widget> rows, {Widget? header}) {
+    final children = <Widget>[];
+    if (header != null) {
+      children.add(header);
+      children.add(Divider(height: 1, thickness: 1, color: divColor));
+    }
+    for (var i = 0; i < rows.length; i++) {
+      children.add(rows[i]);
+      if (i != rows.length - 1) {
+        children.add(Divider(height: 1, thickness: 1, color: divColor));
+      }
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Material(
+        color: cardColor,
+        child: Column(mainAxisSize: MainAxisSize.min, children: children),
+      ),
+    );
+  }
+
   return showModalBottomSheet<T>(
     context: context,
-    isScrollControlled: isScrollControlled,
-    backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 10),
-          // 그랩 핸들
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFD9D9D9),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          if (title != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.1,
-                color:
-                    isDark ? AppColors.darkTextSub : AppColors.lightTextSub,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetCtx) => SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var g = 0; g < groups.length; g++) ...[
+                if (g == 0 && title != null)
+                  buildCard(
+                    groups[g],
+                    header: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.1,
+                          color: titleColor,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  buildCard(groups[g]),
+                const SizedBox(height: 8),
+              ],
+              // 취소 버튼 (분리된 카드)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Material(
+                  color: cardColor,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(sheetCtx),
+                    child: SizedBox(
+                      height: 56,
+                      child: Center(
+                        child: Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                            color: cancelColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          ...items,
-          const SizedBox(height: 8),
-        ],
+            ],
+          ),
+        ),
       ),
     ),
   );
 }
 
-/// 옵션 시트 항목 그룹 구분선(은은한 1px + 위아래 여백).
-/// 계정/약관/파괴적 액션처럼 의미가 다른 그룹 사이에만 사용한다.
+/// 옵션 시트에서 항목 그룹(카드)을 나누는 마커.
+/// 실제로는 렌더되지 않고 [showAppActionSheet]가 카드 분리 기준으로만 사용한다.
 class AppMenuDivider extends StatelessWidget {
   const AppMenuDivider({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final color =
-        context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        // 아이콘 타일(16+40+14) 다음, 라벨 시작선에 맞춤
-        indent: 70,
-        endIndent: 16,
-        color: color,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
