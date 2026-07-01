@@ -16,6 +16,8 @@ import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
 import '../../../marketplace/presentation/widgets/marketplace_profile_list.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -228,25 +230,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           elevation: 0,
           scrolledUnderElevation: 0,
           actions: [
-            PopupMenuButton<String>(
-              icon: Icon(LucideIcons.moreVertical,
+            IconButton(
+              icon: Icon(LucideIcons.moreHorizontal,
                   color: context.isDark ? Colors.white70 : Colors.black87),
-              onSelected: (value) {
-                if (value == 'block') _confirmBlock(profile.id, profile.username);
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: 'block',
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.ban, size: 18, color: AppColors.error),
-                      SizedBox(width: 8),
-                      Text('차단하기',
-                          style: TextStyle(color: AppColors.error)),
-                    ],
-                  ),
+              onPressed: () => showAppActionSheet(context, items: [
+                AppMenuItem(
+                  icon: LucideIcons.ban,
+                  label: '차단하기',
+                  destructive: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmBlock(profile.id, profile.username);
+                  },
                 ),
-              ],
+              ]),
             ),
           ],
         ),

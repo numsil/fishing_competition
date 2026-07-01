@@ -59,11 +59,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         AppMenuItem(
           icon: LucideIcons.camera,
           label: '카메라로 촬영',
+          showIcon: true,
           onTap: () => Navigator.pop(context, ImageSource.camera),
         ),
         AppMenuItem(
           icon: LucideIcons.image,
           label: '갤러리에서 선택',
+          showIcon: true,
           onTap: () => Navigator.pop(context, ImageSource.gallery),
         ),
       ],
