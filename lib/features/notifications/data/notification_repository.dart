@@ -23,9 +23,18 @@ class NotificationRepository {
         .eq('user_id', myId)
         .order('created_at', ascending: false)
         .limit(50);
-    return (data as List)
+    final all = (data as List)
         .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
         .toList();
+
+    // DM 알림은 대화(target_id)별 최신 1개만 노출해 알림함이 지저분해지지 않게 한다.
+    // (created_at 내림차순이라 각 대화의 첫 등장이 최신 = 유지)
+    final seenDmConversations = <String>{};
+    return all.where((n) {
+      if (n.type != 'dm') return true;
+      final key = n.targetId ?? n.actorId; // 대화 식별자(없으면 상대방 기준)
+      return seenDmConversations.add(key); // 처음이면 true(유지), 중복이면 false(제외)
+    }).toList();
   }
 
   Future<void> markAllRead() async {
