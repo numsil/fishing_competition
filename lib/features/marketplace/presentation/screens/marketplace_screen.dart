@@ -13,7 +13,8 @@ import '../../data/marketplace_repository.dart';
 const _categories = ['전체', '낚시대', '릴', '루어/채비', '보팅', '기타'];
 
 /// 중고거래 목록 보기 모드 (false=카드/그리드, true=리스트). 검색창 옆 토글과 공유.
-final marketplaceListViewProvider = StateProvider<bool>((ref) => false);
+/// 기본값은 리스트형(true) — 한 화면에 더 많이 보이게.
+final marketplaceListViewProvider = StateProvider<bool>((ref) => true);
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key, this.searchQuery = ''});
