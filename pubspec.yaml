@@ -2,7 +2,7 @@ name: fishing_competition
 description: "낚시 대회 관리 앱 - 웹/모바일 지원"
 publish_to: 'none'
 
-version: 1.0.0+52
+version: 1.0.0+53
 
 environment:
   sdk: ^3.8.1
