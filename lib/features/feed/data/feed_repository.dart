@@ -641,7 +641,14 @@ class FeedPosts extends _$FeedPosts {
       _lastId = page.lastId;
       _hasMore = page.posts.length >= kFeedPageSize;
       if (page.posts.isNotEmpty) {
-        state = AsyncData([...current, ...page.posts]);
+        // 커서 점수가 NOW() 기반이라 경계 게시물이 다음 페이지에 다시 올 수 있음.
+        // 중복 id를 제거해 이어붙인다(중복 시 영상 글 GlobalKey 충돌로 피드가 깨지는 것 방지).
+        final existingIds = current.map((p) => p.id).toSet();
+        final fresh =
+            page.posts.where((p) => !existingIds.contains(p.id)).toList();
+        if (fresh.isNotEmpty) {
+          state = AsyncData([...current, ...fresh]);
+        }
       }
     } finally {
       _loading = false;

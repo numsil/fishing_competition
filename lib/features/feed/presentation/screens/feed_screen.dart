@@ -15,6 +15,7 @@ import '../../../follow/data/follow_repository.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/utils/time_ago.dart';
@@ -420,8 +421,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                 ),
               ],
               error: (e, st) => [
-                const SliverFillRemaining(
-                  child: Center(child: Text('피드를 불러오지 못했습니다.')),
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('피드를 불러오지 못했습니다.'),
+                        const SizedBox(height: 16),
+                        AppButton(
+                          label: '다시 시도',
+                          fullWidth: false,
+                          onPressed: () => ref.invalidate(feedPostsProvider),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

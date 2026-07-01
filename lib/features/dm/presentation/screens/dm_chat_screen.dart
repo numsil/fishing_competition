@@ -61,6 +61,11 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
       if (hasNew) {
         ref.read(dmRepositoryProvider).markAsRead(widget.conversation.id);
       }
+    }, onError: (_) {
+      // 스트림 오류(네트워크/RLS 등) 시 무한 스피너 방지: 로딩 종료 + 안내
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppSnackBar.error(context, '메시지를 불러오지 못했어요. 네트워크를 확인해주세요.');
     });
   }
 

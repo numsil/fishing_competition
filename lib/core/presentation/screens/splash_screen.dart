@@ -62,26 +62,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     Future.delayed(const Duration(milliseconds: 2400), () async {
       if (!mounted) return;
-
-      final updateInfo = await _updateFuture;
-      if (!mounted) return;
-
-      if (updateInfo != null) {
-        await showUpdateDialog(
-            context, updateInfo, ref.read(appUpdateServiceProvider));
+      try {
+        final updateInfo = await _updateFuture;
         if (!mounted) return;
-      }
 
-      final authRepo = ref.read(authRepositoryProvider);
-      if (ref.read(currentUserProvider) != null) {
-        if (await authRepo.isCurrentUserBanned()) {
-          await authRepo.signOut();
-          if (mounted) context.go(AppRoutes.login);
-          return;
+        if (updateInfo != null) {
+          await showUpdateDialog(
+              context, updateInfo, ref.read(appUpdateServiceProvider));
+          if (!mounted) return;
         }
-        if (mounted) context.go(AppRoutes.feed);
-      } else {
-        context.go(AppRoutes.login);
+
+        final authRepo = ref.read(authRepositoryProvider);
+        if (ref.read(currentUserProvider) != null) {
+          if (await authRepo.isCurrentUserBanned()) {
+            await authRepo.signOut();
+            if (mounted) context.go(AppRoutes.login);
+            return;
+          }
+          if (mounted) context.go(AppRoutes.feed);
+        } else {
+          if (mounted) context.go(AppRoutes.login);
+        }
+      } catch (_) {
+        // 네트워크/서버 일시 오류로 진입 화면에 갇히지 않도록 항상 라우팅한다.
+        // 로그인 상태면 피드로(밴 여부는 앱 재개 시 재확인), 아니면 로그인으로.
+        if (!mounted) return;
+        if (ref.read(currentUserProvider) != null) {
+          context.go(AppRoutes.feed);
+        } else {
+          context.go(AppRoutes.login);
+        }
       }
     });
   }
