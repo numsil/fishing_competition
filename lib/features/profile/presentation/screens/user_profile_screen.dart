@@ -15,6 +15,7 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
+import '../../../marketplace/presentation/widgets/marketplace_profile_list.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -35,7 +36,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 1, vsync: this);
+    _tab = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -518,6 +519,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       indicatorSize: TabBarIndicatorSize.tab,
                       tabs: const [
                         Tab(icon: Icon(LucideIcons.layoutGrid, size: 20)),
+                        Tab(icon: Icon(LucideIcons.shoppingBag, size: 20)),
                       ],
                     ),
                   ],
@@ -529,6 +531,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             controller: _tab,
             children: [
               _UserGrid(userId: widget.userId, isDark: context.isDark),
+              MarketplaceProfileList(userId: widget.userId),
             ],
           ),
         ),

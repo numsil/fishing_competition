@@ -19,8 +19,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
-import '../../../marketplace/data/marketplace_model.dart';
-import '../../../marketplace/data/marketplace_repository.dart';
+import '../../../marketplace/presentation/widgets/marketplace_profile_list.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_action_sheet.dart';
@@ -203,7 +202,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
 
     return ref.watch(myProfileProvider).when(
       data: (profile) {
@@ -450,7 +448,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               controller: _tab,
               children: [
                 _Grid(isDark: context.isDark),
-                _MyMarketplace(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg),
+                const MarketplaceProfileList(),
               ],
             ),
           ),
@@ -560,90 +558,4 @@ class _Grid extends ConsumerWidget {
   }
 }
 
-class _MyMarketplace extends ConsumerWidget {
-  const _MyMarketplace({required this.isDark, required this.accent, required this.sub, required this.cardBg});
-  final bool isDark;
-  final Color accent, sub, cardBg;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(myMarketplaceItemsProvider).when(
-      data: (items) {
-        if (items.isEmpty) {
-          return Center(
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(LucideIcons.shoppingBag, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
-              const SizedBox(height: 12),
-              Text('등록한 중고거래 상품이 없어요', style: TextStyle(color: sub, fontSize: 14)),
-            ]),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (_, i) {
-            final item = items[i];
-            final statusColor = item.isSelling ? accent : sub;
-
-            return GestureDetector(
-              onTap: () => context.push('/marketplace/${item.id}', extra: item),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                  ),
-                ),
-                child: Row(children: [
-                  // 썸네일
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      width: 52, height: 52,
-                      child: item.imageUrls.isNotEmpty
-                          ? Image.network(
-                              item.imageUrls.first,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
-                                child: Icon(LucideIcons.image, size: 18, color: sub),
-                              ),
-                            )
-                          : Container(
-                              color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
-                              child: Icon(LucideIcons.image, size: 18, color: sub),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 4),
-                    Text(item.formattedPrice, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? AppColors.neonGreen : AppColors.navy)),
-                  ])),
-                  // 판매중이 아니면 상태 배지 (예약중/판매완료)
-                  if (!item.isSelling)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(item.statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-                    ),
-                ]),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('불러오기 실패', style: TextStyle(color: sub))),
-    );
-  }
-}
 

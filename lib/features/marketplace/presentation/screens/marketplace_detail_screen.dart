@@ -213,42 +213,6 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                       ),
                     ),
 
-                  const SizedBox(height: 24),
-
-                  // DM 문의 버튼
-                  if (!isOwner)
-                    AppButton(
-                      label: '문의하기',
-                      onPressed: () async {
-                        try {
-                          final conversationId = await ref
-                              .read(dmRepositoryProvider)
-                              .getOrCreateConversation(item.userId);
-                          if (context.mounted) {
-                            context.push(
-                              '/dm/chat',
-                              extra: DmConversation(
-                                id: conversationId,
-                                otherUserId: item.userId,
-                                otherUsername: item.username,
-                                otherAvatarUrl: item.avatarUrl,
-                                lastMessageAt: DateTime.now(),
-                                hasUnread: false,
-                              ),
-                            );
-                          }
-                        } on DmBlockedException {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '차단된 사용자입니다');
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
-                          }
-                        }
-                      },
-                    ),
-
                   // 개인 간 거래 면책 안내 (판매글·구매글 공통)
                   const SizedBox(height: 24),
                   _TradeDisclaimer(isDark: isDark),
@@ -258,6 +222,43 @@ class MarketplaceDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
+      // 문의하기: 스크롤과 무관하게 항상 보이는 하단 고정 바 (타인 글만)
+      bottomNavigationBar: isOwner
+          ? null
+          : SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: AppButton(
+                label: '문의하기',
+                onPressed: () async {
+                  try {
+                    final conversationId = await ref
+                        .read(dmRepositoryProvider)
+                        .getOrCreateConversation(item.userId);
+                    if (context.mounted) {
+                      context.push(
+                        '/dm/chat',
+                        extra: DmConversation(
+                          id: conversationId,
+                          otherUserId: item.userId,
+                          otherUsername: item.username,
+                          otherAvatarUrl: item.avatarUrl,
+                          lastMessageAt: DateTime.now(),
+                          hasUnread: false,
+                        ),
+                      );
+                    }
+                  } on DmBlockedException {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '차단된 사용자입니다');
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
+                    }
+                  }
+                },
+              ),
+            ),
     );
   }
 }

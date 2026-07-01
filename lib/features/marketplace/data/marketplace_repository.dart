@@ -65,11 +65,15 @@ class MarketplaceRepository {
   Future<List<MarketplaceItem>> getMyItems() async {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) return [];
+    return getUserItems(uid);
+  }
 
+  /// 특정 유저가 등록한 중고거래 목록 (프로필에서 사용)
+  Future<List<MarketplaceItem>> getUserItems(String userId) async {
     final response = await _supabase
         .from('marketplace_items')
         .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
-        .eq('user_id', uid)
+        .eq('user_id', userId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
         .limit(100);
@@ -251,4 +255,13 @@ Future<List<MarketplaceItem>> myMarketplaceItems(MyMarketplaceItemsRef ref) asyn
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
   return ref.read(marketplaceRepositoryProvider).getMyItems();
+}
+
+// 특정 유저의 매물 목록 (프로필). 5분 TTL 캐시.
+@riverpod
+Future<List<MarketplaceItem>> userMarketplaceItems(
+    UserMarketplaceItemsRef ref, String userId) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
+  return ref.read(marketplaceRepositoryProvider).getUserItems(userId);
 }
