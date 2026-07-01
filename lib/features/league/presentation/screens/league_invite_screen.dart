@@ -126,9 +126,27 @@ class _LeagueInviteScreenState extends ConsumerState<LeagueInviteScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
             // 안내
-            Text(
-              "@고유 이름으로 초대할 유저를 찾을 수 있어요.\n초대받은 사람만 비공개 리그에 참여할 수 있어요.",
-              style: TextStyle(fontSize: 12, color: sub, height: 1.5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(LucideIcons.info, size: 15, color: sub),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '@고유 이름으로 유저를 검색해 초대하세요.\n비공개 리그는 초대받은 사람만 참여할 수 있어요.',
+                      style: TextStyle(fontSize: 12, color: sub, height: 1.5),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 

@@ -314,9 +314,9 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: AppButton(
-                    label: '+ 유저 초대 (@아이디)',
+                    label: '유저 초대',
                     variant: AppButtonVariant.outline,
-                    icon: Icons.person_add_outlined,
+                    icon: LucideIcons.userPlus,
                     onPressed: () {
                       Navigator.push(
                         context,
