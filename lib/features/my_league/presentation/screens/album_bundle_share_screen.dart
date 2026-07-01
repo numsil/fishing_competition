@@ -10,7 +10,6 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../league/data/league_repository.dart';
 import '../../../profile/data/profile_repository.dart';
-import '../../../../core/widgets/app_svg.dart'; // AppSvg, AppIcons 모두 이 파일에 정의됨
 
 class AlbumBundleShareScreen extends ConsumerStatefulWidget {
   const AlbumBundleShareScreen({super.key, required this.posts});
@@ -464,7 +463,7 @@ class _AlbumBundleShareScreenState
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 10),
                                   child: Row(children: [
-                                    AppSvg(AppIcons.trophy,
+                                    Icon(LucideIcons.trophy,
                                         size: 14,
                                         color: selected ? accent : sub),
                                     const SizedBox(width: 10),

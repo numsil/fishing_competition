@@ -12,7 +12,6 @@ import '../core/services/app_update_service.dart';
 import '../core/widgets/app_button.dart';
 import '../core/widgets/app_card.dart';
 import '../core/widgets/app_snack_bar.dart';
-import '../core/widgets/app_svg.dart';
 import '../core/widgets/app_text_field.dart';
 import '../core/widgets/confirm_dialog.dart';
 import '../core/widgets/empty_state.dart';
@@ -427,21 +426,6 @@ class _WidgetCatalogScreenState extends State<WidgetCatalogScreen> {
             ]),
           ]),
 
-          // ── SVG 아이콘 (AppSvg) ───────────────────────────
-          _Section(label: 'SVG 아이콘 (AppSvg)', color: accent, children: [
-            Wrap(spacing: 18, runSpacing: 16, children: [
-              _SvgChip(AppIcons.fish, 'fish', accent),
-              _SvgChip(AppIcons.fishingRod, 'rod', accent),
-              _SvgChip(AppIcons.trophy, 'trophy', accent),
-              _SvgChip(AppIcons.hook, 'hook', accent),
-              _SvgChip(AppIcons.wave, 'wave', accent),
-              _SvgChip(AppIcons.crown, 'crown', AppColors.gold),
-              _SvgChip(AppIcons.medalGold, 'gold', AppColors.gold),
-              _SvgChip(AppIcons.medalSilver, 'silver', AppColors.silver),
-              _SvgChip(AppIcons.medalBronze, 'bronze', AppColors.bronze),
-            ]),
-          ]),
-
           // ── 업데이트 다이얼로그 (샘플) ────────────────────
           _Section(label: '업데이트 다이얼로그 (UpdateDialog)', color: accent, children: [
             AppButton(
@@ -645,27 +629,6 @@ class _CardContent extends StatelessWidget {
         Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         const SizedBox(height: 4),
         Text('카드 서브텍스트 예시입니다', style: TextStyle(fontSize: 12, color: sub)),
-      ],
-    );
-  }
-}
-
-// ── SVG 칩 ────────────────────────────────────────────────
-class _SvgChip extends StatelessWidget {
-  const _SvgChip(this.asset, this.label, this.color);
-  final String asset;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvg(asset, size: 32, color: color),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 9, color: sub)),
       ],
     );
   }

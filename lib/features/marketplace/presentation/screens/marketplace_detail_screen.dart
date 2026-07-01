@@ -6,6 +6,8 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/utils/time_ago.dart' show formatTimeAgo;
@@ -26,73 +28,101 @@ class MarketplaceDetailScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider);
     final isOwner = me?.id == item.userId;
 
+    Future<void> changeStatus(String v) async {
+      await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
+      ref.read(marketplaceListProvider.notifier).refresh();
+      ref.invalidate(myMarketplaceItemsProvider);
+      ref.invalidate(userMarketplaceItemsProvider(item.userId));
+      if (context.mounted) {
+        AppSnackBar.info(context, '상태가 변경됐습니다.');
+        context.pop();
+      }
+    }
+
+    void confirmDelete() {
+      showDeleteConfirmSheet(
+        context,
+        title: '매물 삭제',
+        content: '이 매물을 삭제할까요?',
+        onConfirmed: () async {
+          try {
+            await ref.read(marketplaceRepositoryProvider).deleteItem(item.id);
+            await ref.read(marketplaceListProvider.notifier).refresh();
+            ref.invalidate(myMarketplaceItemsProvider);
+            ref.invalidate(userMarketplaceItemsProvider(item.userId));
+            if (context.mounted) {
+              AppSnackBar.info(context, '삭제됐습니다.');
+              context.pop();
+            }
+          } catch (e) {
+            if (context.mounted) AppSnackBar.error(context, '삭제 실패: $e');
+          }
+        },
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('중고거래'),
         actions: [
-          if (isOwner)
-            PopupMenuButton<String>(
-              icon: const Icon(LucideIcons.moreVertical),
-              onSelected: (v) async {
-                if (v == 'delete') {
-                  showDeleteConfirmSheet(
-                    context,
-                    title: '매물 삭제',
-                    content: '이 매물을 삭제할까요?',
-                    onConfirmed: () async {
-                      try {
-                        await ref
-                            .read(marketplaceRepositoryProvider)
-                            .deleteItem(item.id);
-                        await ref
-                            .read(marketplaceListProvider.notifier)
-                            .refresh();
-                        ref.invalidate(myMarketplaceItemsProvider);
-                        if (context.mounted) {
-                          AppSnackBar.info(context, '삭제됐습니다.');
-                          context.pop();
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          AppSnackBar.error(context, '삭제 실패: $e');
-                        }
-                      }
+          IconButton(
+            icon: const Icon(LucideIcons.moreHorizontal),
+            onPressed: () {
+              if (isOwner) {
+                showAppActionSheet(context, items: [
+                  if (item.status != 'selling')
+                    AppMenuItem(
+                      icon: LucideIcons.tag,
+                      label: item.isBuy ? '구매중으로 변경' : '판매중으로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('selling');
+                      },
+                    ),
+                  if (item.status != 'reserved')
+                    AppMenuItem(
+                      icon: LucideIcons.clock,
+                      label: '예약중으로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('reserved');
+                      },
+                    ),
+                  if (item.status != 'sold')
+                    AppMenuItem(
+                      icon: LucideIcons.checkCircle,
+                      label: item.isBuy ? '구매완료로 변경' : '판매완료로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('sold');
+                      },
+                    ),
+                  const AppMenuDivider(),
+                  AppMenuItem(
+                    icon: LucideIcons.trash2,
+                    label: '삭제',
+                    destructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      confirmDelete();
                     },
-                  );
-                } else {
-                  await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
-                  ref.read(marketplaceListProvider.notifier).refresh();
-                  ref.invalidate(myMarketplaceItemsProvider);
-                  if (context.mounted) {
-                    AppSnackBar.info(context, '상태가 변경됐습니다.');
-                    context.pop();
-                  }
-                }
-              },
-              itemBuilder: (_) => [
-                if (item.status != 'selling')
-                  PopupMenuItem(value: 'selling', child: Text(item.isBuy ? '구매중으로 변경' : '판매중으로 변경')),
-                if (item.status != 'reserved')
-                  const PopupMenuItem(value: 'reserved', child: Text('예약중으로 변경')),
-                if (item.status != 'sold')
-                  PopupMenuItem(value: 'sold', child: Text(item.isBuy ? '구매완료로 변경' : '판매완료로 변경')),
-                const PopupMenuItem(value: 'delete', child: Text('삭제', style: TextStyle(color: Colors.red))),
-              ],
-            ),
-          if (!isOwner)
-            PopupMenuButton<String>(
-              icon: const Icon(LucideIcons.moreVertical),
-              onSelected: (v) {
-                if (v == 'report') {
-                  ReportReasonSheet.showForMarketplace(context, item.id);
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                    value: 'report',
-                    child: Text('신고하기', style: TextStyle(color: Colors.red))),
-              ],
-            ),
+                  ),
+                ]);
+              } else {
+                showAppActionSheet(context, items: [
+                  AppMenuItem(
+                    icon: LucideIcons.flag,
+                    label: '신고하기',
+                    destructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      ReportReasonSheet.showForMarketplace(context, item.id);
+                    },
+                  ),
+                ]);
+              }
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
