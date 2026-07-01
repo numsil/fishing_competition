@@ -25,9 +25,13 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
   final _priceCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  static const int _kMaxImages = 10; // 등록 가능 최대 사진 수
   String _category = '기타';
+  String _tradeType = 'sell'; // sell=팝니다, buy=삽니다
   final List<File> _images = [];
   bool _loading = false;
+
+  bool get _isBuy => _tradeType == 'buy';
 
   @override
   void dispose() {
@@ -38,19 +42,19 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     super.dispose();
   }
 
-  /// 사진 추가 (최대 5장까지 append)
+  /// 사진 추가 (최대 _kMaxImages장까지 append)
   Future<void> _addImages() async {
-    if (_images.length >= 5) {
-      AppSnackBar.info(context, '사진은 최대 5장까지 추가할 수 있습니다.');
+    if (_images.length >= _kMaxImages) {
+      AppSnackBar.info(context, '사진은 최대 $_kMaxImages장까지 추가할 수 있습니다.');
       return;
     }
     final picker = ImagePicker();
-    final remaining = 5 - _images.length;
+    final remaining = _kMaxImages - _images.length;
     final picked = await picker.pickMultiImage(limit: remaining);
     if (picked.isEmpty) return;
     setState(() {
       _images.addAll(picked.map((x) => File(x.path)));
-      if (_images.length > 5) _images.length = 5;
+      if (_images.length > _kMaxImages) _images.length = _kMaxImages;
     });
   }
 
@@ -79,7 +83,8 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
       AppSnackBar.info(context, '사진을 1장 이상 추가해주세요.');
       return;
     }
-    if (price <= 0) {
+    // 팝니다는 가격 필수, 삽니다(희망가)는 0(미정) 허용
+    if (!_isBuy && price <= 0) {
       AppSnackBar.info(context, '가격을 입력해주세요.');
       return;
     }
@@ -92,6 +97,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
         price: price,
         imageFiles: _images,
         category: _category,
+        tradeType: _tradeType,
         location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
       );
       ref.read(marketplaceListProvider.notifier).refresh();
@@ -117,13 +123,20 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 거래 유형: 팝니다 / 삽니다
+            _TradeTypeToggle(
+              value: _tradeType,
+              onChanged: (v) => setState(() => _tradeType = v),
+            ),
+            const SizedBox(height: 16),
+
             // 사진 개수 헤더
             Row(
               children: [
                 const Icon(LucideIcons.image, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
                 Text(
-                  '사진 ${_images.length}/5',
+                  '사진 ${_images.length}/$_kMaxImages',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -161,7 +174,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                       children: [
                         Icon(LucideIcons.camera, color: Colors.grey),
                         SizedBox(height: 4),
-                        Text('사진 추가 (최대 5장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('사진 추가 (최대 $_kMaxImages장)', style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -281,10 +294,10 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
             AppTextField(controller: _titleCtrl, hint: '제목'),
             const SizedBox(height: 12),
 
-            // 가격
+            // 가격 (삽니다는 희망가, 선택)
             AppTextField(
               controller: _priceCtrl,
-              hint: '가격 (원)',
+              hint: _isBuy ? '희망가 (원, 선택)' : '가격 (원)',
               keyboardType: TextInputType.number,
               inputFormatters: [_ThousandsFormatter()],
             ),
@@ -388,6 +401,62 @@ class _ThousandsFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// 팝니다/삽니다 세그먼트 토글
+class _TradeTypeToggle extends StatelessWidget {
+  const _TradeTypeToggle({required this.value, required this.onChanged});
+  final String value; // sell | buy
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final accent = context.accentColor;
+    final trackColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0);
+
+    Widget seg(String v, String label) {
+      final selected = v == value;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => onChanged(v),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? (isDark ? Colors.black : Colors.white)
+                    : (isDark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: trackColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          seg('sell', '팝니다'),
+          seg('buy', '삽니다'),
+        ],
+      ),
     );
   }
 }

@@ -14,14 +14,16 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/score_card.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../my_league/data/my_league_repository.dart';
-import '../../../marketplace/data/marketplace_model.dart';
-import '../../../marketplace/data/marketplace_repository.dart';
+import '../../../marketplace/presentation/widgets/marketplace_profile_list.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -51,39 +53,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Future<void> _pickAndUploadAvatar() async {
 
     // 카메라 / 갤러리 선택
-    final choice = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: context.isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: context.isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Icon(Icons.camera_alt_rounded, color: context.accentColor),
-              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library_rounded, color: context.accentColor),
-              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
+    final choice = await showAppActionSheet<ImageSource>(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.camera,
+          label: '카메라로 촬영',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.camera),
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.image,
+          label: '갤러리에서 선택',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.gallery),
+        ),
+      ],
     );
 
     if (choice == null) return;
@@ -150,100 +135,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Future<void> _showSettingsSheet(BuildContext rootContext, UserProfile profile) async {
-    final isDark = context.isDark;
-    await showModalBottomSheet<void>(
-      context: rootContext,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF444444)
-                    : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('프로필 수정'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.profileEdit, extra: profile);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock_outline),
-              title: const Text('비밀번호 변경'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.passwordChange);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.headset_mic_outlined),
-              title: const Text('관리자에게 문의'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _openAdminDm();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.block_outlined),
-              title: const Text('차단한 사용자'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.blockedUsers);
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('서비스 이용약관'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.terms);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: const Text('개인정보처리방침'),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                rootContext.push(AppRoutes.privacy);
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.logout_rounded,
-                  color: AppColors.error),
-              title: const Text('로그아웃',
-                  style: TextStyle(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _logout();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+    await showAppActionSheet<void>(
+      rootContext,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.pencil,
+          label: '프로필 수정',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.profileEdit, extra: profile);
+          },
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.lock,
+          label: '비밀번호 변경',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.passwordChange);
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.headphones,
+          label: '관리자에게 문의',
+          onTap: () {
+            Navigator.pop(rootContext);
+            _openAdminDm();
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.ban,
+          label: '차단한 사용자',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.blockedUsers);
+          },
+        ),
+        const AppMenuDivider(),
+        AppMenuItem(
+          icon: LucideIcons.fileText,
+          label: '서비스 이용약관',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.terms);
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.shield,
+          label: '개인정보처리방침',
+          onTap: () {
+            Navigator.pop(rootContext);
+            rootContext.push(AppRoutes.privacy);
+          },
+        ),
+        const AppMenuDivider(),
+        AppMenuItem(
+          icon: LucideIcons.logOut,
+          label: '로그아웃',
+          destructive: true,
+          onTap: () {
+            Navigator.pop(rootContext);
+            _logout();
+          },
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final sub = context.isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
-    final cardBg = context.isDark ? AppColors.darkSurface : Colors.white;
 
     return ref.watch(myProfileProvider).when(
       data: (profile) {
@@ -425,13 +385,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
                   // 런커 기록
                   if (profile.maxFishPost != null)
-                    Container(
+                    AppCard(
+                      variant: AppCardVariant.tinted,
+                      tintColor: AppColors.gold,
+                      tintAlpha: 0.05,
+                      borderColor: AppColors.gold.withValues(alpha: 0.2),
+                      radius: 14,
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
-                      ),
                       child: Row(children: [
                         Icon(LucideIcons.award, size: 32, color: AppColors.gold),
                         const SizedBox(width: 12),
@@ -490,7 +450,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               controller: _tab,
               children: [
                 _Grid(isDark: context.isDark),
-                _MyMarketplace(isDark: context.isDark, accent: context.accentColor, sub: sub, cardBg: cardBg),
+                const MarketplaceProfileList(),
               ],
             ),
           ),
@@ -600,90 +560,4 @@ class _Grid extends ConsumerWidget {
   }
 }
 
-class _MyMarketplace extends ConsumerWidget {
-  const _MyMarketplace({required this.isDark, required this.accent, required this.sub, required this.cardBg});
-  final bool isDark;
-  final Color accent, sub, cardBg;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(myMarketplaceItemsProvider).when(
-      data: (items) {
-        if (items.isEmpty) {
-          return Center(
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(LucideIcons.shoppingBag, size: 48, color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFA1A1AA)),
-              const SizedBox(height: 12),
-              Text('등록한 중고거래 상품이 없어요', style: TextStyle(color: sub, fontSize: 14)),
-            ]),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (_, i) {
-            final item = items[i];
-            final statusColor = item.isSelling ? accent : sub;
-
-            return GestureDetector(
-              onTap: () => context.push('/marketplace/${item.id}', extra: item),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-                  ),
-                ),
-                child: Row(children: [
-                  // 썸네일
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      width: 52, height: 52,
-                      child: item.imageUrls.isNotEmpty
-                          ? Image.network(
-                              item.imageUrls.first,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
-                                child: Icon(LucideIcons.image, size: 18, color: sub),
-                              ),
-                            )
-                          : Container(
-                              color: isDark ? AppColors.darkSurface2 : AppColors.lightBg,
-                              child: Icon(LucideIcons.image, size: 18, color: sub),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 4),
-                    Text(item.formattedPrice, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? AppColors.neonGreen : AppColors.navy)),
-                  ])),
-                  // 판매중이 아니면 상태 배지 (예약중/판매완료)
-                  if (!item.isSelling)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(item.statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-                    ),
-                ]),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('불러오기 실패', style: TextStyle(color: sub))),
-    );
-  }
-}
 

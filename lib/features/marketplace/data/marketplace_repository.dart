@@ -20,12 +20,14 @@ class MarketplaceRepository {
     String? beforeId,
     String? category,
     String? search,
+    String? tradeType,
   }) async {
     var query = _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
         .eq('is_deleted', false);
 
+    if (tradeType != null) query = query.eq('trade_type', tradeType);
     if (category != null) query = query.eq('category', category);
     if (search != null && search.trim().isNotEmpty) {
       // PostgREST or 필터가 깨지는 특수문자 제거 후 제목·설명 부분일치 검색
@@ -63,11 +65,15 @@ class MarketplaceRepository {
   Future<List<MarketplaceItem>> getMyItems() async {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) return [];
+    return getUserItems(uid);
+  }
 
+  /// 특정 유저가 등록한 중고거래 목록 (프로필에서 사용)
+  Future<List<MarketplaceItem>> getUserItems(String userId) async {
     final response = await _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, location, created_at, users(username, avatar_url)')
-        .eq('user_id', uid)
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
+        .eq('user_id', userId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
         .limit(100);
@@ -90,6 +96,7 @@ class MarketplaceRepository {
     required List<File> imageFiles,
     required String category,
     String? location,
+    String tradeType = 'sell',
   }) async {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) throw Exception('Not logged in');
@@ -118,6 +125,7 @@ class MarketplaceRepository {
       'price': price,
       'image_urls': urls,
       'category': category,
+      'trade_type': tradeType,
       'location': location,
     });
   }
@@ -171,6 +179,7 @@ class MarketplaceList extends _$MarketplaceList {
   String? _lastId;
   String _category = '전체';
   String _search = '';
+  String _tradeType = 'all'; // all | sell | buy
 
   bool get hasMore => _hasMore;
 
@@ -189,6 +198,7 @@ class MarketplaceList extends _$MarketplaceList {
           beforeId: reset ? null : _lastId,
           category: _category == '전체' ? null : _category,
           search: _search.trim().isEmpty ? null : _search.trim(),
+          tradeType: _tradeType == 'all' ? null : _tradeType,
         );
     _hasMore = items.length >= kMarketplacePageSize;
     if (items.isNotEmpty) {
@@ -198,11 +208,18 @@ class MarketplaceList extends _$MarketplaceList {
     return items;
   }
 
-  // 카테고리/검색어 변경 시 처음부터 다시 조회
-  Future<void> setFilter({required String category, required String search}) async {
-    if (category == _category && search == _search) return;
+  // 카테고리/검색어/거래유형 변경 시 처음부터 다시 조회
+  Future<void> setFilter({
+    required String category,
+    required String search,
+    String tradeType = 'all',
+  }) async {
+    if (category == _category && search == _search && tradeType == _tradeType) {
+      return;
+    }
     _category = category;
     _search = search;
+    _tradeType = tradeType;
     _hasMore = true;
     _lastCreatedAt = null;
     _lastId = null;
@@ -238,4 +255,13 @@ Future<List<MarketplaceItem>> myMarketplaceItems(MyMarketplaceItemsRef ref) asyn
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
   return ref.read(marketplaceRepositoryProvider).getMyItems();
+}
+
+// 특정 유저의 매물 목록 (프로필). 5분 TTL 캐시.
+@riverpod
+Future<List<MarketplaceItem>> userMarketplaceItems(
+    UserMarketplaceItemsRef ref, String userId) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
+  return ref.read(marketplaceRepositoryProvider).getUserItems(userId);
 }

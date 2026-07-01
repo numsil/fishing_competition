@@ -15,6 +15,7 @@ abstract class MarketplaceItem with _$MarketplaceItem {
     @JsonKey(name: 'image_urls') @Default([]) List<String> imageUrls,
     @Default('기타') String category,
     @Default('selling') String status, // selling, reserved, sold
+    @JsonKey(name: 'trade_type') @Default('sell') String tradeType, // sell=팝니다, buy=삽니다
     String? location,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // joined user data
@@ -28,7 +29,17 @@ abstract class MarketplaceItem with _$MarketplaceItem {
 }
 
 extension MarketplaceItemX on MarketplaceItem {
+  bool get isBuy => tradeType == 'buy';
+
+  /// 카드 태그 라벨. 팝니다: 판매중/예약중/판매완료, 삽니다: 구매중/예약중/구매완료
   String get statusLabel {
+    if (isBuy) {
+      switch (status) {
+        case 'reserved': return '예약중';
+        case 'sold': return '구매완료';
+        default: return '구매중';
+      }
+    }
     switch (status) {
       case 'reserved': return '예약중';
       case 'sold': return '판매완료';

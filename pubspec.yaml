@@ -2,7 +2,7 @@ name: fishing_competition
 description: "낚시 대회 관리 앱 - 웹/모바일 지원"
 publish_to: 'none'
 
-version: 1.0.0+52
+version: 1.0.0+53
 
 environment:
   sdk: ^3.8.1
@@ -106,7 +106,6 @@ flutter:
   assets:
     - .env
     - assets/images/
-    - assets/icons/
 
   # 커스텀 폰트 사용 시 assets/fonts/ 에 파일 추가 후 아래 주석 해제
   # fonts:

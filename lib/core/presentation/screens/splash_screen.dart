@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../widgets/app_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../features/auth/data/auth_repository.dart';
@@ -62,26 +62,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     Future.delayed(const Duration(milliseconds: 2400), () async {
       if (!mounted) return;
-
-      final updateInfo = await _updateFuture;
-      if (!mounted) return;
-
-      if (updateInfo != null) {
-        await showUpdateDialog(
-            context, updateInfo, ref.read(appUpdateServiceProvider));
+      try {
+        final updateInfo = await _updateFuture;
         if (!mounted) return;
-      }
 
-      final authRepo = ref.read(authRepositoryProvider);
-      if (ref.read(currentUserProvider) != null) {
-        if (await authRepo.isCurrentUserBanned()) {
-          await authRepo.signOut();
-          if (mounted) context.go(AppRoutes.login);
-          return;
+        if (updateInfo != null) {
+          await showUpdateDialog(
+              context, updateInfo, ref.read(appUpdateServiceProvider));
+          if (!mounted) return;
         }
-        if (mounted) context.go(AppRoutes.feed);
-      } else {
-        context.go(AppRoutes.login);
+
+        final authRepo = ref.read(authRepositoryProvider);
+        if (ref.read(currentUserProvider) != null) {
+          if (await authRepo.isCurrentUserBanned()) {
+            await authRepo.signOut();
+            if (mounted) context.go(AppRoutes.login);
+            return;
+          }
+          if (mounted) context.go(AppRoutes.feed);
+        } else {
+          if (mounted) context.go(AppRoutes.login);
+        }
+      } catch (_) {
+        // 네트워크/서버 일시 오류로 진입 화면에 갇히지 않도록 항상 라우팅한다.
+        // 로그인 상태면 피드로(밴 여부는 앱 재개 시 재확인), 아니면 로그인으로.
+        if (!mounted) return;
+        if (ref.read(currentUserProvider) != null) {
+          context.go(AppRoutes.feed);
+        } else {
+          context.go(AppRoutes.login);
+        }
       }
     });
   }
@@ -229,26 +239,26 @@ class _NakSvgLogo extends StatelessWidget {
         // 외부 글로우 — 크고 투명하게 (맥동)
         Opacity(
           opacity: 0.18 * glowIntensity,
-          child: SvgPicture.asset(
+          child: AppSvg(
             'assets/images/nak_logo.svg',
             width: 272,
-            colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+            color: _neon,
           ),
         ),
         // 내부 글로우 — 중간 크기
         Opacity(
           opacity: 0.40 * glowIntensity,
-          child: SvgPicture.asset(
+          child: AppSvg(
             'assets/images/nak_logo.svg',
             width: 252,
-            colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+            color: _neon,
           ),
         ),
         // 선명한 로고
-        SvgPicture.asset(
+        AppSvg(
           'assets/images/nak_logo.svg',
           width: 240,
-          colorFilter: const ColorFilter.mode(_neon, BlendMode.srcIn),
+          color: _neon,
         ),
       ],
     );

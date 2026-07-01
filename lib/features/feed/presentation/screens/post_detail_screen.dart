@@ -19,6 +19,7 @@ import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/utils/time_ago.dart';
 import '../../../../core/widgets/menu_item.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../utils/feed_search_utils.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
@@ -153,30 +154,68 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             icon: Icon(LucideIcons.moreHorizontal, color: iconColor),
             onPressed: () {
               final currentUserId = ref.read(currentUserProvider)?.id;
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: context.isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (_) => _MoreMenu(
-                  isDark: context.isDark,
-                  postId: p.id,
-                  post: p,
-                  isOwner: currentUserId != null && currentUserId == p.userId,
-                  onDelete: () {
-                    Navigator.pop(context); // 바텀시트 닫기
-                    _deletePost();
-                  },
-                  onShareToFeed: () {
-                    Navigator.pop(context);
-                    _sharePostToFeed();
-                  },
-                  onEdit: () {
-                    Navigator.pop(context);
-                    _editPost();
-                  },
-                ),
+              final isOwner =
+                  currentUserId != null && currentUserId == p.userId;
+              final canShareToFeed =
+                  isOwner && (p.leagueId != null || p.isPersonalRecord);
+              showAppActionSheet(
+                context,
+                items: [
+                  if (canShareToFeed)
+                    AppMenuItem(
+                      icon: LucideIcons.send,
+                      label: '내 피드에 공유하기',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _sharePostToFeed();
+                      },
+                    ),
+                  if (isOwner && p.leagueId == null && !p.isPersonalRecord)
+                    AppMenuItem(
+                      icon: LucideIcons.pencil,
+                      label: '수정하기',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _editPost();
+                      },
+                    ),
+                  AppMenuItem(
+                    icon: LucideIcons.link2,
+                    label: '링크 복사',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Clipboard.setData(ClipboardData(
+                          text: 'https://nakstar.app/post/${p.id}'));
+                      AppSnackBar.info(context, '링크가 복사되었습니다');
+                    },
+                  ),
+                  AppMenuItem(
+                    icon: LucideIcons.share,
+                    label: '공유하기',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  const AppMenuDivider(),
+                  if (isOwner)
+                    AppMenuItem(
+                      icon: LucideIcons.trash2,
+                      label: '게시물 삭제',
+                      destructive: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _deletePost();
+                      },
+                    )
+                  else
+                    AppMenuItem(
+                      icon: LucideIcons.flag,
+                      label: '신고하기',
+                      destructive: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        ReportReasonSheet.show(context, p.id);
+                      },
+                    ),
+                ],
               );
             },
           ),
@@ -370,103 +409,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   String _timeAgo(DateTime dt) => formatTimeAgo(dt);
-}
-
-// ── 더보기 메뉴 ──────────────────────────────────────────
-class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({
-    required this.isDark,
-    required this.postId,
-    required this.post,
-    required this.isOwner,
-    required this.onDelete,
-    required this.onShareToFeed,
-    this.onEdit,
-  });
-  final bool isDark;
-  final String postId;
-  final Post post;
-  final bool isOwner;
-  final VoidCallback onDelete;
-  final VoidCallback onShareToFeed;
-  final VoidCallback? onEdit;
-
-  bool get _canShareToFeed =>
-      isOwner && (post.leagueId != null || post.isPersonalRecord);
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : Colors.black;
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    final accent = isDark ? AppColors.neonGreen : AppColors.navy;
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 36, height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_canShareToFeed) ...[
-            AppMenuItem(
-              icon: LucideIcons.send,
-              label: '내 피드에 공유하기',
-              color: accent,
-              onTap: onShareToFeed,
-            ),
-            Divider(height: 1, color: divColor),
-          ],
-          if (isOwner && post.leagueId == null && !post.isPersonalRecord) ...[
-            AppMenuItem(
-              icon: LucideIcons.pencil,
-              label: '수정하기',
-              color: textColor,
-              onTap: onEdit ?? () {},
-            ),
-            Divider(height: 1, color: divColor),
-          ],
-          AppMenuItem(
-            icon: LucideIcons.link2, label: '링크 복사', color: textColor,
-            onTap: () {
-              Navigator.pop(context);
-              Clipboard.setData(ClipboardData(text: 'https://nakstar.app/post/$postId'));
-                            AppSnackBar.info(context, '링크가 복사되었습니다');
-            },
-          ),
-          Divider(height: 1, color: divColor),
-          AppMenuItem(icon: LucideIcons.share, label: '공유하기', color: textColor,
-              onTap: () => Navigator.pop(context)),
-          if (isOwner) ...[
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.trash2,
-              label: '게시물 삭제',
-              color: AppColors.error,
-              onTap: onDelete,
-            ),
-          ] else ...[
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.flag,
-              label: '신고하기',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(context);
-                ReportReasonSheet.show(context, postId);
-              },
-            ),
-          ],
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
 }
 
 // ── 댓글 시트 ────────────────────────────────────────────

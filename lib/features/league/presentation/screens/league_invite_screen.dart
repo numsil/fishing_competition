@@ -6,6 +6,7 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -125,9 +126,27 @@ class _LeagueInviteScreenState extends ConsumerState<LeagueInviteScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
             // 안내
-            Text(
-              "@고유 이름으로 초대할 유저를 찾을 수 있어요.\n초대받은 사람만 비공개 리그에 참여할 수 있어요.",
-              style: TextStyle(fontSize: 12, color: sub, height: 1.5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(LucideIcons.info, size: 15, color: sub),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '@고유 이름으로 유저를 검색해 초대하세요.\n비공개 리그는 초대받은 사람만 참여할 수 있어요.',
+                      style: TextStyle(fontSize: 12, color: sub, height: 1.5),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -225,17 +244,13 @@ class _UserHitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final bg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkSurface2 : AppColors.lightDivider;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border),
-      ),
+      radius: 14,
+      borderColor: border,
       child: Row(
         children: [
           UserAvatar(
@@ -286,15 +301,10 @@ class _NotFound extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-        ),
-      ),
+      radius: 14,
+      borderColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
       child: Row(
         children: [
           Icon(LucideIcons.userX, size: 18, color: sub),
@@ -327,17 +337,13 @@ class _SentInviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
-        ),
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        radius: 12,
+        borderColor: isDark ? AppColors.darkSurface2 : AppColors.lightDivider,
+        child: Row(
         children: [
           UserAvatar(
             username: invite.inviteeUsername ?? '?',
@@ -375,6 +381,7 @@ class _SentInviteTile extends StatelessWidget {
             child: const Text('취소', style: TextStyle(fontSize: 12)),
           ),
         ],
+      ),
       ),
     );
   }

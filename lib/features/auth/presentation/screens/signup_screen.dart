@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../core/widgets/app_svg.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
@@ -235,13 +235,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               Center(
                 child: Column(
                   children: [
-                    SvgPicture.asset(
+                    AppSvg(
                       'assets/images/nak_logo.svg',
                       width: 96,
-                      colorFilter: ColorFilter.mode(
-                        context.accentColor,
-                        BlendMode.srcIn,
-                      ),
+                      color: context.accentColor,
                     ),
                     const SizedBox(height: 16),
                     const Text(

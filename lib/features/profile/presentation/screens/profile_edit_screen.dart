@@ -11,6 +11,9 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../../auth/presentation/utils/withdraw_flow.dart';
 import '../../data/profile_repository.dart';
 import 'package:go_router/go_router.dart';
@@ -83,47 +86,22 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final choice = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor:
-          context.isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: context.isDark
-                    ? const Color(0xFF444444)
-                    : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading:
-                  Icon(Icons.camera_alt_rounded, color: context.accentColor),
-              title: const Text('카메라로 촬영',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library_rounded,
-                  color: context.accentColor),
-              title: const Text('갤러리에서 선택',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
+    final choice = await showAppActionSheet<ImageSource>(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.camera,
+          label: '카메라로 촬영',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.camera),
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.image,
+          label: '갤러리에서 선택',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.gallery),
+        ),
+      ],
     );
 
     if (choice == null) return;
@@ -347,15 +325,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             // 닉네임
             _Label(text: '닉네임'),
             const SizedBox(height: 8),
-            TextField(
+            AppTextField(
               controller: _usernameCtrl,
               maxLength: 20,
-              decoration: InputDecoration(
-                hintText: '닉네임 입력',
-                prefixIcon:
-                    const Icon(Icons.person_outline_rounded, size: 20),
-                counterText: '',
-              ),
+              hint: '닉네임 입력',
+              prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
             ),
             const SizedBox(height: 4),
             Text('피드, 랭킹 등에 표시되는 이름입니다. 중복 가능합니다.',
@@ -365,16 +339,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             // 고유 이름 (user_key)
             _Label(text: '고유 이름'),
             const SizedBox(height: 8),
-            TextField(
+            AppTextField(
               controller: _userKeyCtrl,
               maxLength: 20,
-              decoration: InputDecoration(
-                hintText: '고유 이름 입력',
-                prefixIcon: Icon(LucideIcons.atSign, size: 18),
-                counterText: '',
-                suffixIcon: _buildUserKeySuffix(),
-              ),
+              hint: '고유 이름 입력',
+              prefixIcon: const Icon(LucideIcons.atSign, size: 18),
+              suffixIcon: _buildUserKeySuffix(),
             ),
+
             const SizedBox(height: 4),
             _buildUserKeyStatus(sub),
 

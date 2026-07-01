@@ -20,6 +20,7 @@ _MarketplaceItem _$MarketplaceItemFromJson(Map<String, dynamic> json) =>
           const [],
       category: json['category'] as String? ?? '기타',
       status: json['status'] as String? ?? 'selling',
+      tradeType: json['trade_type'] as String? ?? 'sell',
       location: json['location'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -34,6 +35,7 @@ Map<String, dynamic> _$MarketplaceItemToJson(_MarketplaceItem instance) =>
       'image_urls': instance.imageUrls,
       'category': instance.category,
       'status': instance.status,
+      'trade_type': instance.tradeType,
       'location': instance.location,
       'created_at': instance.createdAt.toIso8601String(),
     };

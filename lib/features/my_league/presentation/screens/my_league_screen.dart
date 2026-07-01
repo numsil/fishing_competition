@@ -417,17 +417,13 @@ class _ActiveLeagueCard extends StatelessWidget {
       onTap: () => context.push(
         '${AppRoutes.myLeagueDetail}/${league.id}?type=$type',
       ),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isLive ? accent.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-          width: isLive ? 1.5 : 1,
-        ),
-      ),
-      child: Column(
+      child: AppCard(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.zero,
+        radius: 16,
+        borderColor: isLive ? accent.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+        borderWidth: isLive ? 1.5 : 1,
+        child: Column(
         children: [
           // 헤더
           Padding(
@@ -900,37 +896,23 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
         Positioned(
           left: 16, right: 16, bottom: 16,
           child: _selectMode
-              ? SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _orderedSelected.isEmpty
-                        ? null
-                        : () async {
-                            final result = await context.push<bool>(
-                              AppRoutes.albumBundleShare,
-                              extra: List<Post>.from(_orderedSelected),
-                            );
-                            if (result == true && mounted) {
-                              _exitSelectMode();
-                              // ignore: use_build_context_synchronously
-                              AppSnackBar.success(context, '피드에 공유되었습니다 🎣');
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _orderedSelected.isEmpty ? null : accent,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text(
-                      _orderedSelected.isEmpty
-                          ? '사진을 선택하세요'
-                          : '${_orderedSelected.length}장 선택됨 · 피드에 공유하기',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+              ? AppButton(
+                  label: _orderedSelected.isEmpty
+                      ? '사진을 선택하세요'
+                      : '${_orderedSelected.length}장 선택됨 · 피드에 공유하기',
+                  onPressed: _orderedSelected.isEmpty
+                      ? null
+                      : () async {
+                          final result = await context.push<bool>(
+                            AppRoutes.albumBundleShare,
+                            extra: List<Post>.from(_orderedSelected),
+                          );
+                          if (result == true && mounted) {
+                            _exitSelectMode();
+                            // ignore: use_build_context_synchronously
+                            AppSnackBar.success(context, '피드에 공유되었습니다 🎣');
+                          }
+                        },
                 )
               : Row(
                   children: [
@@ -1252,16 +1234,12 @@ class _MyLeagueCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => context.push('${AppRoutes.leagueManage}/${league.id}'),
-      child: Container(
+      child: AppCard(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-            width: isLive ? 1.5 : 1,
-          ),
-        ),
+        padding: EdgeInsets.zero,
+        radius: 16,
+        borderColor: isLive ? AppColors.liveRed.withValues(alpha: 0.4) : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
+        borderWidth: isLive ? 1.5 : 1,
         child: Column(
           children: [
             Padding(

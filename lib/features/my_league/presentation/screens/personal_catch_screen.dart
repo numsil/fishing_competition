@@ -8,6 +8,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
@@ -114,8 +117,6 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: source,
-      imageQuality: 85,
-      maxWidth: 1280,
     );
     if (picked != null) {
       final file = File(picked.path);
@@ -128,40 +129,22 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
   }
 
   Future<void> _showSourceSheet() async {
-
-    final choice = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: context.isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: context.isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Icon(Icons.camera_alt_rounded, color: context.accentColor),
-              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library_rounded, color: context.accentColor),
-              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
+    final choice = await showAppActionSheet<ImageSource>(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.camera,
+          label: '카메라로 촬영',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.camera),
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.image,
+          label: '갤러리에서 선택',
+          showIcon: true,
+          onTap: () => Navigator.pop(context, ImageSource.gallery),
+        ),
+      ],
     );
 
     if (choice != null) await _pickImage(choice);
@@ -182,6 +165,7 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       await ref.read(feedRepositoryProvider).createPost(
         userId: user.id,
         imageFile: _image!,
+        imageMaxDimension: 1280, // 개인 조과: 1280 단일 인코딩
         aspectRatio: _previewRatio,
         fishType: _fishType,
         length: lengthVal,
@@ -448,20 +432,11 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton.icon(
-              onPressed: _submitting ? null : _submit,
-              icon: _submitting
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.camera_alt_rounded, size: 22),
-              label: Text(_submitting ? '등록 중...' : '조과 기록하기',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
+          child: AppButton(
+            label: '조과 기록하기',
+            onPressed: _submitting ? null : _submit,
+            icon: Icons.camera_alt_rounded,
+            loading: _submitting,
           ),
         ),
       ),

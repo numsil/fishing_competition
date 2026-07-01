@@ -159,8 +159,9 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
 
                 if (filtered.isEmpty) {
                   return RefreshIndicator(
-                    onRefresh: () async => ref.invalidate(leaguesProvider),
+                    onRefresh: () => ref.refresh(leaguesProvider.future),
                     child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
                         const SizedBox(height: 160),
                         Center(
@@ -183,9 +184,10 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                 final itemCount = filtered.length + (showLoadMore ? 1 : 0);
 
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(leaguesProvider),
+                  onRefresh: () => ref.refresh(leaguesProvider.future),
                   child: ListView.builder(
                     controller: _scrollCtrl,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
@@ -231,8 +233,9 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, st) => RefreshIndicator(
-                onRefresh: () async => ref.invalidate(leaguesProvider),
+                onRefresh: () => ref.refresh(leaguesProvider.future),
                 child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   children: [
                     const SizedBox(height: 160),
                     Center(

@@ -130,7 +130,7 @@ jobs:
           fi
 
           APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/app-release.apk"
-          AAB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${{ env.AAB_FILENAME }}"
+          AAB_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/app-release.aab"
           echo "APK_URL=$APK_URL" >> $GITHUB_ENV
           echo "AAB_URL=$AAB_URL" >> $GITHUB_ENV
           echo "✅ APK uploaded: $APK_URL"

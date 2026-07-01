@@ -6,6 +6,8 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/utils/time_ago.dart' show formatTimeAgo;
@@ -26,73 +28,101 @@ class MarketplaceDetailScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider);
     final isOwner = me?.id == item.userId;
 
+    Future<void> changeStatus(String v) async {
+      await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
+      ref.read(marketplaceListProvider.notifier).refresh();
+      ref.invalidate(myMarketplaceItemsProvider);
+      ref.invalidate(userMarketplaceItemsProvider(item.userId));
+      if (context.mounted) {
+        AppSnackBar.info(context, '상태가 변경됐습니다.');
+        context.pop();
+      }
+    }
+
+    void confirmDelete() {
+      showDeleteConfirmSheet(
+        context,
+        title: '매물 삭제',
+        content: '이 매물을 삭제할까요?',
+        onConfirmed: () async {
+          try {
+            await ref.read(marketplaceRepositoryProvider).deleteItem(item.id);
+            await ref.read(marketplaceListProvider.notifier).refresh();
+            ref.invalidate(myMarketplaceItemsProvider);
+            ref.invalidate(userMarketplaceItemsProvider(item.userId));
+            if (context.mounted) {
+              AppSnackBar.info(context, '삭제됐습니다.');
+              context.pop();
+            }
+          } catch (e) {
+            if (context.mounted) AppSnackBar.error(context, '삭제 실패: $e');
+          }
+        },
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('중고거래'),
         actions: [
-          if (isOwner)
-            PopupMenuButton<String>(
-              icon: const Icon(LucideIcons.moreVertical),
-              onSelected: (v) async {
-                if (v == 'delete') {
-                  showDeleteConfirmSheet(
-                    context,
-                    title: '매물 삭제',
-                    content: '이 매물을 삭제할까요?',
-                    onConfirmed: () async {
-                      try {
-                        await ref
-                            .read(marketplaceRepositoryProvider)
-                            .deleteItem(item.id);
-                        await ref
-                            .read(marketplaceListProvider.notifier)
-                            .refresh();
-                        ref.invalidate(myMarketplaceItemsProvider);
-                        if (context.mounted) {
-                          AppSnackBar.info(context, '삭제됐습니다.');
-                          context.pop();
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          AppSnackBar.error(context, '삭제 실패: $e');
-                        }
-                      }
+          IconButton(
+            icon: const Icon(LucideIcons.moreHorizontal),
+            onPressed: () {
+              if (isOwner) {
+                showAppActionSheet(context, items: [
+                  if (item.status != 'selling')
+                    AppMenuItem(
+                      icon: LucideIcons.tag,
+                      label: item.isBuy ? '구매중으로 변경' : '판매중으로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('selling');
+                      },
+                    ),
+                  if (item.status != 'reserved')
+                    AppMenuItem(
+                      icon: LucideIcons.clock,
+                      label: '예약중으로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('reserved');
+                      },
+                    ),
+                  if (item.status != 'sold')
+                    AppMenuItem(
+                      icon: LucideIcons.checkCircle,
+                      label: item.isBuy ? '구매완료로 변경' : '판매완료로 변경',
+                      onTap: () {
+                        Navigator.pop(context);
+                        changeStatus('sold');
+                      },
+                    ),
+                  const AppMenuDivider(),
+                  AppMenuItem(
+                    icon: LucideIcons.trash2,
+                    label: '삭제',
+                    destructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      confirmDelete();
                     },
-                  );
-                } else {
-                  await ref.read(marketplaceRepositoryProvider).updateStatus(item.id, v);
-                  ref.read(marketplaceListProvider.notifier).refresh();
-                  ref.invalidate(myMarketplaceItemsProvider);
-                  if (context.mounted) {
-                    AppSnackBar.info(context, '상태가 변경됐습니다.');
-                    context.pop();
-                  }
-                }
-              },
-              itemBuilder: (_) => [
-                if (item.status != 'selling')
-                  const PopupMenuItem(value: 'selling', child: Text('판매중으로 변경')),
-                if (item.status != 'reserved')
-                  const PopupMenuItem(value: 'reserved', child: Text('예약중으로 변경')),
-                if (item.status != 'sold')
-                  const PopupMenuItem(value: 'sold', child: Text('판매완료로 변경')),
-                const PopupMenuItem(value: 'delete', child: Text('삭제', style: TextStyle(color: Colors.red))),
-              ],
-            ),
-          if (!isOwner)
-            PopupMenuButton<String>(
-              icon: const Icon(LucideIcons.moreVertical),
-              onSelected: (v) {
-                if (v == 'report') {
-                  ReportReasonSheet.showForMarketplace(context, item.id);
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                    value: 'report',
-                    child: Text('신고하기', style: TextStyle(color: Colors.red))),
-              ],
-            ),
+                  ),
+                ]);
+              } else {
+                showAppActionSheet(context, items: [
+                  AppMenuItem(
+                    icon: LucideIcons.flag,
+                    label: '신고하기',
+                    destructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      ReportReasonSheet.showForMarketplace(context, item.id);
+                    },
+                  ),
+                ]);
+              }
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -177,9 +207,11 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // 가격
+                  // 가격 (삽니다·희망가 미입력이면 '가격 미정')
                   Text(
-                    item.formattedPrice,
+                    item.price <= 0
+                        ? '가격 미정'
+                        : (item.isBuy ? '희망가 ${item.formattedPrice}' : item.formattedPrice),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -211,46 +243,84 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                       ),
                     ),
 
+                  // 개인 간 거래 면책 안내 (판매글·구매글 공통)
                   const SizedBox(height: 24),
-
-                  // DM 문의 버튼
-                  if (!isOwner)
-                    AppButton(
-                      label: '문의하기',
-                      onPressed: () async {
-                        try {
-                          final conversationId = await ref
-                              .read(dmRepositoryProvider)
-                              .getOrCreateConversation(item.userId);
-                          if (context.mounted) {
-                            context.push(
-                              '/dm/chat',
-                              extra: DmConversation(
-                                id: conversationId,
-                                otherUserId: item.userId,
-                                otherUsername: item.username,
-                                otherAvatarUrl: item.avatarUrl,
-                                lastMessageAt: DateTime.now(),
-                                hasUnread: false,
-                              ),
-                            );
-                          }
-                        } on DmBlockedException {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '차단된 사용자입니다');
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
-                          }
-                        }
-                      },
-                    ),
+                  _TradeDisclaimer(isDark: isDark),
                 ],
               ),
             ),
           ],
         ),
+      ),
+      // 문의하기: 스크롤과 무관하게 항상 보이는 하단 고정 바 (타인 글만)
+      bottomNavigationBar: isOwner
+          ? null
+          : SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: AppButton(
+                label: '문의하기',
+                onPressed: () async {
+                  try {
+                    final conversationId = await ref
+                        .read(dmRepositoryProvider)
+                        .getOrCreateConversation(item.userId);
+                    if (context.mounted) {
+                      context.push(
+                        '/dm/chat',
+                        extra: DmConversation(
+                          id: conversationId,
+                          otherUserId: item.userId,
+                          otherUsername: item.username,
+                          otherAvatarUrl: item.avatarUrl,
+                          lastMessageAt: DateTime.now(),
+                          hasUnread: false,
+                        ),
+                      );
+                    }
+                  } on DmBlockedException {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '차단된 사용자입니다');
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppSnackBar.error(context, '메시지를 시작할 수 없습니다');
+                    }
+                  }
+                },
+              ),
+            ),
+    );
+  }
+}
+
+/// 중고거래 상세 하단 면책 안내
+class _TradeDisclaimer extends StatelessWidget {
+  const _TradeDisclaimer({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
+    final fg = isDark ? const Color(0xFF9A9A9A) : const Color(0xFF777777);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(LucideIcons.shieldAlert, size: 15, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '개인 간 거래로 발생한 분쟁·사기·피해에 대해 낚스타는 책임지지 않습니다. 거래 시 주의하세요.',
+              style: TextStyle(fontSize: 12, height: 1.5, color: fg),
+            ),
+          ),
+        ],
       ),
     );
   }

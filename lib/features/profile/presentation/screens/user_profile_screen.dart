@@ -7,6 +7,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_widgets.dart';
 import '../../../../core/widgets/score_card.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -14,6 +15,9 @@ import '../../../feed/data/feed_repository.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../follow/data/follow_repository.dart';
 import '../../data/profile_repository.dart';
+import '../../../marketplace/presentation/widgets/marketplace_profile_list.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
+import '../../../../core/widgets/menu_item.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
@@ -34,7 +38,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 1, vsync: this);
+    _tab = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -226,25 +230,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           elevation: 0,
           scrolledUnderElevation: 0,
           actions: [
-            PopupMenuButton<String>(
-              icon: Icon(LucideIcons.moreVertical,
+            IconButton(
+              icon: Icon(LucideIcons.moreHorizontal,
                   color: context.isDark ? Colors.white70 : Colors.black87),
-              onSelected: (value) {
-                if (value == 'block') _confirmBlock(profile.id, profile.username);
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: 'block',
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.ban, size: 18, color: AppColors.error),
-                      SizedBox(width: 8),
-                      Text('차단하기',
-                          style: TextStyle(color: AppColors.error)),
-                    ],
-                  ),
+              onPressed: () => showAppActionSheet(context, items: [
+                AppMenuItem(
+                  icon: LucideIcons.ban,
+                  label: '차단하기',
+                  destructive: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmBlock(profile.id, profile.username);
+                  },
                 ),
-              ],
+              ]),
             ),
           ],
         ),
@@ -443,14 +442,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
                     // 런커 기록
                     if (profile.maxFishLength != null)
-                      Container(
+                      AppCard(
+                        variant: AppCardVariant.tinted,
+                        tintColor: AppColors.gold,
+                        tintAlpha: 0.05,
+                        borderColor: AppColors.gold.withValues(alpha: 0.2),
+                        radius: 14,
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.2)),
-                        ),
                         child: Row(children: [
                           Icon(LucideIcons.award,
                               size: 32, color: AppColors.gold),
@@ -518,6 +516,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       indicatorSize: TabBarIndicatorSize.tab,
                       tabs: const [
                         Tab(icon: Icon(LucideIcons.layoutGrid, size: 20)),
+                        Tab(icon: Icon(LucideIcons.shoppingBag, size: 20)),
                       ],
                     ),
                   ],
@@ -529,6 +528,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             controller: _tab,
             children: [
               _UserGrid(userId: widget.userId, isDark: context.isDark),
+              MarketplaceProfileList(userId: widget.userId),
             ],
           ),
         ),

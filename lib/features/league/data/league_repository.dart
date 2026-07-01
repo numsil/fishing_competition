@@ -395,21 +395,27 @@ class LeagueRepository {
     await _supabase.from('leagues').delete().eq('id', leagueId);
 
     // 3. Storage 파일 best-effort 정리
-    for (final row in postsRows) {
-      final imageUrls = (row['image_urls'] as List?)?.cast<String>();
-      await removePostStorageFiles(
-        _supabase,
-        imageUrl: row['image_url'] as String?,
-        imageUrls: imageUrls,
-        videoUrl: row['video_url'] as String?,
-        media: row['media'] as List?,
-      );
-    }
+    //    DB 삭제는 이미 끝났으므로, 스토리지 정리 실패가 삭제 작업 전체를
+    //    실패로 만들지 않도록 예외를 삼킨다(목록 무효화가 건너뛰어지는 것 방지).
+    try {
+      for (final row in postsRows) {
+        final imageUrls = (row['image_urls'] as List?)?.cast<String>();
+        await removePostStorageFiles(
+          _supabase,
+          imageUrl: row['image_url'] as String?,
+          imageUrls: imageUrls,
+          videoUrl: row['video_url'] as String?,
+          media: row['media'] as List?,
+        );
+      }
 
-    if (leagueRow != null) {
-      final introUrls =
-          (leagueRow['intro_image_urls'] as List?)?.cast<String>();
-      await removeLeagueIntroFiles(_supabase, introUrls);
+      if (leagueRow != null) {
+        final introUrls =
+            (leagueRow['intro_image_urls'] as List?)?.cast<String>();
+        await removeLeagueIntroFiles(_supabase, introUrls);
+      }
+    } catch (_) {
+      // 스토리지 잔여 파일은 무시(베스트 에포트). DB 행은 이미 삭제됨.
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/tier_avatar.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../data/ranking_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -432,19 +433,16 @@ class _ScoreRankRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
-    return Container(
+    return AppCard(
+      variant: isMe ? AppCardVariant.tinted : AppCardVariant.surface,
+      tintColor: accent,
+      tintAlpha: 0.07,
+      borderColor: isMe
+          ? accent.withValues(alpha: 0.3)
+          : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+      radius: 12,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: isMe ? accent.withValues(alpha: 0.07) : cardBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMe
-              ? accent.withValues(alpha: 0.3)
-              : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
-        ),
-      ),
       child: Row(children: [
         SizedBox(
           width: 28,

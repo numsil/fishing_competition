@@ -12,9 +12,11 @@ import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/menu_item.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../feed/data/feed_repository.dart';
 import '../../../feed/data/post_model.dart';
+import '../../../feed/presentation/widgets/fullscreen_image_viewer.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -60,69 +62,44 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
   }
 
   void _openMoreMenu(bool isDark, Color accent) {
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppMenuItem(
-              icon: LucideIcons.pencil,
-              label: '수정하기',
-              color: accent,
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _openEditSheet();
-              },
-            ),
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.send,
-              label: '내 피드에 공유하기',
-              color: accent,
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _shareToFeed();
-              },
-            ),
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.download,
-              label: '사진 저장',
-              color: accent,
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _downloadImage();
-              },
-            ),
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.trash2,
-              label: '기록 삭제',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _delete();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+    showAppActionSheet(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.pencil,
+          label: '수정하기',
+          onTap: () {
+            Navigator.pop(context);
+            _openEditSheet();
+          },
         ),
-      ),
+        AppMenuItem(
+          icon: LucideIcons.send,
+          label: '내 피드에 공유하기',
+          onTap: () {
+            Navigator.pop(context);
+            _shareToFeed();
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.download,
+          label: '사진 저장',
+          onTap: () {
+            Navigator.pop(context);
+            _downloadImage();
+          },
+        ),
+        const AppMenuDivider(),
+        AppMenuItem(
+          icon: LucideIcons.trash2,
+          label: '기록 삭제',
+          destructive: true,
+          onTap: () {
+            Navigator.pop(context);
+            _delete();
+          },
+        ),
+      ],
     );
   }
 
@@ -217,18 +194,27 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
       body: ListView(
         children: [
           // ── 사진 ───────────────────────────────
-          AspectRatio(
-            aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
-            child: Container(
-              color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
-              child: CachedNetworkImage(
-                imageUrl: post.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Center(
-                  child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
-                ),
-                errorWidget: (_, __, ___) => Center(
-                  child: Icon(LucideIcons.image, size: 60, color: sub),
+          GestureDetector(
+            onTap: post.imageUrl.isEmpty
+                ? null
+                : () => FullscreenImageViewer.open(
+                      context,
+                      urls: [post.imageUrl],
+                      initialIndex: 0,
+                    ),
+            child: AspectRatio(
+              aspectRatio: (post.aspectRatio ?? (4 / 3)).clamp(0.8, 1.91),
+              child: Container(
+                color: context.isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F2),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Center(
+                    child: CircularProgressIndicator(strokeWidth: 2, color: context.accentColor),
+                  ),
+                  errorWidget: (_, __, ___) => Center(
+                    child: Icon(LucideIcons.image, size: 60, color: sub),
+                  ),
                 ),
               ),
             ),

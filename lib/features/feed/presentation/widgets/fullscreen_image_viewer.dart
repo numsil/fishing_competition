@@ -46,7 +46,7 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
   late final PageController _pageCtrl;
   late int _page;
 
-  // 아래로 스와이프 닫기용
+  // 아래/위로 스와이프 닫기용 (확대 안 됐고 한 손가락일 때만)
   double _dragDy = 0;
   bool _dragging = false;
 
@@ -68,27 +68,29 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
     super.dispose();
   }
 
-  void _onVerticalDragStart(DragStartDetails d) {
-    if (_zoomed) return;
-    _dragging = true;
-    _dragDy = 0;
+  void _onDismissDrag(double dy) {
+    setState(() {
+      _dragDy = dy;
+      _dragging = true;
+    });
   }
 
-  void _onVerticalDragUpdate(DragUpdateDetails d) {
-    if (!_dragging) return;
-    setState(() => _dragDy += d.delta.dy);
-  }
-
-  void _onVerticalDragEnd(DragEndDetails d) {
-    if (!_dragging) return;
+  void _onDismissEnd(double dy, double velocityY) {
     _dragging = false;
-    final shouldClose =
-        _dragDy.abs() > 120 || d.primaryVelocity != null && d.primaryVelocity!.abs() > 700;
+    final shouldClose = dy.abs() > 120 || velocityY.abs() > 700;
     if (shouldClose) {
       Navigator.of(context).pop();
     } else {
       setState(() => _dragDy = 0);
     }
+  }
+
+  void _onDismissCancel() {
+    if (_dragDy == 0 && !_dragging) return;
+    setState(() {
+      _dragDy = 0;
+      _dragging = false;
+    });
   }
 
   @override
@@ -112,29 +114,28 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
             ),
           ),
 
-          // 이미지 영역
+          // 이미지 영역 — 닫기 드래그는 각 이미지의 InteractiveViewer 콜백에서
+          // 손가락 수/확대 상태로 분기 처리하므로, 경쟁하는 바깥 제스처는 두지 않는다.
           Positioned.fill(
-            child: GestureDetector(
-              onVerticalDragStart: _onVerticalDragStart,
-              onVerticalDragUpdate: _onVerticalDragUpdate,
-              onVerticalDragEnd: _onVerticalDragEnd,
-              child: Transform.translate(
-                offset: Offset(0, dy),
-                child: Transform.scale(
-                  scale: scale,
-                  child: PageView.builder(
-                    controller: _pageCtrl,
-                    physics: _zoomed
-                        ? const NeverScrollableScrollPhysics()
-                        : const PageScrollPhysics(),
-                    itemCount: widget.urls.length,
-                    onPageChanged: (i) => setState(() => _page = i),
-                    itemBuilder: (_, i) => _ZoomableImage(
-                      url: widget.urls[i],
-                      onZoomChanged: (z) {
-                        if (z != _zoomed) setState(() => _zoomed = z);
-                      },
-                    ),
+            child: Transform.translate(
+              offset: Offset(0, dy),
+              child: Transform.scale(
+                scale: scale,
+                child: PageView.builder(
+                  controller: _pageCtrl,
+                  physics: _zoomed
+                      ? const NeverScrollableScrollPhysics()
+                      : const PageScrollPhysics(),
+                  itemCount: widget.urls.length,
+                  onPageChanged: (i) => setState(() => _page = i),
+                  itemBuilder: (_, i) => _ZoomableImage(
+                    url: widget.urls[i],
+                    onZoomChanged: (z) {
+                      if (z != _zoomed) setState(() => _zoomed = z);
+                    },
+                    onDismissDrag: _onDismissDrag,
+                    onDismissEnd: _onDismissEnd,
+                    onDismissCancel: _onDismissCancel,
                   ),
                 ),
               ),
@@ -209,10 +210,22 @@ class _ZoomableImage extends StatefulWidget {
   const _ZoomableImage({
     required this.url,
     required this.onZoomChanged,
+    required this.onDismissDrag,
+    required this.onDismissEnd,
+    required this.onDismissCancel,
   });
 
   final String url;
   final ValueChanged<bool> onZoomChanged;
+
+  /// 닫기 드래그 진행(누적 dy 전달)
+  final ValueChanged<double> onDismissDrag;
+
+  /// 닫기 드래그 종료(누적 dy, 세로 속도)
+  final void Function(double dy, double velocityY) onDismissEnd;
+
+  /// 닫기 드래그 취소(핀치 시작 등)
+  final VoidCallback onDismissCancel;
 
   @override
   State<_ZoomableImage> createState() => _ZoomableImageState();
@@ -224,6 +237,10 @@ class _ZoomableImageState extends State<_ZoomableImage>
   late final AnimationController _animCtrl;
   Animation<Matrix4>? _anim;
   TapDownDetails? _doubleTapDetails;
+
+  // 닫기 드래그 상태
+  bool _dismissing = false;
+  double _dismissDy = 0;
 
   @override
   void initState() {
@@ -240,6 +257,37 @@ class _ZoomableImageState extends State<_ZoomableImage>
   void _handleZoomChange() {
     final s = _ctrl.value.getMaxScaleOnAxis();
     widget.onZoomChanged(s > 1.05);
+  }
+
+  // ── 닫기 드래그: InteractiveViewer 콜백에서 손가락 수/확대상태로 분기 ──
+  void _onInteractionStart(ScaleStartDetails d) {
+    _animCtrl.stop();
+    final scale = _ctrl.value.getMaxScaleOnAxis();
+    // 한 손가락 + 확대 안 된 상태에서만 닫기 후보
+    _dismissing = d.pointerCount == 1 && scale <= 1.01;
+    _dismissDy = 0;
+  }
+
+  void _onInteractionUpdate(ScaleUpdateDetails d) {
+    // 두 손가락(핀치)이 들어오면 닫기 취소 → 줌에 양보
+    if (d.pointerCount >= 2) {
+      if (_dismissing) {
+        _dismissing = false;
+        _dismissDy = 0;
+        widget.onDismissCancel();
+      }
+      return;
+    }
+    if (!_dismissing) return; // 확대 상태면 InteractiveViewer가 패닝 담당
+    _dismissDy += d.focalPointDelta.dy;
+    widget.onDismissDrag(_dismissDy);
+  }
+
+  void _onInteractionEnd(ScaleEndDetails d) {
+    if (!_dismissing) return;
+    _dismissing = false;
+    widget.onDismissEnd(_dismissDy, d.velocity.pixelsPerSecond.dy);
+    _dismissDy = 0;
   }
 
   @override
@@ -284,6 +332,9 @@ class _ZoomableImageState extends State<_ZoomableImage>
         minScale: 1.0,
         maxScale: 5.0,
         clipBehavior: Clip.none,
+        onInteractionStart: _onInteractionStart,
+        onInteractionUpdate: _onInteractionUpdate,
+        onInteractionEnd: _onInteractionEnd,
         child: Center(
           child: CachedNetworkImage(
             imageUrl: widget.url,

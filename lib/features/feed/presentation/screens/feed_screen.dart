@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../core/widgets/app_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -15,10 +15,12 @@ import '../../../follow/data/follow_repository.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/utils/time_ago.dart';
 import '../../../../core/widgets/menu_item.dart';
+import '../../../../core/widgets/app_action_sheet.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../dm/data/dm_repository.dart';
 import '../../../ads/data/ad_model.dart';
@@ -197,47 +199,100 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
   }
 
   // 피드/중고거래 상단 검색 입력 바 (그 자리에서 바로 입력)
-  Widget _buildSearchBar(BuildContext context) {
+  // [trailing]을 주면 검색창을 줄이고 오른쪽에 버튼을 배치(중고거래 보기 토글 등).
+  Widget _buildSearchBar(BuildContext context, {Widget? trailing}) {
     final isDark = context.isDark;
     final hint = isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA);
+    final field = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.search, size: 18, color: hint),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _onSearchChanged,
+              style: TextStyle(
+                  fontSize: 14, color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                filled: false,
+                hintText: '검색',
+                hintStyle: TextStyle(fontSize: 14, color: hint),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              textInputAction: TextInputAction.search,
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: _onSearchClear,
+              child: Icon(LucideIcons.x, size: 16, color: hint),
+            ),
+        ],
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(LucideIcons.search, size: 18, color: hint),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                onChanged: _onSearchChanged,
-                style: TextStyle(
-                    fontSize: 14, color: isDark ? Colors.white : Colors.black),
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  filled: false,
-                  hintText: '검색',
-                  hintStyle: TextStyle(fontSize: 14, color: hint),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                textInputAction: TextInputAction.search,
-              ),
+      child: trailing == null
+          ? field
+          : Row(
+              children: [
+                Expanded(child: field),
+                const SizedBox(width: 8),
+                trailing,
+              ],
             ),
-            if (_searchQuery.isNotEmpty)
-              GestureDetector(
-                onTap: _onSearchClear,
-                child: Icon(LucideIcons.x, size: 16, color: hint),
-              ),
-          ],
+    );
+  }
+
+  // 중고거래 카드(그리드)/리스트 보기 토글 — 검색창 옆에 배치
+  Widget _marketplaceViewToggle() {
+    final isDark = context.isDark;
+    final isList = ref.watch(marketplaceListViewProvider);
+    final track = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F0F0);
+    final activeBg = isDark ? const Color(0xFF3A3A3C) : Colors.white;
+    final activeFg = isDark ? Colors.white : Colors.black;
+    final inactiveFg = isDark ? const Color(0xFF888888) : const Color(0xFF999999);
+
+    Widget btn(IconData icon, bool listMode) {
+      final selected = isList == listMode;
+      return GestureDetector(
+        onTap: () =>
+            ref.read(marketplaceListViewProvider.notifier).state = listMode,
+        child: Container(
+          width: 38,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: selected ? activeFg : inactiveFg),
         ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: track,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          btn(LucideIcons.layoutGrid, false), // 카드(그리드)
+          btn(LucideIcons.list, true), // 리스트
+        ],
       ),
     );
   }
@@ -258,15 +313,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         accent: accent,
         tabController: _tabController,
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          _buildSearchBar(context),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-          // 탭 1: 조과 피드
+          // 탭 1: 조과 피드 — 검색바는 최상단 스크롤 항목(아래로 스크롤하면 사라짐)
           RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(feedPostsProvider);
@@ -278,6 +329,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
           controller: _scrollCtrl,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
+            // 검색바: 피드 최상단에만 (스크롤하면 함께 사라짐)
+            SliverToBoxAdapter(child: _buildSearchBar(context)),
             ...ref.watch(feedPostsProvider).when(
               data: (posts) {
                 final filtered = filterPosts(posts, _searchQuery);
@@ -368,8 +421,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
                 ),
               ],
               error: (e, st) => [
-                const SliverFillRemaining(
-                  child: Center(child: Text('피드를 불러오지 못했습니다.')),
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('피드를 불러오지 못했습니다.'),
+                        const SizedBox(height: 16),
+                        AppButton(
+                          label: '다시 시도',
+                          fullWidth: false,
+                          onPressed: () => ref.invalidate(feedPostsProvider),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -377,10 +443,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> with SingleTickerProvid
         ),
         ),
       ),
-          // 탭 2: 중고거래
-          MarketplaceScreen(searchQuery: _searchQuery),
-              ],
-            ),
+          // 탭 2: 중고거래 — 검색바(축소) + 카드/리스트 보기 토글 상단 고정
+          Column(
+            children: [
+              _buildSearchBar(context, trailing: _marketplaceViewToggle()),
+              Expanded(child: MarketplaceScreen(searchQuery: _searchQuery)),
+            ],
           ),
         ],
       ),
@@ -540,11 +608,10 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(
+          AppSvg(
             'assets/images/nakstar.svg',
             height: 26,
-            fit: BoxFit.contain,
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            color: Colors.white,
           ),
           notiBtn(),
         ],
@@ -626,21 +693,41 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
   }
 
   void _openMoreMenu() {
-    final isDark = widget.isDark;
     final currentUserId = ref.read(currentUserProvider)?.id;
     final isOwner =
         currentUserId != null && currentUserId == widget.post.userId;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => _MoreMenu(
-        isDark: isDark,
-        postId: widget.post.id,
-        isOwner: isOwner,
-      ),
+    final postId = widget.post.id;
+    showAppActionSheet(
+      context,
+      items: [
+        AppMenuItem(
+          icon: LucideIcons.link2,
+          label: '링크 복사',
+          onTap: () {
+            Navigator.pop(context);
+            final link = 'https://nakstar.app/post/$postId';
+            Clipboard.setData(ClipboardData(text: link));
+            AppSnackBar.info(context, '링크가 복사되었습니다');
+          },
+        ),
+        AppMenuItem(
+          icon: LucideIcons.share,
+          label: '공유하기',
+          onTap: () => Navigator.pop(context),
+        ),
+        if (!isOwner) ...[
+          const AppMenuDivider(),
+          AppMenuItem(
+            icon: LucideIcons.flag,
+            label: '신고하기',
+            destructive: true,
+            onTap: () {
+              Navigator.pop(context);
+              ReportReasonSheet.show(context, postId);
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -902,72 +989,6 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
   }
 }
 
-// ── 더보기 메뉴 (••• 버튼) ────────────────────────────
-class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({
-    required this.isDark,
-    required this.postId,
-    required this.isOwner,
-  });
-  final bool isDark;
-  final String postId;
-  final bool isOwner;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : Colors.black;
-    final divColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 36, height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          AppMenuItem(
-            icon: LucideIcons.link2,
-            label: '링크 복사',
-            color: textColor,
-            onTap: () {
-              Navigator.pop(context);
-              final link = 'https://nakstar.app/post/$postId';
-              Clipboard.setData(ClipboardData(text: link));
-                            AppSnackBar.info(context, '링크가 복사되었습니다');
-            },
-          ),
-          Divider(height: 1, color: divColor),
-          AppMenuItem(
-            icon: LucideIcons.share,
-            label: '공유하기',
-            color: textColor,
-            onTap: () => Navigator.pop(context),
-          ),
-          if (!isOwner) ...[
-            Divider(height: 1, color: divColor),
-            AppMenuItem(
-              icon: LucideIcons.flag,
-              label: '신고하기',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(context);
-                ReportReasonSheet.show(context, postId);
-              },
-            ),
-          ],
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
 // ── 댓글 시트 ─────────────────────────────────────────
 class _CommentSheet extends ConsumerStatefulWidget {
   const _CommentSheet({
@@ -1034,46 +1055,38 @@ class _CommentSheetState extends ConsumerState<_CommentSheet> {
   /// 댓글 꾹 누르면 뜨는 액션 시트. 본인 댓글: 수정/삭제, 남의 댓글: 신고.
   void _showCommentActions(_Comment comment) {
     if (comment.id.isEmpty) return;
-    final isDark = widget.isDark;
-    final bg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        Widget action(IconData icon, String label, Color color, VoidCallback onTap) {
-          return ListTile(
-            leading: Icon(icon, color: color, size: 22),
-            title: Text(label,
-                style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w600)),
+    showAppActionSheet(
+      context,
+      items: [
+        if (comment.isMe) ...[
+          AppMenuItem(
+            icon: LucideIcons.pencil,
+            label: '수정',
             onTap: () {
-              Navigator.pop(ctx);
-              onTap();
+              Navigator.pop(context);
+              _startEditComment(comment);
             },
-          );
-        }
-
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              if (comment.isMe) ...[
-                action(LucideIcons.pencil, '수정', textColor, () => _startEditComment(comment)),
-                action(LucideIcons.trash2, '삭제', AppColors.error, () => _confirmDeleteComment(comment)),
-              ] else
-                action(LucideIcons.flag, '신고', AppColors.error, () {
-                  ReportReasonSheet.showForComment(context, comment.id, postId: widget.post.id);
-                }),
-              const SizedBox(height: 8),
-            ],
           ),
-        );
-      },
+          AppMenuItem(
+            icon: LucideIcons.trash2,
+            label: '삭제',
+            destructive: true,
+            onTap: () {
+              Navigator.pop(context);
+              _confirmDeleteComment(comment);
+            },
+          ),
+        ] else
+          AppMenuItem(
+            icon: LucideIcons.flag,
+            label: '신고',
+            destructive: true,
+            onTap: () {
+              Navigator.pop(context);
+              ReportReasonSheet.showForComment(context, comment.id, postId: widget.post.id);
+            },
+          ),
+      ],
     );
   }
 

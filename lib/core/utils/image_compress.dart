@@ -4,29 +4,17 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 /// 업로드 전 이미지를 JPEG로 변환·압축해 3MB 이하를 보장합니다.
-/// minWidth/minHeight는 출력 최대 해상도입니다 (1080이면 긴 변이 1080 이하).
-Future<File> compressForUpload(File file, {int maxSizeBytes = 3 * 1024 * 1024}) async {
-  final originalSize = await file.length();
-
-  if (originalSize <= maxSizeBytes) {
-    // 이미 작으면 포맷 변환(HEIC→JPEG)만 — keepExif: true로 회전 정보 유지
+/// minWidth/minHeight는 출력 최대 해상도입니다 (1440이면 긴 변이 1440 이하).
+/// picker가 원본을 그대로 넘기므로 여기서 1패스만 인코딩합니다(이중 인코딩 방지).
+Future<File> compressForUpload(File file,
+    {int maxSizeBytes = 3 * 1024 * 1024, int maxDimension = 1440}) async {
+  // 긴 변 maxDimension 이하 + JPEG 품질 85로 1패스 압축 (HEIC→JPEG, keepExif로 회전 유지).
+  // 1440/q85는 보통 1MB 미만이라 대부분 첫 시도에서 통과.
+  for (final quality in [85, 75, 65]) {
     final result = await FlutterImageCompress.compressWithFile(
       file.absolute.path,
-      minWidth: 1080,
-      minHeight: 1080,
-      quality: 85,
-      keepExif: true,
-    );
-    if (result == null) return file;
-    return _toFile(file, result);
-  }
-
-  // 3MB 초과 → quality 단계적으로 낮춤
-  for (final quality in [75, 60, 45]) {
-    final result = await FlutterImageCompress.compressWithFile(
-      file.absolute.path,
-      minWidth: 1080,
-      minHeight: 1080,
+      minWidth: maxDimension,
+      minHeight: maxDimension,
       quality: quality,
       keepExif: true,
     );
@@ -34,12 +22,13 @@ Future<File> compressForUpload(File file, {int maxSizeBytes = 3 * 1024 * 1024}) 
     if (result.length <= maxSizeBytes) return _toFile(file, result);
   }
 
-  // 마지막 수단: 해상도도 줄임
+  // 그래도 3MB를 넘으면 해상도를 더 줄임
+  final fallbackDim = (maxDimension * 0.85).round();
   final result = await FlutterImageCompress.compressWithFile(
     file.absolute.path,
-    minWidth: 720,
-    minHeight: 720,
-    quality: 50,
+    minWidth: fallbackDim,
+    minHeight: fallbackDim,
+    quality: 60,
     keepExif: true,
   );
   return result != null ? _toFile(file, result) : file;
