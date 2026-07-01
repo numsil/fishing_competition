@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/extensions/theme_extensions.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_radius.dart';
+import '../core/theme/app_elevation.dart';
+import '../core/theme/app_durations.dart';
+import '../core/services/app_update_service.dart';
 import '../core/widgets/app_button.dart';
 import '../core/widgets/app_card.dart';
 import '../core/widgets/app_snack_bar.dart';
+import '../core/widgets/app_svg.dart';
 import '../core/widgets/app_text_field.dart';
 import '../core/widgets/confirm_dialog.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/info_chip.dart';
 import '../core/widgets/menu_item.dart';
+import '../core/widgets/app_action_sheet.dart';
 import '../core/widgets/score_card.dart';
 import '../core/widgets/section_label.dart';
 import '../core/widgets/slide_to_confirm.dart';
 import '../core/widgets/stat_widgets.dart';
+import '../core/widgets/tier_avatar.dart';
+import '../core/widgets/update_dialog.dart';
+import '../core/widgets/user_avatar.dart';
 
 class WidgetCatalogScreen extends StatefulWidget {
   const WidgetCatalogScreen({super.key});
@@ -304,17 +315,38 @@ class _WidgetCatalogScreenState extends State<WidgetCatalogScreen> {
             ),
           ]),
 
-          // ── 메뉴 아이템 ───────────────────────────────────
-          _Section(label: '메뉴 아이템 (AppMenuItem)', color: accent, children: [
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(children: [
-                AppMenuItem(icon: LucideIcons.pencil, label: '수정', color: isDark ? AppColors.darkText : AppColors.lightText, onTap: () {}),
-                Divider(height: 1, color: isDark ? AppColors.darkDivider : AppColors.lightDivider),
-                AppMenuItem(icon: LucideIcons.share2, label: '공유', color: isDark ? AppColors.darkText : AppColors.lightText, onTap: () {}),
-                Divider(height: 1, color: isDark ? AppColors.darkDivider : AppColors.lightDivider),
-                AppMenuItem(icon: LucideIcons.trash2, label: '삭제', color: AppColors.error, onTap: () {}),
-              ]),
+          // ── 옵션 시트 (showAppActionSheet + AppMenuItem) ──
+          _Section(label: '옵션 시트 (showAppActionSheet)', color: accent, children: [
+            AppButton(
+              label: '옵션 시트 열기',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => showAppActionSheet(
+                context,
+                items: [
+                  AppMenuItem(
+                    icon: LucideIcons.pencil,
+                    label: '수정하기',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  AppMenuItem(
+                    icon: LucideIcons.share2,
+                    label: '공유하기',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  AppMenuItem(
+                    icon: LucideIcons.download,
+                    label: '저장하기',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  const AppMenuDivider(),
+                  AppMenuItem(
+                    icon: LucideIcons.trash2,
+                    label: '삭제',
+                    destructive: true,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ),
           ]),
 
@@ -361,6 +393,114 @@ class _WidgetCatalogScreenState extends State<WidgetCatalogScreen> {
                 subColor: sub,
               ),
             ),
+          ]),
+
+          // ── 아바타 (UserAvatar) ───────────────────────────
+          _Section(label: '아바타 (UserAvatar)', color: accent, children: [
+            Row(children: [
+              UserAvatar(username: '홍길동', radius: 20, isDark: isDark),
+              const SizedBox(width: 14),
+              UserAvatar(username: '김철수', radius: 28, isDark: isDark),
+              const SizedBox(width: 14),
+              UserAvatar(username: '이영희', radius: 28, isDark: isDark, borderColor: accent),
+            ]),
+          ]),
+
+          // ── 티어 아바타 (TierAvatar) ──────────────────────
+          _Section(label: '티어 아바타 (TierAvatar)', color: accent, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                TierAvatar(username: 'M', score: 6000, radius: 28, isDark: isDark),
+                const SizedBox(height: 6),
+                Text('마스터', style: TextStyle(fontSize: 10, color: sub)),
+              ]),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                TierAvatar(username: 'L', score: 12000, radius: 28, isDark: isDark),
+                const SizedBox(height: 6),
+                Text('레전드', style: TextStyle(fontSize: 10, color: sub)),
+              ]),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                TierAvatar(username: 'G', score: 21000, radius: 28, isDark: isDark),
+                const SizedBox(height: 6),
+                Text('그랜드마스터', style: TextStyle(fontSize: 10, color: sub)),
+              ]),
+            ]),
+          ]),
+
+          // ── SVG 아이콘 (AppSvg) ───────────────────────────
+          _Section(label: 'SVG 아이콘 (AppSvg)', color: accent, children: [
+            Wrap(spacing: 18, runSpacing: 16, children: [
+              _SvgChip(AppIcons.fish, 'fish', accent),
+              _SvgChip(AppIcons.fishingRod, 'rod', accent),
+              _SvgChip(AppIcons.trophy, 'trophy', accent),
+              _SvgChip(AppIcons.hook, 'hook', accent),
+              _SvgChip(AppIcons.wave, 'wave', accent),
+              _SvgChip(AppIcons.crown, 'crown', AppColors.gold),
+              _SvgChip(AppIcons.medalGold, 'gold', AppColors.gold),
+              _SvgChip(AppIcons.medalSilver, 'silver', AppColors.silver),
+              _SvgChip(AppIcons.medalBronze, 'bronze', AppColors.bronze),
+            ]),
+          ]),
+
+          // ── 업데이트 다이얼로그 (샘플) ────────────────────
+          _Section(label: '업데이트 다이얼로그 (UpdateDialog)', color: accent, children: [
+            AppButton(
+              label: 'UpdateDialog 열기 (샘플)',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => showUpdateDialog(
+                context,
+                const AppVersionInfo(
+                  version: '1.1.0',
+                  buildNumber: 60,
+                  currentBuildNumber: 52,
+                  releaseNotes: '• 중고거래 팝니다/삽니다 추가\n• 버그 수정 및 성능 개선',
+                  forceUpdate: false,
+                ),
+                AppUpdateService(Supabase.instance.client),
+              ),
+            ),
+          ]),
+
+          // ── 간격 토큰 (AppSpacing) ────────────────────────
+          _Section(label: '간격 (AppSpacing)', color: accent, children: [
+            _SpaceRow('xs', AppSpacing.xs, accent),
+            _SpaceRow('sm', AppSpacing.sm, accent),
+            _SpaceRow('md', AppSpacing.md, accent),
+            _SpaceRow('lg', AppSpacing.lg, accent),
+            _SpaceRow('xl', AppSpacing.xl, accent),
+            _SpaceRow('xxl', AppSpacing.xxl, accent),
+            _SpaceRow('xxxl', AppSpacing.xxxl, accent),
+            _SpaceRow('huge', AppSpacing.huge, accent),
+            _SpaceRow('mega', AppSpacing.mega, accent),
+          ]),
+
+          // ── 모서리 토큰 (AppRadius) ───────────────────────
+          _Section(label: '모서리 (AppRadius)', color: accent, children: [
+            Wrap(spacing: 14, runSpacing: 14, children: [
+              _RadiusBox('xs', AppRadius.xs, accent),
+              _RadiusBox('sm', AppRadius.sm, accent),
+              _RadiusBox('md', AppRadius.md, accent),
+              _RadiusBox('lg', AppRadius.lg, accent),
+              _RadiusBox('xl', AppRadius.xl, accent),
+              _RadiusBox('xxl', AppRadius.xxl, accent),
+            ]),
+          ]),
+
+          // ── 그림자 토큰 (AppElevation) ────────────────────
+          _Section(label: '그림자 (AppElevation)', color: accent, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+              _ShadowBox('sm', AppElevation.sm(Colors.black), isDark),
+              _ShadowBox('md', AppElevation.md(Colors.black), isDark),
+              _ShadowBox('lg', AppElevation.lg(Colors.black), isDark),
+            ]),
+          ]),
+
+          // ── 애니메이션 시간 (AppDurations) ────────────────
+          _Section(label: '애니메이션 (AppDurations)', color: accent, children: [
+            _DurRow('instant', AppDurations.instant, sub),
+            _DurRow('fast', AppDurations.fast, sub),
+            _DurRow('normal', AppDurations.normal, sub),
+            _DurRow('slow', AppDurations.slow, sub),
           ]),
 
           const SizedBox(height: 40),
@@ -506,6 +646,139 @@ class _CardContent extends StatelessWidget {
         const SizedBox(height: 4),
         Text('카드 서브텍스트 예시입니다', style: TextStyle(fontSize: 12, color: sub)),
       ],
+    );
+  }
+}
+
+// ── SVG 칩 ────────────────────────────────────────────────
+class _SvgChip extends StatelessWidget {
+  const _SvgChip(this.asset, this.label, this.color);
+  final String asset;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppSvg(asset, size: 32, color: color),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 9, color: sub)),
+      ],
+    );
+  }
+}
+
+// ── 간격 행 ───────────────────────────────────────────────
+class _SpaceRow extends StatelessWidget {
+  const _SpaceRow(this.name, this.value, this.color);
+  final String name;
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            child: Text(name,
+                style: TextStyle(fontSize: 11, color: sub, fontFamily: 'monospace')),
+          ),
+          Container(height: 12, width: value, color: color),
+          const SizedBox(width: 8),
+          Text('${value.toInt()}', style: TextStyle(fontSize: 10, color: sub)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 모서리 박스 ───────────────────────────────────────────
+class _RadiusBox extends StatelessWidget {
+  const _RadiusBox(this.name, this.value, this.color);
+  final String name;
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.18),
+            border: Border.all(color: color),
+            borderRadius: BorderRadius.circular(value),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('$name ${value.toInt()}', style: TextStyle(fontSize: 9, color: sub)),
+      ],
+    );
+  }
+}
+
+// ── 그림자 박스 ───────────────────────────────────────────
+class _ShadowBox extends StatelessWidget {
+  const _ShadowBox(this.name, this.shadow, this.isDark);
+  final String name;
+  final List<BoxShadow> shadow;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 48,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface2 : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: shadow,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(name, style: TextStyle(fontSize: 10, color: sub)),
+      ],
+    );
+  }
+}
+
+// ── 애니메이션 시간 행 ─────────────────────────────────────
+class _DurRow extends StatelessWidget {
+  const _DurRow(this.name, this.duration, this.sub);
+  final String name;
+  final Duration duration;
+  final Color sub;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(name,
+                style: TextStyle(fontSize: 11, color: sub, fontFamily: 'monospace')),
+          ),
+          Text('${duration.inMilliseconds}ms',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 }
