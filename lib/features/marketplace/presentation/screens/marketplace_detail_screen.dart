@@ -293,7 +293,6 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                 label: canBump
                     ? '끌어올리기'
                     : '${_bumpRemainLabel(bumpRemain)} 후 끌어올리기',
-                icon: LucideIcons.arrowUp,
                 variant: AppButtonVariant.outline,
                 onPressed: canBump ? bump : null,
               ),
