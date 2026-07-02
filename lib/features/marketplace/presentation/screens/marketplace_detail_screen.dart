@@ -16,6 +16,7 @@ import '../../../dm/data/dm_repository.dart';
 import '../../../report/presentation/widgets/report_reason_sheet.dart';
 import '../../data/marketplace_model.dart';
 import '../../data/marketplace_repository.dart';
+import 'marketplace_upload_screen.dart';
 
 class MarketplaceDetailScreen extends ConsumerWidget {
   const MarketplaceDetailScreen({super.key, required this.item});
@@ -115,6 +116,21 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                       },
                     ),
                   const AppMenuDivider(),
+                  AppMenuItem(
+                    icon: LucideIcons.pencil,
+                    label: '수정',
+                    onTap: () async {
+                      Navigator.pop(context); // 액션시트 닫기
+                      final updated = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MarketplaceUploadScreen(editItem: item),
+                        ),
+                      );
+                      // 수정 완료 시 상세는 옛 데이터를 들고 있으므로 목록으로 복귀
+                      if (updated == true && context.mounted) context.pop();
+                    },
+                  ),
                   AppMenuItem(
                     icon: LucideIcons.trash2,
                     label: '삭제',
