@@ -242,7 +242,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                       _images.insert(newIndex, img);
                     });
                   },
-                  itemCount: _images.length + (_images.length < 5 ? 1 : 0),
+                  itemCount: _images.length + (_images.length < _kMaxImages ? 1 : 0),
                   itemBuilder: (ctx, i) {
                     // 마지막 아이템: "+ 사진 추가" 타일
                     if (i == _images.length) {
