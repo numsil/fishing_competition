@@ -192,7 +192,7 @@ class _UserMarketplaceItemsProviderElement
   String get userId => (origin as UserMarketplaceItemsProvider).userId;
 }
 
-String _$marketplaceListHash() => r'f0e24b17e9957c7522917016f1beee4332ea0aa7';
+String _$marketplaceListHash() => r'03b01693912d227a1468693e6a0ee56381a10c75';
 
 /// See also [MarketplaceList].
 @ProviderFor(MarketplaceList)

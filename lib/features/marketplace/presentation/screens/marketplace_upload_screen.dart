@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,12 +10,15 @@ import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../data/marketplace_model.dart';
 import '../../data/marketplace_repository.dart';
 
 const _categories = ['낚시대', '릴', '루어/채비', '보팅', '기타'];
 
 class MarketplaceUploadScreen extends ConsumerStatefulWidget {
-  const MarketplaceUploadScreen({super.key});
+  /// [editItem]이 주어지면 수정 모드, 없으면 신규 등록 모드로 동작한다.
+  const MarketplaceUploadScreen({super.key, this.editItem});
+  final MarketplaceItem? editItem;
 
   @override
   ConsumerState<MarketplaceUploadScreen> createState() => _MarketplaceUploadScreenState();
@@ -28,10 +32,27 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
   static const int _kMaxImages = 10; // 등록 가능 최대 사진 수
   String _category = '기타';
   String _tradeType = 'sell'; // sell=팝니다, buy=삽니다
-  final List<File> _images = [];
+  // 기존 URL과 새 파일이 섞일 수 있어 통합 타입으로 관리 (순서 = 표시 순서)
+  final List<MarketplaceImageInput> _images = [];
   bool _loading = false;
 
   bool get _isBuy => _tradeType == 'buy';
+  bool get _isEdit => widget.editItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editItem;
+    if (e != null) {
+      _titleCtrl.text = e.title;
+      if (e.price > 0) _priceCtrl.text = _formatThousands(e.price);
+      _descCtrl.text = e.description ?? '';
+      _locationCtrl.text = e.location ?? '';
+      _category = _categories.contains(e.category) ? e.category : '기타';
+      _tradeType = e.tradeType;
+      _images.addAll(e.imageUrls.map((u) => ExistingImageUrl(u)));
+    }
+  }
 
   @override
   void dispose() {
@@ -53,7 +74,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     final picked = await picker.pickMultiImage(limit: remaining);
     if (picked.isEmpty) return;
     setState(() {
-      _images.addAll(picked.map((x) => File(x.path)));
+      _images.addAll(picked.map((x) => NewImageFile(File(x.path))));
       if (_images.length > _kMaxImages) _images.length = _kMaxImages;
     });
   }
@@ -66,7 +87,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     showDialog<void>(
       context: context,
       barrierColor: Colors.black,
-      builder: (_) => _LocalImageFullscreen(file: _images[index]),
+      builder: (_) => _ImageFullscreen(image: _images[index]),
     );
   }
 
@@ -91,22 +112,45 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
 
     setState(() => _loading = true);
     try {
-      await ref.read(marketplaceRepositoryProvider).createItem(
-        title: title,
-        description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-        price: price,
-        imageFiles: _images,
-        category: _category,
-        tradeType: _tradeType,
-        location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-      );
-      ref.read(marketplaceListProvider.notifier).refresh();
+      final repo = ref.read(marketplaceRepositoryProvider);
+      final desc = _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
+      final loc = _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim();
+      final e = widget.editItem;
+      if (e == null) {
+        // 신규 등록: 새로 고른 파일만 존재
+        final files = _images.whereType<NewImageFile>().map((x) => x.file).toList();
+        await repo.createItem(
+          title: title,
+          description: desc,
+          price: price,
+          imageFiles: files,
+          category: _category,
+          tradeType: _tradeType,
+          location: loc,
+        );
+        ref.read(marketplaceListProvider.notifier).refresh();
+      } else {
+        await repo.updateItem(
+          itemId: e.id,
+          title: title,
+          description: desc,
+          price: price,
+          images: _images,
+          originalUrls: e.imageUrls,
+          category: _category,
+          tradeType: _tradeType,
+          location: loc,
+        );
+        ref.read(marketplaceListProvider.notifier).refresh();
+        ref.invalidate(myMarketplaceItemsProvider);
+        ref.invalidate(userMarketplaceItemsProvider(e.userId));
+      }
       if (mounted) {
-        AppSnackBar.success(context, '등록됐습니다!');
-        context.pop();
+        AppSnackBar.success(context, e == null ? '등록됐습니다!' : '수정됐습니다!');
+        context.pop(e == null ? null : true);
       }
     } catch (e) {
-      if (mounted) AppSnackBar.error(context, '등록 실패: $e');
+      if (mounted) AppSnackBar.error(context, '${_isEdit ? '수정' : '등록'} 실패: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -117,7 +161,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
     final isDark = context.isDark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('중고거래 등록')),
+      appBar: AppBar(title: Text(_isEdit ? '중고거래 수정' : '중고거래 등록')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -198,7 +242,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                       _images.insert(newIndex, img);
                     });
                   },
-                  itemCount: _images.length + (_images.length < 5 ? 1 : 0),
+                  itemCount: _images.length + (_images.length < _kMaxImages ? 1 : 0),
                   itemBuilder: (ctx, i) {
                     // 마지막 아이템: "+ 사진 추가" 타일
                     if (i == _images.length) {
@@ -229,11 +273,11 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                     }
 
                     // 실제 이미지 타일
-                    final file = _images[i];
+                    final img = _images[i];
                     final accentColor = context.accentColor;
                     final divColor = isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD);
                     return GestureDetector(
-                      key: ValueKey(file.path),
+                      key: ValueKey(img is NewImageFile ? img.file.path : (img as ExistingImageUrl).url),
                       onTap: () => _openFullscreen(i),
                       child: Stack(
                         children: [
@@ -250,7 +294,14 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(7),
-                              child: Image.file(file, fit: BoxFit.cover),
+                              child: img is NewImageFile
+                                  ? Image.file(img.file, fit: BoxFit.cover)
+                                  : CachedNetworkImage(
+                                      imageUrl: (img as ExistingImageUrl).url,
+                                      fit: BoxFit.cover,
+                                      width: 110,
+                                      height: 130,
+                                    ),
                             ),
                           ),
                           if (i == 0)
@@ -328,7 +379,7 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
             const SizedBox(height: 24),
 
             AppButton(
-              label: '등록하기',
+              label: _isEdit ? '수정하기' : '등록하기',
               onPressed: _loading ? null : _submit,
               loading: _loading,
             ),
@@ -339,13 +390,14 @@ class _MarketplaceUploadScreenState extends ConsumerState<MarketplaceUploadScree
   }
 }
 
-/// 로컬 파일 이미지를 풀스크린으로 띄우는 단순 다이얼로그 위젯
-class _LocalImageFullscreen extends StatelessWidget {
-  const _LocalImageFullscreen({required this.file});
-  final File file;
+/// 이미지(기존 URL 또는 로컬 파일)를 풀스크린으로 띄우는 단순 다이얼로그 위젯
+class _ImageFullscreen extends StatelessWidget {
+  const _ImageFullscreen({required this.image});
+  final MarketplaceImageInput image;
 
   @override
   Widget build(BuildContext context) {
+    final img = image;
     return Dialog.fullscreen(
       backgroundColor: Colors.black,
       child: Stack(
@@ -355,7 +407,9 @@ class _LocalImageFullscreen extends StatelessWidget {
             minScale: 0.8,
             maxScale: 5.0,
             child: Center(
-              child: Image.file(file, fit: BoxFit.contain),
+              child: img is NewImageFile
+                  ? Image.file(img.file, fit: BoxFit.contain)
+                  : Image.network((img as ExistingImageUrl).url, fit: BoxFit.contain),
             ),
           ),
           Positioned(
@@ -378,6 +432,17 @@ class _LocalImageFullscreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 정수를 천단위 콤마 문자열로 변환 (수정 모드 가격 프리필용).
+String _formatThousands(int n) {
+  final s = n.toString();
+  final buf = StringBuffer();
+  for (int i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+    buf.write(s[i]);
+  }
+  return buf.toString();
 }
 
 /// 숫자 입력에 천단위 콤마를 실시간으로 넣는 포매터.

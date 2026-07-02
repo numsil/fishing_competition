@@ -10,6 +10,24 @@ part 'marketplace_repository.g.dart';
 
 const int kMarketplacePageSize = 20;
 
+/// updateItem에 넘기는 이미지 입력. 수정 화면에서는 이미 업로드된 기존 URL과
+/// 새로 고른 로컬 파일이 섞이므로, 순서를 유지한 채 두 종류를 함께 표현한다.
+sealed class MarketplaceImageInput {
+  const MarketplaceImageInput();
+}
+
+/// 이미 업로드되어 image_urls에 들어있는 기존 이미지
+class ExistingImageUrl extends MarketplaceImageInput {
+  final String url;
+  const ExistingImageUrl(this.url);
+}
+
+/// 새로 추가된 로컬 파일 (업로드 필요)
+class NewImageFile extends MarketplaceImageInput {
+  final File file;
+  const NewImageFile(this.file);
+}
+
 class MarketplaceRepository {
   final SupabaseClient _supabase;
   MarketplaceRepository(this._supabase);
@@ -24,7 +42,7 @@ class MarketplaceRepository {
   }) async {
     var query = _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, bumped_at, users(username, avatar_url)')
         .eq('is_deleted', false);
 
     if (tradeType != null) query = query.eq('trade_type', tradeType);
@@ -38,16 +56,16 @@ class MarketplaceRepository {
     }
     if (before != null) {
       final c = before.toUtc().toIso8601String();
-      // keyset (created_at, id) 복합 커서: 동일 created_at이 페이지 경계에 걸려도 누락 없음
+      // keyset (bumped_at, id) 복합 커서: 끌어올리기 반영 정렬, 경계 누락 없음
       if (beforeId != null) {
-        query = query.or('created_at.lt.$c,and(created_at.eq.$c,id.lt.$beforeId)');
+        query = query.or('bumped_at.lt.$c,and(bumped_at.eq.$c,id.lt.$beforeId)');
       } else {
-        query = query.lt('created_at', c);
+        query = query.lt('bumped_at', c);
       }
     }
 
     final response = await query
-        .order('created_at', ascending: false)
+        .order('bumped_at', ascending: false)
         .order('id', ascending: false)
         .limit(limit);
 
@@ -72,7 +90,7 @@ class MarketplaceRepository {
   Future<List<MarketplaceItem>> getUserItems(String userId) async {
     final response = await _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, bumped_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
@@ -134,6 +152,82 @@ class MarketplaceRepository {
     await _supabase
         .from('marketplace_items')
         .update({'status': status})
+        .eq('id', itemId);
+  }
+
+  /// 매물 수정. 이미지는 [images] 순서(첫 항목 = 대표)를 그대로 유지하며,
+  /// 새 파일은 압축·업로드하고 기존 URL은 그대로 재사용한다.
+  /// [originalUrls]와 비교해 이번 수정에서 빠진 기존 이미지는 스토리지에서 정리한다.
+  Future<void> updateItem({
+    required String itemId,
+    required String title,
+    String? description,
+    required int price,
+    required List<MarketplaceImageInput> images,
+    required List<String> originalUrls,
+    required String category,
+    String? location,
+    String tradeType = 'sell',
+  }) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not logged in');
+
+    // 순서를 유지한 채 최종 image_urls 재구성 (새 파일만 업로드)
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final finalUrls = <String>[];
+    int newIdx = 0;
+    for (final img in images) {
+      switch (img) {
+        case ExistingImageUrl(:final url):
+          finalUrls.add(url);
+        case NewImageFile(:final file):
+          final compressed = await compressForUpload(file);
+          final path = 'marketplace/${uid}_${ts}_$newIdx.jpg';
+          await _supabase.storage.from('post_images').upload(
+            path,
+            compressed,
+            fileOptions: const FileOptions(contentType: 'image/jpeg', cacheControl: '31536000'),
+          );
+          finalUrls.add(_supabase.storage.from('post_images').getPublicUrl(path));
+          // 업로드 후 로컬 압축본 정리 (디스크 누수 방지)
+          try {
+            await compressed.delete();
+          } catch (_) {}
+          newIdx++;
+      }
+    }
+
+    // 행 수정 (RLS: 본인 행만 update 가능)
+    await _supabase.from('marketplace_items').update({
+      'title': title,
+      'description': description,
+      'price': price,
+      'image_urls': finalUrls,
+      'category': category,
+      'trade_type': tradeType,
+      'location': location,
+    }).eq('id', itemId);
+
+    // 이번 수정에서 제거된 기존 이미지 스토리지 best-effort 정리
+    final kept = finalUrls.toSet();
+    final removed = originalUrls.where((u) => !kept.contains(u));
+    final paths = <String>{};
+    for (final u in removed) {
+      final p = extractStoragePath(u, 'post_images');
+      if (p != null) paths.add(p);
+    }
+    if (paths.isNotEmpty) {
+      try {
+        await _supabase.storage.from('post_images').remove(paths.toList());
+      } catch (_) {/* swallow */}
+    }
+  }
+
+  /// 끌어올리기: bumped_at을 현재 시각으로 갱신 → 목록 최상단으로.
+  Future<void> bumpItem(String itemId) async {
+    await _supabase
+        .from('marketplace_items')
+        .update({'bumped_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', itemId);
   }
 
@@ -202,7 +296,8 @@ class MarketplaceList extends _$MarketplaceList {
         );
     _hasMore = items.length >= kMarketplacePageSize;
     if (items.isNotEmpty) {
-      _lastCreatedAt = items.last.createdAt;
+      // 정렬 기준(bumped_at) 커서. 값이 없으면 createdAt로 대체.
+      _lastCreatedAt = items.last.bumpedAt ?? items.last.createdAt;
       _lastId = items.last.id;
     }
     return items;
