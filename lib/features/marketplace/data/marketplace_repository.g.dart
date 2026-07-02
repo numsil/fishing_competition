@@ -26,6 +26,166 @@ final marketplaceRepositoryProvider =
 // ignore: unused_element
 typedef MarketplaceRepositoryRef =
     AutoDisposeProviderRef<MarketplaceRepository>;
+String _$marketplaceItemHash() => r'ef6a05297ffb5e0c33ea393d6ec42f85a7c0abcc';
+
+/// Copied from Dart SDK
+class _SystemHash {
+  _SystemHash._();
+
+  static int combine(int hash, int value) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + value);
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    return hash ^ (hash >> 6);
+  }
+
+  static int finish(int hash) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    // ignore: parameter_assignments
+    hash = hash ^ (hash >> 11);
+    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+  }
+}
+
+/// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+/// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+///
+/// Copied from [marketplaceItem].
+@ProviderFor(marketplaceItem)
+const marketplaceItemProvider = MarketplaceItemFamily();
+
+/// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+/// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+///
+/// Copied from [marketplaceItem].
+class MarketplaceItemFamily extends Family<AsyncValue<MarketplaceItem?>> {
+  /// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+  /// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+  ///
+  /// Copied from [marketplaceItem].
+  const MarketplaceItemFamily();
+
+  /// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+  /// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+  ///
+  /// Copied from [marketplaceItem].
+  MarketplaceItemProvider call(String itemId) {
+    return MarketplaceItemProvider(itemId);
+  }
+
+  @override
+  MarketplaceItemProvider getProviderOverride(
+    covariant MarketplaceItemProvider provider,
+  ) {
+    return call(provider.itemId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'marketplaceItemProvider';
+}
+
+/// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+/// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+///
+/// Copied from [marketplaceItem].
+class MarketplaceItemProvider
+    extends AutoDisposeFutureProvider<MarketplaceItem?> {
+  /// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+  /// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+  ///
+  /// Copied from [marketplaceItem].
+  MarketplaceItemProvider(String itemId)
+    : this._internal(
+        (ref) => marketplaceItem(ref as MarketplaceItemRef, itemId),
+        from: marketplaceItemProvider,
+        name: r'marketplaceItemProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$marketplaceItemHash,
+        dependencies: MarketplaceItemFamily._dependencies,
+        allTransitiveDependencies:
+            MarketplaceItemFamily._allTransitiveDependencies,
+        itemId: itemId,
+      );
+
+  MarketplaceItemProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.itemId,
+  }) : super.internal();
+
+  final String itemId;
+
+  @override
+  Override overrideWith(
+    FutureOr<MarketplaceItem?> Function(MarketplaceItemRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: MarketplaceItemProvider._internal(
+        (ref) => create(ref as MarketplaceItemRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        itemId: itemId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<MarketplaceItem?> createElement() {
+    return _MarketplaceItemProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MarketplaceItemProvider && other.itemId == itemId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, itemId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin MarketplaceItemRef on AutoDisposeFutureProviderRef<MarketplaceItem?> {
+  /// The parameter `itemId` of this provider.
+  String get itemId;
+}
+
+class _MarketplaceItemProviderElement
+    extends AutoDisposeFutureProviderElement<MarketplaceItem?>
+    with MarketplaceItemRef {
+  _MarketplaceItemProviderElement(super.provider);
+
+  @override
+  String get itemId => (origin as MarketplaceItemProvider).itemId;
+}
+
 String _$myMarketplaceItemsHash() =>
     r'4914003af4948357e7a1b1e9775fa68c00127e2c';
 
@@ -48,27 +208,6 @@ typedef MyMarketplaceItemsRef =
     AutoDisposeFutureProviderRef<List<MarketplaceItem>>;
 String _$userMarketplaceItemsHash() =>
     r'9a7eb4afd744854f9b0bc6e2231daf0b3a97f7a8';
-
-/// Copied from Dart SDK
-class _SystemHash {
-  _SystemHash._();
-
-  static int combine(int hash, int value) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + value);
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
-    return hash ^ (hash >> 6);
-  }
-
-  static int finish(int hash) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
-    // ignore: parameter_assignments
-    hash = hash ^ (hash >> 11);
-    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
-  }
-}
 
 /// See also [userMarketplaceItems].
 @ProviderFor(userMarketplaceItems)
