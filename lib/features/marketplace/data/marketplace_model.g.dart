@@ -23,6 +23,9 @@ _MarketplaceItem _$MarketplaceItemFromJson(Map<String, dynamic> json) =>
       tradeType: json['trade_type'] as String? ?? 'sell',
       location: json['location'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
+      bumpedAt: json['bumped_at'] == null
+          ? null
+          : DateTime.parse(json['bumped_at'] as String),
     );
 
 Map<String, dynamic> _$MarketplaceItemToJson(_MarketplaceItem instance) =>
@@ -38,4 +41,5 @@ Map<String, dynamic> _$MarketplaceItemToJson(_MarketplaceItem instance) =>
       'trade_type': instance.tradeType,
       'location': instance.location,
       'created_at': instance.createdAt.toIso8601String(),
+      'bumped_at': instance.bumpedAt?.toIso8601String(),
     };

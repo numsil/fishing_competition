@@ -61,6 +61,23 @@ class MarketplaceDetailScreen extends ConsumerWidget {
       );
     }
 
+    // 끌어올리기 쿨다운(24시간)
+    final bumpBase = item.bumpedAt ?? item.createdAt;
+    final bumpNextAt = bumpBase.add(const Duration(hours: 24));
+    final canBump = !DateTime.now().isBefore(bumpNextAt);
+    final bumpRemain = bumpNextAt.difference(DateTime.now());
+
+    Future<void> bump() async {
+      await ref.read(marketplaceRepositoryProvider).bumpItem(item.id);
+      ref.read(marketplaceListProvider.notifier).refresh();
+      ref.invalidate(myMarketplaceItemsProvider);
+      ref.invalidate(userMarketplaceItemsProvider(item.userId));
+      if (context.mounted) {
+        AppSnackBar.success(context, '맨 위로 끌어올렸어요');
+        context.pop();
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('중고거래'),
@@ -252,9 +269,19 @@ class MarketplaceDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
-      // 문의하기: 스크롤과 무관하게 항상 보이는 하단 고정 바 (타인 글만)
+      // 하단 고정 바: 본인 매물이면 끌어올리기, 아니면 문의하기
       bottomNavigationBar: isOwner
-          ? null
+          ? SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: AppButton(
+                label: canBump
+                    ? '끌어올리기'
+                    : '${_bumpRemainLabel(bumpRemain)} 후 끌어올리기',
+                icon: LucideIcons.arrowUp,
+                variant: AppButtonVariant.outline,
+                onPressed: canBump ? bump : null,
+              ),
+            )
           : SafeArea(
               minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: AppButton(
@@ -291,6 +318,13 @@ class MarketplaceDetailScreen extends ConsumerWidget {
             ),
     );
   }
+}
+
+/// 끌어올리기 남은 시간 라벨 (예: "5시간", "12분")
+String _bumpRemainLabel(Duration d) {
+  if (d.inHours >= 1) return '${d.inHours}시간';
+  final m = d.inMinutes;
+  return '${m < 1 ? 1 : m}분';
 }
 
 /// 중고거래 상세 하단 면책 안내

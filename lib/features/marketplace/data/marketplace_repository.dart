@@ -24,7 +24,7 @@ class MarketplaceRepository {
   }) async {
     var query = _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, bumped_at, users(username, avatar_url)')
         .eq('is_deleted', false);
 
     if (tradeType != null) query = query.eq('trade_type', tradeType);
@@ -38,16 +38,16 @@ class MarketplaceRepository {
     }
     if (before != null) {
       final c = before.toUtc().toIso8601String();
-      // keyset (created_at, id) 복합 커서: 동일 created_at이 페이지 경계에 걸려도 누락 없음
+      // keyset (bumped_at, id) 복합 커서: 끌어올리기 반영 정렬, 경계 누락 없음
       if (beforeId != null) {
-        query = query.or('created_at.lt.$c,and(created_at.eq.$c,id.lt.$beforeId)');
+        query = query.or('bumped_at.lt.$c,and(bumped_at.eq.$c,id.lt.$beforeId)');
       } else {
-        query = query.lt('created_at', c);
+        query = query.lt('bumped_at', c);
       }
     }
 
     final response = await query
-        .order('created_at', ascending: false)
+        .order('bumped_at', ascending: false)
         .order('id', ascending: false)
         .limit(limit);
 
@@ -72,7 +72,7 @@ class MarketplaceRepository {
   Future<List<MarketplaceItem>> getUserItems(String userId) async {
     final response = await _supabase
         .from('marketplace_items')
-        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, users(username, avatar_url)')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, bumped_at, users(username, avatar_url)')
         .eq('user_id', userId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
@@ -134,6 +134,14 @@ class MarketplaceRepository {
     await _supabase
         .from('marketplace_items')
         .update({'status': status})
+        .eq('id', itemId);
+  }
+
+  /// 끌어올리기: bumped_at을 현재 시각으로 갱신 → 목록 최상단으로.
+  Future<void> bumpItem(String itemId) async {
+    await _supabase
+        .from('marketplace_items')
+        .update({'bumped_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', itemId);
   }
 
@@ -202,7 +210,8 @@ class MarketplaceList extends _$MarketplaceList {
         );
     _hasMore = items.length >= kMarketplacePageSize;
     if (items.isNotEmpty) {
-      _lastCreatedAt = items.last.createdAt;
+      // 정렬 기준(bumped_at) 커서. 값이 없으면 createdAt로 대체.
+      _lastCreatedAt = items.last.bumpedAt ?? items.last.createdAt;
       _lastId = items.last.id;
     }
     return items;

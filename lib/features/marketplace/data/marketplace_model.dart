@@ -18,6 +18,7 @@ abstract class MarketplaceItem with _$MarketplaceItem {
     @JsonKey(name: 'trade_type') @Default('sell') String tradeType, // sell=팝니다, buy=삽니다
     String? location,
     @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'bumped_at') DateTime? bumpedAt, // 끌어올리기 정렬 기준(없으면 createdAt)
     // joined user data
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String username,
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('') String userKey,
