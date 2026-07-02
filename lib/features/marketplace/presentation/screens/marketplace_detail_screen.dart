@@ -309,13 +309,22 @@ class MarketplaceDetailScreen extends ConsumerWidget {
                     if (context.mounted) {
                       context.push(
                         '/dm/chat',
-                        extra: DmConversation(
-                          id: conversationId,
-                          otherUserId: item.userId,
-                          otherUsername: item.username,
-                          otherAvatarUrl: item.avatarUrl,
-                          lastMessageAt: DateTime.now(),
-                          hasUnread: false,
+                        extra: DmChatArgs(
+                          conversation: DmConversation(
+                            id: conversationId,
+                            otherUserId: item.userId,
+                            otherUsername: item.username,
+                            otherAvatarUrl: item.avatarUrl,
+                            lastMessageAt: DateTime.now(),
+                            hasUnread: false,
+                          ),
+                          pendingItem: DmPendingItem(
+                            itemId: item.id,
+                            title: item.title,
+                            priceLabel: item.formattedPrice,
+                            thumbnailUrl:
+                                item.imageUrls.isNotEmpty ? item.imageUrls.first : null,
+                          ),
                         ),
                       );
                     }
