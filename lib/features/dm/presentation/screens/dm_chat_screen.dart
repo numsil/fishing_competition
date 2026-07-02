@@ -124,6 +124,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
     if ((text.isEmpty && _pending == null) || _sending) return;
 
     final pending = _pending;
+    bool cardSent = false;
     setState(() => _sending = true);
     _ctrl.clear();
 
@@ -144,6 +145,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
             _messages = _mergeMessages(_messages, _localSent);
           });
           _scrollToBottom();
+          cardSent = true;
         }
       }
 
@@ -162,14 +164,14 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
       if (mounted) {
         AppSnackBar.warning(context, e.toString());
         _ctrl.text = text;
-        setState(() => _pending = pending); // 실패 시 미리보기 복구
+        if (!cardSent) setState(() => _pending = pending); // 실패 시 미리보기 복구
       }
     } catch (e) {
       if (await handleIfBanned(e)) return;
       if (mounted) {
         AppSnackBar.error(context, '메시지 전송에 실패했습니다');
         _ctrl.text = text;
-        setState(() => _pending = pending); // 실패 시 미리보기 복구
+        if (!cardSent) setState(() => _pending = pending); // 실패 시 미리보기 복구
       }
     } finally {
       if (mounted) setState(() => _sending = false);
