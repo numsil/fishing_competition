@@ -234,35 +234,55 @@ class _SlopeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: EdgeInsets.zero,
       onTap: () => _openNaverMap(context),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // ── 위성 썸네일 (내장 에셋) ──
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.asset(
+              slope.thumbAsset,
+              height: 140,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
               children: [
-                Text(
-                  slope.name,
-                  style: AppTextStyles.bodyBold.copyWith(color: textColor),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  slope.address,
-                  style: AppTextStyles.caption.copyWith(color: subColor),
-                ),
-                if (slope.waterBody.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${slope.sigungu} · ${slope.waterBody}',
-                    style: AppTextStyles.captionSmall.copyWith(color: accent),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slope.name,
+                        style: AppTextStyles.bodyBold.copyWith(color: textColor),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        slope.address,
+                        style: AppTextStyles.caption.copyWith(color: subColor),
+                      ),
+                      if (slope.waterBody.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '${slope.sigungu} · ${slope.waterBody}',
+                          style:
+                              AppTextStyles.captionSmall.copyWith(color: accent),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Icon(LucideIcons.map, color: accent, size: 20),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Icon(LucideIcons.map, color: accent, size: 20),
         ],
       ),
     );
