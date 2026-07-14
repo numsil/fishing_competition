@@ -118,7 +118,6 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
                       vertical: AppSpacing.xs,
                     ),
                     children: [
-                      _sigunguChip('전체', sidoFiltered.length, accent, isDark),
                       for (final sgg in sigungus)
                         _sigunguChip(sgg, sigunguCounts[sgg]!, accent, isDark),
                     ],
@@ -188,7 +187,9 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
       child: ChoiceChip(
         label: Text('$label $count'),
         selected: selected,
-        onSelected: (_) => setState(() => _selectedSigungu = label),
+        // 재탭 시 해제 → 시도 전체 목록으로 복귀
+        onSelected: (_) => setState(
+            () => _selectedSigungu = selected ? '전체' : label),
         labelStyle: AppTextStyles.captionSmall.copyWith(
           color: selected
               ? accent
