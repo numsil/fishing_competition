@@ -41,6 +41,7 @@ import '../../features/marketplace/data/marketplace_model.dart';
 import '../../features/marketplace/presentation/screens/marketplace_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notification_screen.dart';
 import '../../features/units/presentation/screens/units_unit_screen.dart';
+import '../../features/slopes/presentation/screens/slopes_screen.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 import '../../dev/widget_catalog_screen.dart';
@@ -164,6 +165,12 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.units,
         pageBuilder: (context, state) =>
             const MaterialPage(child: UnitsScreen()),
+      ),
+      // 슬로프 찾기: ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: AppRoutes.slopes,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: SlopesScreen()),
       ),
       // DM 목록: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -330,6 +337,7 @@ class AppRoutes {
   static const String dm = '/dm';
   static const String notifications = '/notifications';
   static const String units = '/units';
+  static const String slopes = '/slopes';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
   static const String widgetCatalog = '/widget-catalog';

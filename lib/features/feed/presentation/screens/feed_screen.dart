@@ -505,6 +505,13 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
           visualDensity: VisualDensity.compact,
         );
 
+    Widget slopesBtn() => IconButton(
+          onPressed: () => context.push(AppRoutes.slopes),
+          icon: Icon(LucideIcons.mapPin,
+              color: isDark ? Colors.white : Colors.black, size: 22),
+          visualDensity: VisualDensity.compact,
+        );
+
     Widget notiBtn() => Consumer(
           builder: (context, ref, _) {
             final hasUnread =
@@ -633,8 +640,9 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 builder: (_) => const MarketplaceUploadScreen()),
                           )),
                     ]
-                  // 조과: 자 · DM · 글쓰기(+)  (검색은 피드 상단 바, 알림은 로고 옆)
+                  // 조과: 슬로프 · 자 · DM · 글쓰기(+)  (검색은 피드 상단 바, 알림은 로고 옆)
                   : [
+                      slopesBtn(),
                       unitsBtn(),
                       dmBtn(),
                       plusBtn(() => context.push(AppRoutes.upload)),
