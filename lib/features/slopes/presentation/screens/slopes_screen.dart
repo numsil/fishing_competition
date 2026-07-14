@@ -23,6 +23,7 @@ class SlopesScreen extends ConsumerStatefulWidget {
 
 class _SlopesScreenState extends ConsumerState<SlopesScreen> {
   String _selectedSido = '전체';
+  String _selectedSigungu = '전체';
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +60,23 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
             sidoCounts[s.sido] = (sidoCounts[s.sido] ?? 0) + 1;
           }
           final sidos = sidoCounts.keys.toList()..sort();
-          final filtered = _selectedSido == '전체'
+          final sidoFiltered = _selectedSido == '전체'
               ? slopes
               : slopes.where((s) => s.sido == _selectedSido).toList();
+
+          // 선택된 시도의 시군구 카테고리 (2차 필터)
+          final sigunguCounts = <String, int>{};
+          if (_selectedSido != '전체') {
+            for (final s in sidoFiltered) {
+              sigunguCounts[s.sigungu] = (sigunguCounts[s.sigungu] ?? 0) + 1;
+            }
+          }
+          final sigungus = sigunguCounts.keys.toList()..sort();
+          final filtered = _selectedSigungu == '전체'
+              ? sidoFiltered
+              : sidoFiltered
+                  .where((s) => s.sigungu == _selectedSigungu)
+                  .toList();
 
           return Column(
             children: [
@@ -81,6 +96,23 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
                   ],
                 ),
               ),
+              // ── 시군구 필터 칩 (시도 선택 시, 2곳 이상일 때) ──
+              if (sigungus.length > 1)
+                SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.xs,
+                    ),
+                    children: [
+                      _sigunguChip('전체', sidoFiltered.length, accent, isDark),
+                      for (final sgg in sigungus)
+                        _sigunguChip(sgg, sigunguCounts[sgg]!, accent, isDark),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: filtered.isEmpty
                     ? EmptyState(
@@ -115,7 +147,10 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
       child: ChoiceChip(
         label: Text('$label $count'),
         selected: selected,
-        onSelected: (_) => setState(() => _selectedSido = label),
+        onSelected: (_) => setState(() {
+          _selectedSido = label;
+          _selectedSigungu = '전체'; // 시도 변경 시 시군구 초기화
+        }),
         labelStyle: AppTextStyles.bodySmall.copyWith(
           color: selected
               ? (isDark ? Colors.black : Colors.white)
@@ -131,6 +166,34 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
               : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
         ),
         visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  Widget _sigunguChip(String label, int count, Color accent, bool isDark) {
+    final selected = _selectedSigungu == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: ChoiceChip(
+        label: Text('$label $count'),
+        selected: selected,
+        onSelected: (_) => setState(() => _selectedSigungu = label),
+        labelStyle: AppTextStyles.captionSmall.copyWith(
+          color: selected
+              ? accent
+              : (isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+        selectedColor: accent.withValues(alpha: isDark ? 0.15 : 0.08),
+        backgroundColor: Colors.transparent,
+        showCheckmark: false,
+        side: BorderSide(
+          color: selected
+              ? accent
+              : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+        ),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       ),
     );
   }
