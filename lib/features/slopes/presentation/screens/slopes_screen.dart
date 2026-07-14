@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../../../core/router/app_router.dart';
 
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -45,6 +48,14 @@ class _SlopesScreenState extends ConsumerState<SlopesScreen> {
           '슬로프 찾기',
           style: AppTextStyles.heading3.copyWith(color: textColor),
         ),
+        actions: [
+          // 전체 지도 보기
+          IconButton(
+            onPressed: () => context.push(AppRoutes.slopesMap),
+            icon: Icon(LucideIcons.map, color: textColor, size: 22),
+            tooltip: '지도로 보기',
+          ),
+        ],
       ),
       body: slopesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -214,8 +225,12 @@ class _SlopeCard extends StatelessWidget {
   final Color textColor;
   final Color subColor;
 
-  /// 네이버지도 앱으로 주소 검색 열기. 미설치 시 웹 지도 폴백.
-  Future<void> _openNaverMap(BuildContext context) async {
+  /// 카드 탭: 좌표가 있으면 앱 내 지도, 없으면 네이버지도 앱 열기
+  Future<void> _openMap(BuildContext context) async {
+    if (slope.lat != null && slope.lng != null) {
+      context.push(AppRoutes.slopesMap, extra: slope);
+      return;
+    }
     final query = Uri.encodeComponent(slope.address);
     final appUri = Uri.parse(
         'nmap://search?query=$query&appname=com.glution.nakstar');
@@ -236,7 +251,7 @@ class _SlopeCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       padding: EdgeInsets.zero,
-      onTap: () => _openNaverMap(context),
+      onTap: () => _openMap(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

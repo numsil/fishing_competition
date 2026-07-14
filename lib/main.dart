@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/deep_link/deep_link_service.dart';
@@ -42,6 +43,19 @@ void main() async {
     );
   } else {
     debugPrint('Supabase URL 또는 Anon Key가 설정되지 않았습니다.');
+  }
+
+  // 네이버지도 SDK 초기화 (슬로프 지도)
+  final naverMapClientId = dotenv.env['NAVER_MAP_CLIENT_ID'] ?? '';
+  if (naverMapClientId.isNotEmpty) {
+    try {
+      await FlutterNaverMap().init(
+        clientId: naverMapClientId,
+        onAuthFailed: (ex) => debugPrint('네이버지도 인증 실패: $ex'),
+      );
+    } catch (e) {
+      debugPrint('네이버지도 초기화 실패: $e');
+    }
   }
 
   // Firebase 초기화 및 백그라운드 핸들러 등록

@@ -42,6 +42,8 @@ import '../../features/marketplace/presentation/screens/marketplace_detail_scree
 import '../../features/notifications/presentation/screens/notification_screen.dart';
 import '../../features/units/presentation/screens/units_unit_screen.dart';
 import '../../features/slopes/presentation/screens/slopes_screen.dart';
+import '../../features/slopes/presentation/screens/slope_map_screen.dart';
+import '../../features/slopes/data/slope_model.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 import '../../dev/widget_catalog_screen.dart';
@@ -171,6 +173,15 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.slopes,
         pageBuilder: (context, state) =>
             const MaterialPage(child: SlopesScreen()),
+      ),
+      // 슬로프 지도 (extra: 포커스할 Slope, null이면 전국 뷰)
+      GoRoute(
+        path: AppRoutes.slopesMap,
+        pageBuilder: (context, state) => MaterialPage(
+          child: SlopeMapScreen(
+            focus: state.extra is Slope ? state.extra as Slope : null,
+          ),
+        ),
       ),
       // DM 목록: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
@@ -338,6 +349,7 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String units = '/units';
   static const String slopes = '/slopes';
+  static const String slopesMap = '/slopes/map';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
   static const String widgetCatalog = '/widget-catalog';
