@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/image_compress.dart';
+import '../../../core/utils/image_hash.dart';
 import '../../../core/utils/score_calculator.dart';
 import '../../../core/utils/storage_cleanup.dart';
 import 'post_model.dart';
@@ -13,6 +14,18 @@ import '../../verification/data/verification_repository.dart';
 part 'feed_repository.g.dart';
 
 const int kFeedPageSize = 20;
+
+/// 같은 사진으로 조과를 다시 등록하려 할 때 발생.
+///
+/// posts.image_hash 부분 unique 인덱스(개인기록 전역 / 리그별)와 짝을 이룬다.
+class DuplicateCatchPhotoException implements Exception {
+  const DuplicateCatchPhotoException();
+
+  static const String message = '이미 등록된 사진입니다. 다른 사진으로 인증해주세요.';
+
+  @override
+  String toString() => message;
+}
 
 /// getPosts 반환값 — 포스트 목록 + 다음 페이지 커서.
 typedef FeedPage = ({
@@ -367,6 +380,50 @@ class FeedRepository {
     });
   }
 
+  /// 지문을 뜰 사진 1장 고르기 (조과 등록 화면은 단일 사진만 받는다).
+  File? _hashSourceImage({
+    File? imageFile,
+    List<File>? imageFiles,
+    List<PickedMedia>? mediaFiles,
+  }) {
+    if (imageFile != null) return imageFile;
+    if (imageFiles != null && imageFiles.isNotEmpty) return imageFiles.first;
+    if (mediaFiles != null) {
+      for (final m in mediaFiles) {
+        if (m.isImage) return m.file;
+      }
+    }
+    return null;
+  }
+
+  /// 같은 사진이 이미 조과로 등록돼 있으면 업로드 전에 중단.
+  ///
+  /// 비교 범위는 등록하려는 글의 종류에 맞춘다.
+  /// - 개인기록: 전역 (누가 올렸든 같은 사진이면 중복)
+  /// - 리그 조과: 해당 리그 안에서만
+  ///
+  /// 한 마리를 리그에도 내고 개인기록으로도 남기는 정상 흐름은 막지 않는다.
+  Future<void> _assertCatchPhotoNotUsed({
+    required String imageHash,
+    required bool isPersonalRecord,
+    String? leagueId,
+  }) async {
+    var query = _supabase
+        .from('posts')
+        .select('id')
+        .eq('image_hash', imageHash)
+        .eq('is_deleted', false);
+
+    if (isPersonalRecord) {
+      query = query.eq('is_personal_record', true);
+    } else {
+      query = query.eq('league_id', leagueId!);
+    }
+
+    final existing = await query.limit(1).maybeSingle();
+    if (existing != null) throw const DuplicateCatchPhotoException();
+  }
+
   Future<void> createPost({
     required String userId,
     File? imageFile,           // 단일 이미지 (리그 조과 등 하위 호환)
@@ -395,6 +452,25 @@ class FeedRepository {
     String? videoUrl;
     List<String>? imageUrls;
     List<Map<String, dynamic>>? mediaJson; // posts.media (jsonb)
+
+    // 조과 사진 지문: 업로드 전에 계산해 중복이면 스토리지에 쓰기 전에 막는다.
+    // (unique 인덱스는 동시 업로드 경합에 대한 최종 방어선)
+    final hashSource = _hashSourceImage(
+      imageFile: imageFile,
+      imageFiles: imageFiles,
+      mediaFiles: mediaFiles,
+    );
+    String? imageHash;
+    if (hashSource != null) {
+      imageHash = await computeImageHash(hashSource);
+      if (isPersonalRecord || leagueId != null) {
+        await _assertCatchPhotoNotUsed(
+          imageHash: imageHash,
+          isPersonalRecord: isPersonalRecord,
+          leagueId: leagueId,
+        );
+      }
+    }
 
     if (youtubeUrl != null && youtubeUrl.isNotEmpty) {
       // 유튜브 모드: 업로드 없이 썸네일 URL 만 image_url 에 저장
@@ -548,7 +624,9 @@ class FeedRepository {
       throw Exception('이미지 또는 동영상을 선택해주세요');
     }
 
-    final inserted = await _supabase.from('posts').insert({
+    final Map<String, dynamic> inserted;
+    try {
+      inserted = await _supabase.from('posts').insert({
       'user_id': userId,
       'image_url': imageUrl,
       'image_urls': imageUrls,
@@ -570,8 +648,24 @@ class FeedRepository {
       'catch_count': catchCount,
       'is_lunker': length != null && length >= 50.0,
       'score': calculateFishScore(length),
+      'image_hash': imageHash,
       // review_status는 DB 트리거(enforce_initial_review_status)가 강제 설정
-    }).select('id').single();
+      }).select('id').single();
+    } on PostgrestException catch (e) {
+      // 사전 조회를 통과했지만 동시 업로드로 unique 인덱스에 걸린 경우.
+      // 방금 올린 스토리지 파일을 정리하고 중복으로 처리한다.
+      if (e.code == '23505' && (e.message).contains('image_hash')) {
+        await removePostStorageFiles(
+          _supabase,
+          imageUrl: imageUrl,
+          imageUrls: imageUrls,
+          videoUrl: videoUrl,
+          media: mediaJson,
+        );
+        throw const DuplicateCatchPhotoException();
+      }
+      rethrow;
+    }
 
     // 개인기록만 인증 요청 생성
     if (isPersonalRecord) {
