@@ -257,11 +257,38 @@ class MarketplaceRepository {
       }
     }
   }
+
+  /// 단일 매물 조회 (DM 매물 카드 렌더·상세 진입용). 삭제/미존재 시 null.
+  /// getItems와 동일한 컬럼·join 형태를 유지해 카드 탭 시 상세 화면에 그대로 전달 가능.
+  Future<MarketplaceItem?> getItem(String itemId) async {
+    final data = await _supabase
+        .from('marketplace_items')
+        .select('id, user_id, title, description, price, image_urls, category, status, trade_type, location, created_at, bumped_at, users(username, avatar_url)')
+        .eq('id', itemId)
+        .eq('is_deleted', false)
+        .maybeSingle();
+    if (data == null) return null;
+    final item = MarketplaceItem.fromJson(data);
+    final u = data['users'];
+    return item.copyWith(
+      username: (u is Map ? u['username'] : null) ?? 'Unknown',
+      userKey: (u is Map ? u['user_key'] : null) ?? '',
+      avatarUrl: (u is Map ? u['avatar_url'] : null) ?? '',
+    );
+  }
 }
 
 @riverpod
 MarketplaceRepository marketplaceRepository(MarketplaceRepositoryRef ref) {
   return MarketplaceRepository(Supabase.instance.client);
+}
+
+/// 매물 id별 단일 조회. 카드가 여러 개여도 id 단위로 캐싱되어 재사용(N+1 아님).
+/// autoDispose(기본): 채팅방을 벗어나면 해제되어 다음 진입 시 최신 상태(가격/상태/삭제) 반영.
+@riverpod
+Future<MarketplaceItem?> marketplaceItem(
+    MarketplaceItemRef ref, String itemId) {
+  return ref.watch(marketplaceRepositoryProvider).getItem(itemId);
 }
 
 // 중고거래 목록: 서버 검색·카테고리 필터 + 커서 페이지네이션

@@ -50,6 +50,11 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   isPersonalRecord: json['is_personal_record'] as bool? ?? false,
   score: (json['score'] as num?)?.toInt() ?? 0,
   reviewStatus: json['review_status'] as String? ?? 'pending',
+  originalLength: (json['original_length'] as num?)?.toDouble(),
+  originalWeight: (json['original_weight'] as num?)?.toDouble(),
+  measureEditedAt: json['measure_edited_at'] == null
+      ? null
+      : DateTime.parse(json['measure_edited_at'] as String),
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 
@@ -78,5 +83,8 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'is_personal_record': instance.isPersonalRecord,
   'score': instance.score,
   'review_status': instance.reviewStatus,
+  'original_length': instance.originalLength,
+  'original_weight': instance.originalWeight,
+  'measure_edited_at': instance.measureEditedAt?.toIso8601String(),
   'created_at': instance.createdAt.toIso8601String(),
 };

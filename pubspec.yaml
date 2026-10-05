@@ -2,7 +2,7 @@ name: fishing_competition
 description: "낚시 대회 관리 앱 - 웹/모바일 지원"
 publish_to: 'none'
 
-version: 1.0.0+54
+version: 1.0.1+55
 
 environment:
   sdk: ^3.8.1
@@ -33,6 +33,7 @@ dependencies:
   intl: ^0.20.2
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
+  crypto: ^3.0.7  # 조과 사진 중복 차단용 SHA-256
 
   # 가시성 감지
   visibility_detector: ^0.4.0+2

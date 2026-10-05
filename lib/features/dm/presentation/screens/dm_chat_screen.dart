@@ -13,10 +13,17 @@ import '../../data/dm_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
+import '../../../marketplace/data/marketplace_model.dart';
+import '../../../marketplace/data/marketplace_repository.dart';
 
 class DmChatScreen extends ConsumerStatefulWidget {
-  const DmChatScreen({super.key, required this.conversation});
+  const DmChatScreen({
+    super.key,
+    required this.conversation,
+    this.pendingItem,
+  });
   final DmConversation conversation;
+  final DmPendingItem? pendingItem;
 
   @override
   ConsumerState<DmChatScreen> createState() => _DmChatScreenState();
@@ -32,10 +39,13 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
   final List<DmMessage> _localSent = [];
   bool _isLoading = true;
   StreamSubscription<List<DmMessage>>? _sub;
+  // 문의하기로 진입 시 전송 대기 중인 매물 카드. 전송하면 null로 해제.
+  DmPendingItem? _pending;
 
   @override
   void initState() {
     super.initState();
+    _pending = widget.pendingItem;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dmRepositoryProvider).markAsRead(widget.conversation.id);
@@ -110,33 +120,58 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
+    // 텍스트가 있거나, 전송 대기 매물 카드가 있으면 전송 가능(카드 단독 전송 허용).
+    if ((text.isEmpty && _pending == null) || _sending) return;
 
+    final pending = _pending;
+    bool cardSent = false;
     setState(() => _sending = true);
     _ctrl.clear();
 
     try {
-      final sent = await ref
-          .read(dmRepositoryProvider)
-          .sendMessage(widget.conversation.id, text);
-      // 보낸 메시지 즉시 표시 (Realtime 에코를 기다리지 않음)
-      if (mounted && !_messages.any((m) => m.id == sent.id)) {
-        _localSent.add(sent);
-        setState(() {
-          _messages = _mergeMessages(_messages, _localSent);
-        });
-        _scrollToBottom();
+      final repo = ref.read(dmRepositoryProvider);
+
+      // 1) 매물 카드 먼저 전송 (카드가 위, 텍스트가 아래에 오도록)
+      if (pending != null) {
+        final card = await repo.sendItemCard(
+          widget.conversation.id,
+          itemId: pending.itemId,
+          title: pending.title,
+        );
+        if (mounted) {
+          if (!_messages.any((m) => m.id == card.id)) _localSent.add(card);
+          setState(() {
+            _pending = null;
+            _messages = _mergeMessages(_messages, _localSent);
+          });
+          _scrollToBottom();
+          cardSent = true;
+        }
+      }
+
+      // 2) 텍스트가 있으면 이어서 전송
+      if (text.isNotEmpty) {
+        final sent = await repo.sendMessage(widget.conversation.id, text);
+        if (mounted && !_messages.any((m) => m.id == sent.id)) {
+          _localSent.add(sent);
+          setState(() {
+            _messages = _mergeMessages(_messages, _localSent);
+          });
+          _scrollToBottom();
+        }
       }
     } on DmBlockedException catch (e) {
       if (mounted) {
         AppSnackBar.warning(context, e.toString());
         _ctrl.text = text;
+        if (!cardSent) setState(() => _pending = pending); // 실패 시 미리보기 복구
       }
     } catch (e) {
       if (await handleIfBanned(e)) return;
       if (mounted) {
-                AppSnackBar.error(context, '메시지 전송에 실패했습니다');
+        AppSnackBar.error(context, '메시지 전송에 실패했습니다');
         _ctrl.text = text;
+        if (!cardSent) setState(() => _pending = pending); // 실패 시 미리보기 복구
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -189,6 +224,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
           Divider(height: 0.5, thickness: 0.5, color: divColor),
           Expanded(child: _buildMessageList(context.isDark, context.accentColor, myId)),
           Divider(height: 0.5, thickness: 0.5, color: divColor),
+          if (_pending != null) _buildPendingBar(context.isDark, divColor),
           _buildInput(context.isDark, context.accentColor, divColor),
         ],
       ),
@@ -245,6 +281,70 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
     );
   }
 
+  Widget _buildPendingBar(bool isDark, Color divColor) {
+    final p = _pending!;
+    final sub = isDark ? const Color(0xFF999999) : const Color(0xFF888888);
+    final thumbBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      color: isDark ? const Color(0xFF141414) : const Color(0xFFFAFAFA),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: (p.thumbnailUrl != null && p.thumbnailUrl!.isNotEmpty)
+                  ? Image.network(
+                      p.thumbnailUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: thumbBg,
+                        child: const Icon(LucideIcons.image,
+                            size: 18, color: Colors.grey),
+                      ),
+                    )
+                  : Container(
+                      color: thumbBg,
+                      child: const Icon(LucideIcons.image,
+                          size: 18, color: Colors.grey),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  p.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  p.priceLabel,
+                  style: TextStyle(fontSize: 12, color: sub),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(LucideIcons.x, size: 18, color: sub),
+            onPressed: () => setState(() => _pending = null),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInput(bool isDark, Color accent, Color divColor) {
     final sub =
         isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
@@ -292,14 +392,15 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
             ValueListenableBuilder(
               valueListenable: _ctrl,
               builder: (_, val, __) {
-                final hasText = val.text.trim().isNotEmpty;
+                final canSend =
+                    val.text.trim().isNotEmpty || _pending != null;
                 return GestureDetector(
-                  onTap: hasText && !_sending ? _send : null,
+                  onTap: canSend && !_sending ? _send : null,
                   child: Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: hasText
+                      color: canSend
                           ? accent
                           : (isDark
                               ? const Color(0xFF2A2A2A)
@@ -309,7 +410,7 @@ class _DmChatScreenState extends ConsumerState<DmChatScreen> {
                     child: Icon(
                       LucideIcons.send,
                       size: 18,
-                      color: hasText
+                      color: canSend
                           ? (isDark ? Colors.black : Colors.white)
                           : (isDark
                               ? const Color(0xFF555555)
@@ -382,6 +483,11 @@ class _MessageBubble extends StatelessWidget {
     r'https:\/\/nakstar\.app\/league\/([0-9a-fA-F-]{36})',
   );
 
+  // 매물 카드 마커: https://nakstar.app/market/<uuid>
+  static final _marketLinkRe = RegExp(
+    r'https:\/\/nakstar\.app\/market\/([0-9a-fA-F-]{36})',
+  );
+
   ({String text, String? leagueId}) _parseContent(String raw) {
     final m = _leagueLinkRe.firstMatch(raw);
     if (m == null) return (text: raw, leagueId: null);
@@ -394,6 +500,38 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeStr =
         '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}';
+
+    final marketId = _marketLinkRe.firstMatch(msg.content)?.group(1);
+    if (marketId != null) {
+      final subColor =
+          isDark ? const Color(0xFF666666) : const Color(0xFFAAAAAA);
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          mainAxisAlignment:
+              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isMe) const SizedBox(width: 38), // 아바타 폭만큼 들여쓰기 정렬
+            if (isMe) ...[
+              Text(timeStr, style: TextStyle(fontSize: 10, color: subColor)),
+              const SizedBox(width: 4),
+            ],
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.68,
+              ),
+              child: _MarketItemCard(itemId: marketId, isDark: isDark),
+            ),
+            if (!isMe) ...[
+              const SizedBox(width: 4),
+              Text(timeStr, style: TextStyle(fontSize: 10, color: subColor)),
+            ],
+          ],
+        ),
+      );
+    }
+
     final bubbleBg = isMe
         ? accent
         : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0));
@@ -514,6 +652,163 @@ class _MessageBubble extends StatelessWidget {
             Text(timeStr,
                 style: TextStyle(fontSize: 10, color: subColor)),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 채팅 버블용 매물 카드. marketplaceItemProvider로 현재 매물 상태를 실시간 조회한다.
+/// 로딩/삭제(null)/정상 3상태. 탭 시 매물 상세로 이동(삭제 시 안내).
+class _MarketItemCard extends ConsumerWidget {
+  const _MarketItemCard({required this.itemId, required this.isDark});
+  final String itemId;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(marketplaceItemProvider(itemId));
+    final cardBg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    final sub = isDark ? const Color(0xFF999999) : const Color(0xFF888888);
+    final thumbBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0);
+
+    Widget shell({required Widget child, VoidCallback? onTap}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+          ),
+          child: child,
+        ),
+      );
+    }
+
+    return async.when(
+      loading: () => shell(
+        child: SizedBox(
+          height: 56,
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: thumbBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('매물 불러오는 중…',
+                  style: TextStyle(fontSize: 13, color: sub)),
+            ],
+          ),
+        ),
+      ),
+      error: (_, __) => shell(
+        child: _deletedRow(sub, thumbBg),
+        onTap: null,
+      ),
+      data: (item) {
+        if (item == null) {
+          return shell(child: _deletedRow(sub, thumbBg), onTap: () {
+            AppSnackBar.info(context, '삭제된 매물이에요');
+          });
+        }
+        return shell(
+          onTap: () => context.push('/marketplace/${item.id}', extra: item),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: item.imageUrls.isNotEmpty
+                      ? Image.network(
+                          item.imageUrls.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: thumbBg,
+                            child: const Icon(LucideIcons.image,
+                                size: 20, color: Colors.grey),
+                          ),
+                        )
+                      : Container(
+                          color: thumbBg,
+                          child: const Icon(LucideIcons.image,
+                              size: 20, color: Colors.grey),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.statusLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: sub,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.formattedPrice,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, size: 16, color: sub),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _deletedRow(Color sub, Color thumbBg) {
+    return SizedBox(
+      height: 56,
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: thumbBg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(LucideIcons.imageOff, size: 20, color: sub),
+          ),
+          const SizedBox(width: 10),
+          Text('삭제된 매물',
+              style: TextStyle(fontSize: 13, color: sub)),
         ],
       ),
     );

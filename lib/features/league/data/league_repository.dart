@@ -51,6 +51,31 @@ class LeaguePendingEntry {
   final String? avatarUrl;
 }
 
+/// 조과 수치 수정 결과 (RPC 반환값).
+class CatchMeasureResult {
+  const CatchMeasureResult({
+    required this.length,
+    required this.weight,
+    required this.score,
+    required this.isLunker,
+  });
+
+  final double? length;
+  final double? weight;
+  final int score;
+  final bool isLunker;
+}
+
+/// 수치 수정 실패 사유를 사용자 문구로 변환.
+String catchMeasureErrorMessage(Object error) {
+  final text = error.toString();
+  if (text.contains('NOT_LEAGUE_HOST')) return '리그 개설자만 수정할 수 있습니다';
+  if (text.contains('INVALID_VALUE')) return '올바른 값을 입력해주세요';
+  if (text.contains('POST_NOT_FOUND')) return '수정할 조과를 찾을 수 없습니다';
+  if (text.contains('AUTH_REQUIRED')) return '로그인이 필요합니다';
+  return '수정 실패: $error';
+}
+
 class LeagueRepository {
   final SupabaseClient _supabase;
 
@@ -273,7 +298,7 @@ class LeagueRepository {
   Future<List<Post>> getLeagueCatchesForReview(String leagueId) async {
     final data = await _supabase
         .from('posts')
-        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, fish_type, length, weight, score, review_status, created_at, users(username, avatar_url)')
+        .select('id, user_id, league_id, image_url, image_urls, media, aspect_ratio, fish_type, length, weight, score, review_status, original_length, original_weight, measure_edited_at, created_at, users(username, avatar_url)')
         .eq('league_id', leagueId)
         .eq('is_deleted', false)
         .order('created_at', ascending: false)
@@ -304,6 +329,25 @@ class LeagueRepository {
         .eq('id', postId);
   }
 
+  // ── 조과 수치 수정 (호스트/어드민) ─────────────────────────
+  //
+  // 점수·런커 재계산, 최초 원본 보존, 작성자 알림을 RPC가 한 트랜잭션에서 처리한다.
+  // 규칙이 '무게'인 리그는 weight, 그 외는 length가 대상이다.
+  Future<CatchMeasureResult> editCatchMeasure(String postId, double value) async {
+    final rows = await _supabase.rpc('host_edit_catch_measure', params: {
+      'p_post_id': postId,
+      'p_value': value,
+    });
+
+    final row = (rows as List).first as Map<String, dynamic>;
+    return CatchMeasureResult(
+      length: (row['length'] as num?)?.toDouble(),
+      weight: (row['weight'] as num?)?.toDouble(),
+      score: (row['score'] as num?)?.toInt() ?? 0,
+      isLunker: row['is_lunker'] as bool? ?? false,
+    );
+  }
+
   // ── 특정 참가자의 조과 목록 ──────────────────────────────────
   Future<List<Post>> getUserLeaguePosts(String leagueId, String userId) async {
     final data = await _supabase
@@ -312,6 +356,7 @@ class LeagueRepository {
           'id, user_id, league_id, image_url, image_urls, media, aspect_ratio, '
           'video_url, caption, fish_type, length, weight, lure_type, '
           'catch_count, score, is_lunker, is_personal_record, review_status, '
+          'original_length, original_weight, measure_edited_at, '
           'location, created_at, users(username, avatar_url)',
         )
         .eq('league_id', leagueId)

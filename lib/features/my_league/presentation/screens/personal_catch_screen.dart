@@ -182,6 +182,10 @@ class _PersonalCatchScreenState extends ConsumerState<PersonalCatchScreen> {
                 AppSnackBar.success(context, '조과가 기록되었습니다! 🎣');
         Navigator.pop(context, true);
       }
+    } on DuplicateCatchPhotoException {
+      if (mounted) {
+        AppSnackBar.warning(context, DuplicateCatchPhotoException.message);
+      }
     } catch (e) {
       if (await handleIfBanned(e)) return;
       if (mounted) {

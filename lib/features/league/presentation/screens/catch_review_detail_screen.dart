@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../feed/data/post_model.dart';
@@ -38,6 +39,104 @@ class _CatchReviewDetailScreenState
   }
 
   bool get _isHeld => _post.reviewStatus == 'held';
+
+  /// 무게 규칙 리그 여부. 리그 조과 등록은 길이·무게 중 하나만 채우므로
+  /// 글 자체로 판별할 수 있다 (rule을 화면까지 전달하지 않아도 된다).
+  bool get _isWeightRule => _post.weight != null && _post.length == null;
+
+  String get _unit => _isWeightRule ? 'g' : 'cm';
+
+  double? get _currentValue => _isWeightRule ? _post.weight : _post.length;
+
+  double? get _originalValue =>
+      _isWeightRule ? _post.originalWeight : _post.originalLength;
+
+  String _formatValue(double v) =>
+      _isWeightRule ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+
+  Future<void> _editMeasure() async {
+    final current = _currentValue;
+    final controller = TextEditingController(
+      text: current == null ? '' : _formatValue(current),
+    );
+
+    final input = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_isWeightRule ? '무게 수정' : '길이 수정'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppTextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.numberWithOptions(
+                decimal: !_isWeightRule,
+              ),
+              hint: _isWeightRule ? '예) 1250' : '예) 42.5',
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Text(_unit),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '수정하면 작성자에게 알림이 전송됩니다',
+              style: TextStyle(fontSize: 12, color: context.isDark
+                  ? AppColors.darkTextSub
+                  : AppColors.lightTextSub),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('수정'),
+          ),
+        ],
+      ),
+    );
+
+    if (input == null || input.isEmpty) return;
+    final value = double.tryParse(input);
+    if (value == null || value <= 0) {
+      if (mounted) AppSnackBar.warning(context, '올바른 값을 입력해주세요');
+      return;
+    }
+    if (value == current) return;
+
+    setState(() => _loading = true);
+    try {
+      final result = await ref
+          .read(leagueRepositoryProvider)
+          .editCatchMeasure(_post.id, value);
+      setState(() {
+        _post = _post.copyWith(
+          length: result.length,
+          weight: result.weight,
+          score: result.score,
+          isLunker: result.isLunker,
+          originalLength: _post.originalLength ?? _post.length,
+          originalWeight: _post.originalWeight ?? _post.weight,
+        );
+      });
+      ref.invalidate(leagueCatchesForReviewProvider(widget.leagueId));
+      ref.invalidate(leagueRankingProvider(widget.leagueId));
+      ref.invalidate(leagueUserPostsProvider(widget.leagueId, _post.userId));
+      invalidateScoreCaches(ref);
+      if (mounted) AppSnackBar.success(context, '수정되었습니다');
+    } catch (e) {
+      if (await handleIfBanned(e)) return;
+      if (mounted) AppSnackBar.error(context, catchMeasureErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   Future<void> _toggleHold() async {
     setState(() => _loading = true);
@@ -168,8 +267,40 @@ class _CatchReviewDetailScreenState
                             fontSize: 20, fontWeight: FontWeight.w800),
                       ),
                     ],
+                    const Spacer(),
+                    // 수치 수정 (호스트/어드민만 이 화면에 진입한다)
+                    TextButton.icon(
+                      onPressed: _loading ? null : _editMeasure,
+                      icon: Icon(LucideIcons.pencil, size: 14, color: accent),
+                      label: Text(
+                        '수정',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: accent),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
                   ],
                 ),
+                // 수정된 글이면 참가자가 올린 최초 값을 호스트에게만 보여준다
+                if (_originalValue != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(LucideIcons.history, size: 12, color: sub),
+                      const SizedBox(width: 4),
+                      Text(
+                        '원래 ${_formatValue(_originalValue!)}$_unit (수정됨)',
+                        style: TextStyle(fontSize: 12, color: sub),
+                      ),
+                    ],
+                  ),
+                ],
                 if (_post.caption != null && _post.caption!.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(

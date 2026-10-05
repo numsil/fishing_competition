@@ -110,63 +110,14 @@ class VerificationRepository {
     }).toList();
   }
 
-  // 투표 제출 + 결과 자동 판정
-  Future<void> submitVote(String verificationId, String voterId, String vote) async {
-    // 1. 투표 기록
-    await _supabase
-        .from('verification_votes')
-        .update({'vote': vote, 'voted_at': DateTime.now().toIso8601String()})
-        .eq('verification_id', verificationId)
-        .eq('voter_id', voterId);
-
-    // 2. 현재 집계 조회
-    final counts = await _supabase
-        .from('verification_votes')
-        .select('vote')
-        .eq('verification_id', verificationId)
-        .not('vote', 'is', null);
-
-    int approveCount = 0;
-    int rejectCount = 0;
-    for (final row in counts) {
-      if (row['vote'] == 'approve') approveCount++;
-      if (row['vote'] == 'reject') rejectCount++;
-    }
-
-    // 3. catch_verifications 카운트 업데이트
-    await _supabase
-        .from('catch_verifications')
-        .update({'approve_count': approveCount, 'reject_count': rejectCount})
-        .eq('id', verificationId);
-
-    // 4. 판정 (테스트 기간: 거절 1명이면 즉시 거절, 승인 2명이면 승인)
-    String? newStatus;
-    if (rejectCount >= 1) {
-      newStatus = 'rejected';
-    } else if (approveCount >= 2) {
-      newStatus = 'approved';
-    }
-    if (newStatus == null) return;
-
-    // 5. post_id 먼저 조회 (UPDATE+select().single() 조합은 RLS 0행 시 크래시)
-    final verifRow = await _supabase
-        .from('catch_verifications')
-        .select('post_id')
-        .eq('id', verificationId)
-        .single();
-
-    await _supabase
-        .from('catch_verifications')
-        .update({
-          'status': newStatus,
-          'resolved_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', verificationId);
-
-    await _supabase
-        .from('posts')
-        .update({'review_status': newStatus})
-        .eq('id', verifRow['post_id']);
+  // 투표 제출 + 결과 자동 판정 (RPC 1회 — 집계/판정/posts 반영을 서버에서 원자적으로 처리)
+  // 반환: 'pending' | 'approved' | 'rejected'
+  Future<String> submitVote(String verificationId, String voterId, String vote) async {
+    final result = await _supabase.rpc('submit_verification_vote', params: {
+      'p_verification_id': verificationId,
+      'p_vote': vote,
+    });
+    return result as String;
   }
 
   // 어드민 직접 승인/거부 (투표 시스템 우회)

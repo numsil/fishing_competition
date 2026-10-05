@@ -7,6 +7,10 @@ import '../../auth/data/auth_repository.dart';
 
 part 'dm_repository.g.dart';
 
+/// 매물 카드 딥링크 마커. 메시지 본문에 심고 채팅 버블에서 카드로 렌더한다.
+/// 리그 초대 링크(`https://nakstar.app/league/{id}`)와 동일 계열 포맷.
+String marketItemLink(String itemId) => 'https://nakstar.app/market/$itemId';
+
 /// 차단된 사용자에게 DM 시도 시 던지는 예외. UI 에서 친절한 메시지로 변환.
 class DmBlockedException implements Exception {
   const DmBlockedException();
@@ -61,6 +65,29 @@ class DmMessage {
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );
   }
+}
+
+/// DM 채팅방에 문의 매물 컨텍스트를 실어 보내기 위한 표시용 값 객체.
+/// marketplace 모델에 의존하지 않도록 원시값(문자열)만 담는다.
+class DmPendingItem {
+  final String itemId;
+  final String title;
+  final String priceLabel;
+  final String? thumbnailUrl;
+  const DmPendingItem({
+    required this.itemId,
+    required this.title,
+    required this.priceLabel,
+    this.thumbnailUrl,
+  });
+}
+
+/// /dm/chat 라우트 extra: 대화방 + (선택) 문의 대기 매물.
+/// pendingItem이 있으면 채팅방 입력창 위에 매물 미리보기 바를 띄운다.
+class DmChatArgs {
+  final DmConversation conversation;
+  final DmPendingItem? pendingItem;
+  const DmChatArgs({required this.conversation, this.pendingItem});
 }
 
 class DmRepository {
@@ -254,6 +281,53 @@ class DmRepository {
       'p_conv_id': conversationId,
       'p_sender_id': myId,
       'p_content': content,
+    });
+
+    return DmMessage.fromJson(row);
+  }
+
+  /// 매물 문의 카드를 메시지로 전송. content엔 마커 URL을 넣어 채팅 버블이 카드로
+  /// 렌더하고, 목록 미리보기(last_message)엔 raw URL 대신 친화 텍스트('📦 제목')를 넣는다.
+  Future<DmMessage> sendItemCard(
+    String conversationId, {
+    required String itemId,
+    required String title,
+  }) async {
+    final myId = _myId;
+    if (myId == null) throw Exception('로그인이 필요합니다');
+
+    // 차단 체크(sendMessage와 동일 규칙): 카드 전송이 차단을 우회하지 않도록.
+    final convRow = await _supabase
+        .from('conversations')
+        .select('user1_id, user2_id')
+        .eq('id', conversationId)
+        .maybeSingle();
+    if (convRow != null) {
+      final otherId = (convRow['user1_id'] as String) == myId
+          ? convRow['user2_id'] as String
+          : convRow['user1_id'] as String;
+      final blockedIds = await AuthRepository(_supabase).getBlockedUserIds();
+      if (blockedIds.contains(otherId)) {
+        throw const DmBlockedException();
+      }
+    }
+
+    final content = marketItemLink(itemId);
+    final row = await _supabase
+        .from('messages')
+        .insert({
+          'conversation_id': conversationId,
+          'sender_id': myId,
+          'content': content,
+        })
+        .select('id, conversation_id, sender_id, content, is_read, created_at')
+        .single();
+
+    // 목록 미리보기는 마커 URL이 아니라 친화 텍스트로 저장.
+    await _supabase.rpc('on_dm_sent', params: {
+      'p_conv_id': conversationId,
+      'p_sender_id': myId,
+      'p_content': '📦 $title',
     });
 
     return DmMessage.fromJson(row);

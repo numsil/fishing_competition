@@ -13,6 +13,8 @@ String? routeFromNotification(String type, String? targetId, {String? actorId}) 
       return '/dm';
     case 'follow':
       return actorId != null ? '/user/$actorId' : null;
+    case 'league_catch_edit':
+      return targetId != null ? '/post/$targetId' : null;
     default:
       return null;
   }

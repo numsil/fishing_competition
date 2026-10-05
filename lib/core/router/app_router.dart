@@ -179,7 +179,16 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.dmChat,
         pageBuilder: (context, state) {
-          final conv = state.extra as DmConversation;
+          final extra = state.extra;
+          if (extra is DmChatArgs) {
+            return MaterialPage(
+              child: DmChatScreen(
+                conversation: extra.conversation,
+                pendingItem: extra.pendingItem,
+              ),
+            );
+          }
+          final conv = extra as DmConversation;
           return MaterialPage(child: DmChatScreen(conversation: conv));
         },
       ),
