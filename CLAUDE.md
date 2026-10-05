@@ -140,6 +140,19 @@ UI → Provider → Repository → Supabase
 
 ---
 
+## 버전 규칙 (Versioning)
+
+`pubspec.yaml`의 `version: X.Y.Z+B` = 마케팅 버전(`X.Y.Z`, 사용자에게 보임) + 빌드번호(`+B`, 내부용).
+
+- **스토어 배포 시 마케팅 버전과 빌드번호를 세트로 함께 +1**, 안드로이드·iOS 동일하게 맞춘다.
+  - 예: `1.0.1+55` → `1.0.2+56` → `1.0.3+57`
+- **빌드번호(+B)는 절대 생략 금지.** 안드로이드 플레이스토어는 versionCode(빌드번호)가 이전보다 커야만 업로드가 되고, 버전명은 정렬에 관여하지 않는다.
+- **iOS 앱스토어는 정식 출시마다 마케팅 버전(X.Y.Z)이 반드시 증가해야 한다.** 이미 출시된 버전명(예: `1.0.0`)은 "닫혀서(train closed)" 같은 버전명으로는 새 빌드를 못 올린다 → 업데이트할 땐 무조건 `1.0.1`, `1.0.2` …로 올린다.
+- 정리: **배포 = 앞(마케팅) 한 칸 + 뒤(빌드) 한 칸, 둘 다 같이 올리기.** 안드로이드/iOS 버전을 항상 일치시켜 관리한다.
+- iOS 앱스토어용 빌드: `flutter build ipa --release` → `build/ios/ipa/*.ipa` 생성 → Transporter 앱으로 업로드 (자동 서명, 팀 `DGQB2M7XR6`, 번들 `com.glution.nakstar`).
+
+---
+
 ## Docs Reference
 
 - 디자인 시스템: docs/DESIGN_SYSTEM.md
