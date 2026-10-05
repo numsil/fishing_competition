@@ -43,6 +43,8 @@ import '../../features/notifications/presentation/screens/notification_screen.da
 import '../../features/units/presentation/screens/units_unit_screen.dart';
 import '../../features/slopes/presentation/screens/slopes_screen.dart';
 import '../../features/slopes/presentation/screens/slope_map_screen.dart';
+import '../../features/slopes/presentation/screens/slope_report_new_screen.dart';
+import '../../features/slopes/presentation/screens/slope_report_error_screen.dart';
 import '../../features/slopes/data/slope_model.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
@@ -180,6 +182,21 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) => MaterialPage(
           child: SlopeMapScreen(
             focus: state.extra is Slope ? state.extra as Slope : null,
+          ),
+        ),
+      ),
+      // 새 슬로프 제보
+      GoRoute(
+        path: AppRoutes.slopeReportNew,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: SlopeReportNewScreen()),
+      ),
+      // 슬로프 오류 신고 (extra: 미리 선택할 Slope, null이면 폼에서 선택)
+      GoRoute(
+        path: AppRoutes.slopeReportError,
+        pageBuilder: (context, state) => MaterialPage(
+          child: SlopeReportErrorScreen(
+            initialSlope: state.extra is Slope ? state.extra as Slope : null,
           ),
         ),
       ),
@@ -350,6 +367,8 @@ class AppRoutes {
   static const String units = '/units';
   static const String slopes = '/slopes';
   static const String slopesMap = '/slopes/map';
+  static const String slopeReportNew = '/slopes/report/new';
+  static const String slopeReportError = '/slopes/report/error';
   static const String dmChat = '/dm/chat';
   static const String albumBundleShare = '/album-bundle-share';
   static const String widgetCatalog = '/widget-catalog';

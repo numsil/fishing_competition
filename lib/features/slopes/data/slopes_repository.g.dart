@@ -6,7 +6,7 @@ part of 'slopes_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$slopesRepositoryHash() => r'e7f12e00334db7cce0b4249fc8d0596c6a4232d2';
+String _$slopesRepositoryHash() => r'3d61f066d44d1de769837a676fa89b20b6fbc07f';
 
 /// See also [slopesRepository].
 @ProviderFor(slopesRepository)
@@ -23,7 +23,7 @@ final slopesRepositoryProvider = AutoDisposeProvider<SlopesRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SlopesRepositoryRef = AutoDisposeProviderRef<SlopesRepository>;
-String _$slopesHash() => r'2d930760626505ec3959add9cd882d460f179c84';
+String _$slopesHash() => r'0db043651793b434969663a696783f4b2c7a84cb';
 
 /// See also [slopes].
 @ProviderFor(slopes)

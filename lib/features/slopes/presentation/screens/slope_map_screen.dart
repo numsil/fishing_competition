@@ -44,12 +44,13 @@ class _SlopeMapScreenState extends ConsumerState<SlopeMapScreen> {
     final accent = context.isDark ? AppColors.neonGreen : AppColors.navy;
     final slopes = await ref.read(slopesProvider.future);
     if (!mounted) return;
+    final markers = <NClusterableMarker>{};
     for (final s in slopes) {
       if (s.lat == null || s.lng == null) continue;
-      final marker = NMarker(
+      final marker = NClusterableMarker(
         id: s.id,
         position: NLatLng(s.lat!, s.lng!),
-        caption: NOverlayCaption(text: s.name, textSize: 11),
+        caption: NOverlayCaption(text: s.displayName, textSize: 11),
         iconTintColor: accent,
       );
       marker.setOnTapListener((_) {
@@ -58,8 +59,10 @@ class _SlopeMapScreenState extends ConsumerState<SlopeMapScreen> {
           NCameraUpdate.scrollAndZoomTo(target: NLatLng(s.lat!, s.lng!)),
         );
       });
-      await controller.addOverlay(marker);
+      markers.add(marker);
     }
+    // 마커 일괄 추가 (개별 addOverlay 반복 X → 배치 1회)
+    await controller.addOverlayAll(markers);
   }
 
   /// 네이버지도 앱으로 열기 (미설치 시 웹 폴백)
@@ -94,7 +97,7 @@ class _SlopeMapScreenState extends ConsumerState<SlopeMapScreen> {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: textColor),
         title: Text(
-          widget.focus?.name ?? '슬로프 지도',
+          widget.focus?.displayName ?? '슬로프 지도',
           style: AppTextStyles.heading3.copyWith(color: textColor),
           overflow: TextOverflow.ellipsis,
         ),
@@ -121,6 +124,18 @@ class _SlopeMapScreenState extends ConsumerState<SlopeMapScreen> {
               mapType: _satellite ? NMapType.hybrid : NMapType.basic,
               logoAlign: NLogoAlign.leftTop,
               logoMargin: const EdgeInsets.all(AppSpacing.md),
+            ),
+            // 밀집 지역(당진 대호만 등) 자동 클러스터링
+            clusterOptions: NaverMapClusteringOptions(
+              clusterMarkerBuilder: (info, clusterMarker) {
+                clusterMarker
+                  ..setIconTintColor(accent)
+                  ..setCaption(NOverlayCaption(
+                    text: info.size.toString(),
+                    color: isDark ? Colors.black : Colors.white,
+                    haloColor: Colors.transparent,
+                  ));
+              },
             ),
             onMapReady: (controller) {
               _controller = controller;
@@ -154,7 +169,7 @@ class _SlopeMapScreenState extends ConsumerState<SlopeMapScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            _selected!.name,
+                            _selected!.displayName,
                             style: AppTextStyles.bodyBold
                                 .copyWith(color: textColor),
                           ),
