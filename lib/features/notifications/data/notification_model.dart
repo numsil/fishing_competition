@@ -1,6 +1,6 @@
 class AppNotification {
   final String id;
-  final String type; // dm | comment | follow
+  final String type; // dm | comment | follow | league_catch_edit
   final String actorId;
   final String? targetId;
   final String body;

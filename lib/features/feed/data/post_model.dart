@@ -43,6 +43,10 @@ abstract class Post with _$Post {
     @JsonKey(name: 'is_personal_record') @Default(false) bool isPersonalRecord,
     @Default(0) int score,
     @JsonKey(name: 'review_status') @Default('pending') String reviewStatus,
+    // 리그 호스트가 수치를 수정한 경우 (original_*는 참가자가 올린 최초 값)
+    @JsonKey(name: 'original_length') double? originalLength,
+    @JsonKey(name: 'original_weight') double? originalWeight,
+    @JsonKey(name: 'measure_edited_at') DateTime? measureEditedAt,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // Joined user data (can be populated after fetch)
     @JsonKey(includeFromJson: false, includeToJson: false) @Default('Unknown') String username,

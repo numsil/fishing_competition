@@ -170,6 +170,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return '$actor님이 댓글을 남겼습니다';
       case 'follow':
         return '$actor님이 팔로우했습니다';
+      case 'league_catch_edit':
+        return '$actor님이 조과 기록을 수정했습니다';
       default:
         return '알림';
     }
