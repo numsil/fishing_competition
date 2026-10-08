@@ -46,6 +46,7 @@ import '../../features/slopes/presentation/screens/slope_map_screen.dart';
 import '../../features/slopes/presentation/screens/slope_report_new_screen.dart';
 import '../../features/slopes/presentation/screens/slope_report_error_screen.dart';
 import '../../features/slopes/data/slope_model.dart';
+import '../../features/slopes/presentation/widgets/slope_access_guard.dart';
 import '../presentation/screens/main_screen.dart';
 import '../presentation/screens/splash_screen.dart';
 import '../../dev/widget_catalog_screen.dart';
@@ -171,32 +172,39 @@ GoRouter appRouter(Ref ref) {
             const MaterialPage(child: UnitsScreen()),
       ),
       // 슬로프 찾기: ShellRoute 밖 → 하단 탭 없음
+      // 전 화면을 SlopeAccessGuard 로 감싼다 — 피드 아이콘을 숨겨도 딥링크로
+      // 들어올 수 있으므로 화면 자체에서 권한을 확인한다.
       GoRoute(
         path: AppRoutes.slopes,
         pageBuilder: (context, state) =>
-            const MaterialPage(child: SlopesScreen()),
+            const MaterialPage(child: SlopeAccessGuard(child: SlopesScreen())),
       ),
       // 슬로프 지도 (extra: 포커스할 Slope, null이면 전국 뷰)
       GoRoute(
         path: AppRoutes.slopesMap,
         pageBuilder: (context, state) => MaterialPage(
-          child: SlopeMapScreen(
-            focus: state.extra is Slope ? state.extra as Slope : null,
+          child: SlopeAccessGuard(
+            child: SlopeMapScreen(
+              focus: state.extra is Slope ? state.extra as Slope : null,
+            ),
           ),
         ),
       ),
       // 새 슬로프 제보
       GoRoute(
         path: AppRoutes.slopeReportNew,
-        pageBuilder: (context, state) =>
-            const MaterialPage(child: SlopeReportNewScreen()),
+        pageBuilder: (context, state) => const MaterialPage(
+          child: SlopeAccessGuard(child: SlopeReportNewScreen()),
+        ),
       ),
       // 슬로프 오류 신고 (extra: 미리 선택할 Slope, null이면 폼에서 선택)
       GoRoute(
         path: AppRoutes.slopeReportError,
         pageBuilder: (context, state) => MaterialPage(
-          child: SlopeReportErrorScreen(
-            initialSlope: state.extra is Slope ? state.extra as Slope : null,
+          child: SlopeAccessGuard(
+            child: SlopeReportErrorScreen(
+              initialSlope: state.extra is Slope ? state.extra as Slope : null,
+            ),
           ),
         ),
       ),

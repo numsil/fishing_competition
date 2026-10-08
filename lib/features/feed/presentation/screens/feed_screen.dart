@@ -642,7 +642,13 @@ class _FeedAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ]
                   // 조과: 슬로프 · 자 · DM · 글쓰기(+)  (검색은 피드 상단 바, 알림은 로고 옆)
                   : [
-                      slopesBtn(),
+                      // 슬로프: 허용된 유저에게만 노출 (일반 유저는 존재를 모름)
+                      Consumer(
+                        builder: (_, ref, __) =>
+                            (ref.watch(canUseSlopesProvider).valueOrNull ?? false)
+                                ? slopesBtn()
+                                : const SizedBox.shrink(),
+                      ),
                       unitsBtn(),
                       dmBtn(),
                       plusBtn(() => context.push(AppRoutes.upload)),

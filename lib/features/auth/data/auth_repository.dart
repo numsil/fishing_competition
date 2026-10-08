@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,6 +15,10 @@ class MyAccountStatus {
   final DateTime? locationAgreedAt;
   final String? email;
 
+  /// 슬로프 기능 접근 권한 (어드민이거나 slope_access_until 이 미래).
+  /// 일반 유저에게는 기능의 존재 자체를 노출하지 않는다.
+  final bool canUseSlopes;
+
   MyAccountStatus({
     required this.status,
     required this.isDeleted,
@@ -20,6 +26,7 @@ class MyAccountStatus {
     required this.isVerifier,
     required this.locationAgreedAt,
     required this.email,
+    this.canUseSlopes = false,
   });
 
   bool get isBanned => status == 'banned';
@@ -97,6 +104,7 @@ class AuthRepository {
           ? null
           : DateTime.parse(r['location_agreed_at'] as String).toUtc(),
       email: r['email'] as String?,
+      canUseSlopes: (r['can_use_slopes'] as bool?) ?? false,
     );
     _cachedStatus = fetched;
     _cachedStatusAt = DateTime.now();
@@ -292,4 +300,18 @@ Stream<AuthState> authState(AuthStateRef ref) {
 @riverpod
 User? currentUser(CurrentUserRef ref) {
   return ref.watch(authRepositoryProvider).currentUser;
+}
+
+/// 슬로프 기능 접근 권한.
+///
+/// 일반 유저에게는 기능의 존재 자체를 노출하지 않는다 (진입 아이콘 비노출 +
+/// 라우트 가드). 데이터는 DB 쪽 RLS(has_slope_access)가 별도로 막는다.
+/// get_my_account_status 의 캐시를 그대로 쓰므로 추가 쿼리가 발생하지 않는다.
+@riverpod
+Future<bool> canUseSlopes(CanUseSlopesRef ref) async {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 10), link.close);
+  if (Supabase.instance.client.auth.currentUser == null) return false;
+  final status = await ref.read(authRepositoryProvider).getMyAccountStatus();
+  return status?.canUseSlopes ?? false;
 }
