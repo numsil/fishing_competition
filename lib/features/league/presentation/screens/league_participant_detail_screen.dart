@@ -546,6 +546,11 @@ class _CatchCard extends StatelessWidget {
                       _MeasureStat(icon: LucideIcons.zap, value: post.lureType!, sub: sub),
                     if (post.location != null && post.location!.isNotEmpty)
                       _MeasureStat(icon: LucideIcons.mapPin, value: dedupeAddress(post.location!), sub: sub),
+                    // 호스트가 수치를 고친 건은 참가자에게도 그 사실을 알린다.
+                    // (원래 값까지 보여주면 분쟁 소지가 있어 '수정됨' 표시만 한다)
+                    if (post.measureEditedAt != null)
+                      _MeasureStat(
+                          icon: LucideIcons.pencil, value: '주최자 수정', sub: sub),
                   ]),
                   if (post.caption != null && post.caption!.isNotEmpty) ...[
                     const SizedBox(height: 8),
