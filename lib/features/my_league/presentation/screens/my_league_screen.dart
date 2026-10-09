@@ -19,6 +19,10 @@ import '../../../feed/data/post_model.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 
+/// 개인 기록 일괄 등록 시 한 번에 고를 수 있는 최대 사진 수.
+/// 순차 업로드라 장수가 늘수록 대기 시간이 길어져 상한을 둔다.
+const int _kMaxBatchPhotos = 10;
+
 class MyLeagueScreen extends ConsumerStatefulWidget {
   const MyLeagueScreen({super.key});
 
@@ -921,20 +925,31 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                       width: 54, height: 54,
                       child: OutlinedButton(
                         onPressed: () async {
-                          File? picked;
+                          // 여러 장 선택 가능. 1장이면 기존 단일 화면,
+                          // 2장 이상이면 사진별로 길이를 받는 일괄 등록 화면으로.
+                          List<File> picked = const [];
                           try {
-                            final img = await ImagePicker().pickImage(
-                              source: ImageSource.gallery,
+                            final imgs = await ImagePicker().pickMultiImage(
                               imageQuality: 85,
                               maxWidth: 1280,
+                              limit: _kMaxBatchPhotos,
                             );
-                            if (img != null) picked = File(img.path);
+                            picked = imgs.map((x) => File(x.path)).toList();
                           } catch (e) {
                             if (context.mounted) AppSnackBar.error(context, '갤러리 실행 실패: $e');
                             return;
                           }
-                          if (picked == null || !context.mounted) return;
-                          await context.push(AppRoutes.personalCatch, extra: picked);
+                          if (picked.isEmpty || !context.mounted) return;
+                          if (picked.length > _kMaxBatchPhotos) {
+                            picked = picked.sublist(0, _kMaxBatchPhotos);
+                            AppSnackBar.warning(
+                                context, '한 번에 최대 $_kMaxBatchPhotos장까지 등록할 수 있습니다');
+                          }
+                          if (picked.length == 1) {
+                            await context.push(AppRoutes.personalCatch, extra: picked.first);
+                          } else {
+                            await context.push(AppRoutes.personalCatchBatch, extra: picked);
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.zero,

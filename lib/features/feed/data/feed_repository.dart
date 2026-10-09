@@ -61,15 +61,19 @@ class FeedRepository {
   FeedRepository(this._supabase);
 
   /// 인기도 혼합 정렬 피드 (RPC). 커서 기반 페이지네이션.
-  /// 점수 = 좋아요(0.4) + 댓글(0.3) + 최신성(0.3), 7일 감쇠.
+  /// 점수 = 최신성 순위(0.40) + 좋아요(0.25) + 댓글(0.15) + 시드 지터(0.20).
+  ///
+  /// [seed] 가 같으면 순서가 항상 같아 페이지를 이어 받아도 중복·누락이 없다.
+  /// 새로고침할 때 새 시드를 넘기면 피드가 다시 섞인다.
   Future<FeedPage> getPosts({
     int limit = kFeedPageSize,
     double? beforeScore,
     DateTime? beforeCreatedAt,
     String? beforeId,
     List<String> blockedUserIds = const [],
+    String seed = '',
   }) async {
-    final params = <String, dynamic>{'p_limit': limit};
+    final params = <String, dynamic>{'p_limit': limit, 'p_seed': seed};
     if (beforeScore != null) params['p_before_score'] = beforeScore;
     if (beforeCreatedAt != null) {
       params['p_before_created_at'] = beforeCreatedAt.toUtc().toIso8601String();
@@ -693,6 +697,10 @@ class FeedPosts extends _$FeedPosts {
   DateTime? _lastCreatedAt;
   String? _lastId;
 
+  // 정렬 시드. build() 될 때마다(= 새로고침·무효화) 새로 만들어 피드를 섞는다.
+  // 같은 세션에서 페이지를 넘길 때는 유지해야 중복·누락이 없다.
+  String _seed = '';
+
   bool get hasMore => _hasMore;
 
   @override
@@ -702,12 +710,14 @@ class FeedPosts extends _$FeedPosts {
     _lastScore = null;
     _lastCreatedAt = null;
     _lastId = null;
+    _seed = DateTime.now().microsecondsSinceEpoch.toString();
     final link = ref.keepAlive();
     Timer(const Duration(minutes: 5), link.close);
     final blocked = await ref.read(authRepositoryProvider).getBlockedUserIds();
     final page = await ref.watch(feedRepositoryProvider).getPosts(
           limit: kFeedPageSize,
           blockedUserIds: blocked,
+          seed: _seed,
         );
     _lastScore = page.lastScore;
     _lastCreatedAt = page.lastCreatedAt;
@@ -729,6 +739,7 @@ class FeedPosts extends _$FeedPosts {
             beforeCreatedAt: _lastCreatedAt,
             beforeId: _lastId,
             blockedUserIds: blocked,
+            seed: _seed,
           );
       _lastScore = page.lastScore;
       _lastCreatedAt = page.lastCreatedAt;

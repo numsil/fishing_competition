@@ -5,12 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
-import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/utils/banned_error_handler.dart';
 import '../../../../core/extensions/theme_extensions.dart';
 import '../../../feed/data/post_model.dart';
 import '../../../ranking/data/score_cache_invalidation.dart';
 import '../../data/league_repository.dart';
+import '../widgets/measure_edit_dialog.dart';
 
 class CatchReviewDetailScreen extends ConsumerStatefulWidget {
   const CatchReviewDetailScreen({
@@ -56,59 +56,16 @@ class _CatchReviewDetailScreenState
 
   Future<void> _editMeasure() async {
     final current = _currentValue;
-    final controller = TextEditingController(
-      text: current == null ? '' : _formatValue(current),
-    );
 
-    final input = await showDialog<String>(
+    final value = await showDialog<double>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(_isWeightRule ? '무게 수정' : '길이 수정'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppTextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.numberWithOptions(
-                decimal: !_isWeightRule,
-              ),
-              hint: _isWeightRule ? '예) 1250' : '예) 42.5',
-              suffixIcon: Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Text(_unit),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '수정하면 작성자에게 알림이 전송됩니다',
-              style: TextStyle(fontSize: 12, color: context.isDark
-                  ? AppColors.darkTextSub
-                  : AppColors.lightTextSub),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: const Text('수정'),
-          ),
-        ],
+      builder: (_) => MeasureEditDialog(
+        currentValue: current,
+        isWeight: _isWeightRule,
       ),
     );
 
-    if (input == null || input.isEmpty) return;
-    final value = double.tryParse(input);
-    if (value == null || value <= 0) {
-      if (mounted) AppSnackBar.warning(context, '올바른 값을 입력해주세요');
-      return;
-    }
-    if (value == current) return;
+    if (value == null || value == current) return;
 
     setState(() => _loading = true);
     try {

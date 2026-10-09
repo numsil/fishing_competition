@@ -109,6 +109,30 @@ class CatchReviewItem extends StatelessWidget {
                           ),
                         ),
                       ),
+                    // 호스트가 수치를 고친 건은 목록에서 바로 구분되게 표시한다.
+                    // (심사 목록은 처리 여부와 무관하게 전체 조과를 보여준다)
+                    if (post.measureEditedAt != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(LucideIcons.pencil,
+                              size: 10,
+                              color: isDark
+                                  ? AppColors.darkTextSub
+                                  : AppColors.lightTextSub),
+                          const SizedBox(width: 3),
+                          Text(
+                            '수치 수정됨',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.darkTextSub
+                                  : AppColors.lightTextSub,
+                            ),
+                          ),
+                        ]),
+                      ),
                   ],
                 ),
               ),
