@@ -232,7 +232,7 @@ class _PersonalCatchBatchScreenState
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
             Text(
-              '사진마다 길이를 입력해주세요. 입력하지 않은 사진은 등록되지 않습니다.',
+              '사진을 탭하면 크게 볼 수 있습니다. 길이를 입력하지 않은 사진은 등록되지 않습니다.',
               style: TextStyle(fontSize: 13, color: sub),
             ),
             const SizedBox(height: 16),
@@ -314,30 +314,60 @@ class _EntryCard extends StatelessWidget {
         borderColor: ready ? accent.withValues(alpha: 0.4) : null,
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.file(
-                entry.file,
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
+            // 길이를 적기 전에 사진을 확인해야 하므로 탭하면 크게 본다.
+            GestureDetector(
+              onTap: () => showDialog<void>(
+                context: context,
+                barrierColor: Colors.black,
+                builder: (_) => _PhotoViewer(file: entry.file),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      entry.file,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    right: 3,
+                    bottom: 3,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(LucideIcons.maximize2,
+                          size: 10, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: AppTextField(
                 controller: entry.lengthCtrl,
-                hint: '길이',
+                hint: '길이 입력',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                 ],
                 onChanged: (_) => onChanged(),
-                suffixIcon: const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Text('cm'),
-                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'cm',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: ready ? accent : sub,
               ),
             ),
             IconButton(
@@ -347,6 +377,44 @@ class _EntryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 등록 전 사진 확인용 전체화면 뷰어. 확대·축소와 탭으로 닫기를 지원한다.
+class _PhotoViewer extends StatelessWidget {
+  const _PhotoViewer({required this.file});
+
+  final File file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4.0,
+                child: Center(child: Image.file(file, fit: BoxFit.contain)),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(LucideIcons.x, color: Colors.white, size: 26),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
