@@ -19,6 +19,7 @@ import '../../features/league/presentation/screens/league_manage_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_screen.dart';
 import '../../features/my_league/presentation/screens/my_league_detail_screen.dart';
 import '../../features/my_league/presentation/screens/personal_catch_screen.dart';
+import '../../features/my_league/presentation/screens/personal_catch_batch_screen.dart';
 import '../../features/my_league/presentation/screens/personal_record_detail_screen.dart';
 import '../../features/my_league/presentation/screens/album_bundle_share_screen.dart';
 import '../../features/feed/data/post_model.dart';
@@ -131,6 +132,19 @@ GoRouter appRouter(Ref ref) {
           return MaterialPage(
             fullscreenDialog: true,
             child: PersonalCatchScreen(initialImage: initialImage),
+          );
+        },
+      ),
+      // 개인 기록 여러 장 일괄 등록 (앨범에서 2장 이상 선택)
+      GoRoute(
+        path: AppRoutes.personalCatchBatch,
+        pageBuilder: (context, state) {
+          final images = state.extra is List<File>
+              ? state.extra as List<File>
+              : <File>[];
+          return MaterialPage(
+            fullscreenDialog: true,
+            child: PersonalCatchBatchScreen(images: images),
           );
         },
       ),
@@ -321,6 +335,7 @@ class AppRoutes {
   static const String leagueManage = '/league/manage';
   static const String upload = '/upload';
   static const String personalCatch = '/personal-catch';
+  static const String personalCatchBatch = '/personal-catch-batch';
   static const String personalRecordDetail = '/personal-record';
   static const String ranking = '/ranking';
   static const String profile = '/profile';
