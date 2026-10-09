@@ -11,7 +11,10 @@ plugins {
 
 android {
     namespace = "com.glution.nakstar"
-    compileSdk = flutter.compileSdkVersion
+    // Play 정책: 최신 Android 출시로부터 1년 이내 API 수준을 타겟팅해야 업데이트 가능.
+    // flutter.compileSdkVersion/targetSdkVersion 을 따라가면 Flutter 를 내릴 때
+    // 함께 내려가 정책 위반이 되므로 명시적으로 고정한다.
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -29,7 +32,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36 // Android 16. Play 정책 준수 (위 주석 참고)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
