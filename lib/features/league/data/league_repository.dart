@@ -181,7 +181,8 @@ class LeagueRepository {
     var query = _supabase
         .from('leagues')
         .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)')
-        .eq('league_participants.status', 'approved');
+        .eq('league_participants.status', 'approved')
+        .neq('status', 'canceled');
 
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());
@@ -435,9 +436,12 @@ class LeagueRepository {
         .eq('id', leagueId)
         .maybeSingle();
 
-    // 2. DB 삭제 (리그 소속 posts 먼저 — league_id FK 제약)
-    await _supabase.from('posts').delete().eq('league_id', leagueId);
-    await _supabase.from('leagues').delete().eq('id', leagueId);
+    // 2. DB 삭제는 RPC 로 처리한다.
+    //    클라이언트에서 posts 를 직접 지우면 posts DELETE RLS
+    //    (auth.uid() = user_id) 때문에 호스트 자기 글만 지워지고 다른 참가자의
+    //    조과는 조용히 남는다. delete_league 는 SECURITY DEFINER 로
+    //    "기록이 전혀 없는 리그"만 삭제하며, 기록이 있으면 예외를 던진다.
+    await _supabase.rpc('delete_league', params: {'p_league_id': leagueId});
 
     // 3. Storage 파일 best-effort 정리
     //    DB 삭제는 이미 끝났으므로, 스토리지 정리 실패가 삭제 작업 전체를
@@ -462,6 +466,35 @@ class LeagueRepository {
     } catch (_) {
       // 스토리지 잔여 파일은 무시(베스트 에포트). DB 행은 이미 삭제됨.
     }
+  }
+
+  // ── 리그 취소 ──────────────────────────────────────────────
+  /// 조과·참가자가 있는 리그는 삭제할 수 없다(기록이 사라지고, 과거에는
+  /// 남은 조과가 공개 피드로 유출되기도 했다). 대신 '취소됨' 으로 돌려
+  /// 기록을 보존한다.
+  Future<void> cancelLeague(String leagueId) async {
+    await _supabase.rpc('cancel_league', params: {'p_league_id': leagueId});
+  }
+
+  /// 리그를 완전히 삭제할 수 있는지 여부.
+  /// 살아있는 조과가 없고, 호스트 외 승인 참가자가 없을 때만 true.
+  Future<bool> canDeleteLeague(String leagueId, String hostId) async {
+    final posts = await _supabase
+        .from('posts')
+        .select('id')
+        .eq('league_id', leagueId)
+        .eq('is_deleted', false)
+        .limit(1);
+    if (posts.isNotEmpty) return false;
+
+    final others = await _supabase
+        .from('league_participants')
+        .select('user_id')
+        .eq('league_id', leagueId)
+        .eq('status', 'approved')
+        .neq('user_id', hostId)
+        .limit(1);
+    return others.isEmpty;
   }
 
   // ── 리그 상태 변경 ──────────────────────────────────────────

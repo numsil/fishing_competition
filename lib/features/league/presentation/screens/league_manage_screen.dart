@@ -30,7 +30,10 @@ enum LeagueManageStatus { upcoming, live, ended }
 LeagueManageStatus _statusFromString(String s) {
   switch (s) {
     case 'in_progress': return LeagueManageStatus.live;
-    case 'completed':   return LeagueManageStatus.ended;
+    // 취소된 리그는 종료와 같은 권한(심사·추방·삭제 불가)으로 다룬다.
+    // 뱃지 문구만 _StatusCard 에서 isCanceled 로 구분한다.
+    case 'completed':
+    case 'canceled':    return LeagueManageStatus.ended;
     default:            return LeagueManageStatus.upcoming;
   }
 }
@@ -206,28 +209,93 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
     }
   }
 
-  void _deleteLeague(BuildContext context, League league) {
+  /// 리그 삭제 / 취소.
+  ///
+  /// 조과나 다른 참가자가 있는 리그는 삭제하지 않고 '취소됨' 으로 돌린다.
+  /// 삭제해버리면 참가자들의 기록이 사라지고, 과거에는 남은 조과의
+  /// league_id 가 비워져 공개 피드로 유출되기도 했다.
+  Future<void> _deleteLeague(BuildContext context, League league) async {
     if (league.status == 'completed') {
       AppSnackBar.error(context, '종료된 리그는 삭제할 수 없습니다.\n참가자 전적 데이터가 보호됩니다.');
       return;
     }
+
+    final repo = ref.read(leagueRepositoryProvider);
+
+    bool canDelete;
+    try {
+      canDelete = await repo.canDeleteLeague(league.id, league.hostId);
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, '확인 실패: $e');
+      return;
+    }
+    if (!context.mounted) return;
+
+    if (canDelete) {
+      _confirmHardDelete(context, league, repo);
+    } else {
+      _confirmCancel(context, league, repo);
+    }
+  }
+
+  /// 기록이 전혀 없는 리그 → 완전 삭제.
+  void _confirmHardDelete(
+    BuildContext context,
+    League league,
+    LeagueRepository repo,
+  ) {
     showDeleteConfirmSheet(
       context,
       title: '리그 삭제',
-      content: '"${league.title}"\n\n리그를 삭제하면 모든 참가자 데이터도 함께 삭제됩니다.',
+      content: '"${league.title}"\n\n등록된 조과와 참가자가 없어 완전히 삭제됩니다.',
       onConfirmed: () async {
         final navigator = Navigator.of(context);
         try {
-          await ref.read(leagueRepositoryProvider).deleteLeague(league.id);
+          await repo.deleteLeague(league.id);
           ref.invalidate(myLeaguesProvider);
           ref.invalidate(leaguesProvider);
           if (context.mounted) {
-                        AppSnackBar.success(context, '리그가 삭제되었습니다.');
+            AppSnackBar.success(context, '리그가 삭제되었습니다.');
             navigator.pop();
           }
         } catch (e) {
           if (context.mounted) {
-                        AppSnackBar.error(context, '삭제 실패: $e');
+            AppSnackBar.error(context, '삭제 실패: $e');
+          }
+        }
+      },
+    );
+  }
+
+  /// 조과·참가자가 있는 리그 → 취소(기록 보존).
+  void _confirmCancel(
+    BuildContext context,
+    League league,
+    LeagueRepository repo,
+  ) {
+    showDeleteConfirmSheet(
+      context,
+      title: '리그 취소',
+      content: '"${league.title}"\n\n'
+          '이미 등록된 조과나 참가자가 있어 삭제할 수 없습니다.\n'
+          '대신 리그를 취소하면 더 이상 진행되지 않고, 참가자들의 기록은 그대로 보존됩니다.',
+      slideLabel: '밀어서 취소',
+      icon: LucideIcons.ban,
+      onConfirmed: () async {
+        final navigator = Navigator.of(context);
+        try {
+          await repo.cancelLeague(league.id);
+          ref.invalidate(myLeaguesProvider);
+          ref.invalidate(leaguesProvider);
+          ref.invalidate(leagueDetailProvider(widget.leagueId));
+          if (context.mounted) {
+            AppSnackBar.success(context, '리그가 취소되었습니다.');
+            navigator.pop();
+          }
+        } catch (e) {
+          if (context.mounted) {
+            AppSnackBar.error(context, '취소 실패: $e');
           }
         }
       },
@@ -263,7 +331,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
             title: const Text('대회 관리',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             actions: [
-              if (league.status != 'completed')
+              if (league.status != 'completed' && league.status != 'canceled')
                 TextButton(
                   onPressed: () => _deleteLeague(context, league),
                   child: const Text('리그삭제',
@@ -290,6 +358,7 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
               // ── 대회 정보 카드 ──────────────────────────────────
               _StatusCard(
                 status: status,
+                isCanceled: league.status == 'canceled',
                 name: league.title,
                 location: league.location,
                 dateRange: dateRange,
@@ -592,6 +661,7 @@ class _PendingTabBody extends ConsumerWidget {
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
     required this.status,
+    required this.isCanceled,
     required this.name,
     required this.location,
     required this.dateRange,
@@ -610,6 +680,7 @@ class _StatusCard extends StatelessWidget {
   });
 
   final LeagueManageStatus status;
+  final bool isCanceled;
   final String name, location, dateRange, fish, rule;
   final int maxParticipants, fee, currentParticipants;
   final bool isDark;
@@ -618,11 +689,13 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (statusLabel, statusColor) = switch (status) {
-      LeagueManageStatus.upcoming => ('진행 예정', accent),
-      LeagueManageStatus.live     => ('진행중', AppColors.liveRed),
-      LeagueManageStatus.ended    => ('종료', sub),
-    };
+    final (statusLabel, statusColor) = isCanceled
+        ? ('취소됨', sub)
+        : switch (status) {
+            LeagueManageStatus.upcoming => ('진행 예정', accent),
+            LeagueManageStatus.live     => ('진행중', AppColors.liveRed),
+            LeagueManageStatus.ended    => ('종료', sub),
+          };
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
