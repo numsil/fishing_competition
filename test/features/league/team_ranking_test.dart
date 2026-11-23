@@ -69,12 +69,13 @@ void main() {
     });
 
     test('마릿수 룰은 totalCount 로 정렬한다', () {
-      // 마릿수 룰에서는 totalLength 가 0으로 들어온다.
-      // 측정값으로 정렬하면 전 팀이 동점이 되어 순위가 뒤집힌다.
+      // 마릿수 룰은 마릿수가 점수다. totalLength 로 정렬하면 엉뚱한
+      // 기준(길이 합)으로 줄을 세우게 된다. 아래 입력은 그 역전을 만든다:
+      // a 는 길이가 길지만 마릿수가 적다.
       final result = buildTeamRanking(
         ranking: [
-          entry('a', totalCount: 2),
-          entry('b', totalCount: 7),
+          entry('a', totalLength: 300, totalCount: 2, bestLength: 160),
+          entry('b', totalLength: 150, totalCount: 7, bestLength: 40),
         ],
         teams: [team('A', ['a'], sortOrder: 0), team('B', ['b'], sortOrder: 1)],
         rule: '마릿수',

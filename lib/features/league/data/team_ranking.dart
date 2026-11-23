@@ -45,7 +45,11 @@ Map<String, int> rankByUserId(List<LeagueRankEntry> ranking) {
 /// 결과이고, 리그의 rule/catch_limit 은 이미 그 안에서 각 개인에게 적용돼
 /// 있다. 여기서 하는 일은 합산과 정렬뿐이다.
 ///
-/// [rule] 이 '마릿수' 면 측정값이 비어 있으므로 마릿수로 정렬한다.
+/// [rule] 이 '마릿수' 면 마릿수로 정렬한다. 그 룰에서는 길이·무게가 아니라
+/// 마릿수가 점수이기 때문이다 (기존 `get_league_ranking` 의 개인 정렬도
+/// 마릿수를 1순위로 쓴다). 참고로 마릿수 리그에서도 `totalLength` 는 0이
+/// 아니라 길이 합으로 채워져 오므로, 측정값으로 정렬하면 "동점"이 되는 게
+/// 아니라 "엉뚱한 기준(길이)으로 정렬"된다. prod 실측 확인함.
 List<LeagueTeamRank> buildTeamRanking({
   required List<LeagueRankEntry> ranking,
   required List<LeagueTeam> teams,
