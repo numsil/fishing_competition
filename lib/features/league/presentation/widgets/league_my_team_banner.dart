@@ -12,7 +12,10 @@ import '../../data/league_team_model.dart';
 ///
 /// 호스트 배정 리그에 그리면 누를 수 없는 버튼을 보여주는 셈이다
 /// (set_my_league_team 이 SELF_PICK_DISABLED 를 던진다).
-@visibleForTesting
+///
+/// 프로덕션 경로(league_team_ranking_tab)가 호출하므로 @visibleForTesting 을
+/// 붙이면 안 된다 — analyze 가 invalid_use_of_visible_for_testing_member
+/// 경고를 내고, 경고는 analyze 를 실패시킨다.
 bool shouldShowMyTeamBanner({
   required bool isSelfPick,
   required bool isApprovedParticipant,

@@ -12,6 +12,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_repository.dart';
 import '../../data/league_team_model.dart';
+import '../../data/team_assign_options.dart';
 import '../../data/team_capacity.dart';
 import '../widgets/team_member_add_sheet.dart';
 
@@ -54,6 +55,16 @@ class _LeagueTeamManageScreenState
   /// 않는다. 커버 범위는 "방금 셔플이 실수였다" 하나다.
   List<TeamAssignment>? _undoSnapshot;
 
+  /// 정원 스테퍼의 낙관적 값. null 이면 서버 값을 그대로 쓴다.
+  ///
+  /// 서버 값만 보고 그리면 왕복이 끝날 때까지 숫자가 그대로여서, 호스트가
+  /// 빠르게 다섯 번 누르면 다섯 번 모두 같은 값(current+1)을 보내고
+  /// 결과는 1 이 된다. 왕복도 5회 낭비된다.
+  int? _capacityDraft;
+
+  /// 진행 중인 정원 저장. 마지막 값만 서버에 반영한다.
+  bool _savingCapacity = false;
+
   String get leagueId => widget.leagueId;
 
   /// 팀 변경 후 갱신. 팀 소속이 바뀌어도 개인 점수는 바뀌지 않으므로
@@ -80,11 +91,13 @@ class _LeagueTeamManageScreenState
     final rankingAsync = ref.watch(leagueRankingProvider(leagueId));
     // 정원은 리그 단위다. 리그 상세는 호스트가 관리 화면으로 들어오는
     // 경로에서 이미 캐시돼 있으므로 사실상 추가 쿼리가 아니다.
-    final capacity = ref
+    final serverCapacity = ref
             .watch(leagueDetailProvider(leagueId))
             .valueOrNull
             ?.teamCapacity ??
         0;
+    // 낙관적 값이 있으면 그걸 쓴다 (연속 탭이 유실되지 않게).
+    final capacity = _capacityDraft ?? serverCapacity;
 
     return Scaffold(
       appBar: AppBar(title: const Text('팀 관리')),
@@ -102,6 +115,13 @@ class _LeagueTeamManageScreenState
             }
             final unassigned =
                 participants.where((p) => !assigned.contains(p.userId)).toList();
+            // 팀 카드·시트가 같은 수를 보도록 한 곳에서 센다.
+            final memberCountByTeamId = <String, int>{
+              for (final t in teams)
+                t.id: t.memberUserIds
+                    .where((uid) => byUserId.containsKey(uid))
+                    .length,
+            };
 
             return RefreshIndicator(
               onRefresh: () async => _refreshAll(),
@@ -223,7 +243,8 @@ class _LeagueTeamManageScreenState
                               isDark: isDark,
                               onTap: teams.isEmpty
                                   ? null
-                                  : () => _pickTeam(teams, p.userId, null),
+                                  : () => _pickTeam(teams, p.userId, null,
+                                      capacity, memberCountByTeamId),
                             ),
                         ],
                       ),
@@ -250,7 +271,8 @@ class _LeagueTeamManageScreenState
                       onRename: () => _editTeam(t),
                       onRecolor: () => _editTeamColor(t),
                       onDelete: () => _deleteTeam(t),
-                      onTapMember: (uid) => _pickTeam(teams, uid, t.id),
+                      onTapMember: (uid) => _pickTeam(
+                          teams, uid, t.id, capacity, memberCountByTeamId),
                       onAddMembers: () =>
                           _addMembers(t, teams, participants, capacity),
                     ),
@@ -274,14 +296,41 @@ class _LeagueTeamManageScreenState
 
   /// 정원을 현재 인원보다 작게 줄여도 멤버를 강제로 빼지 않는다.
   /// 그 팀은 "6 / 5" 로 표시되고 신규 진입만 막힌다.
-  Future<void> _setCapacity(int next) async {
+  ///
+  /// 화면에는 즉시 반영하고(_capacityDraft), 저장은 직렬화해서 **마지막 값만**
+  /// 보낸다. 연속 탭마다 왕복을 걸면 탭이 유실되고 호출이 낭비된다.
+  void _setCapacity(int next) {
+    final clamped = next < 0 ? 0 : (next > 50 ? 50 : next);
+    setState(() => _capacityDraft = clamped);
+    _flushCapacity();
+  }
+
+  Future<void> _flushCapacity() async {
+    if (_savingCapacity) return; // 진행 중이면 끝날 때 최신값으로 다시 돈다
+    _savingCapacity = true;
     try {
-      await ref
-          .read(leagueRepositoryProvider)
-          .updateLeague(id: leagueId, teamCapacity: next);
-      ref.invalidate(leagueDetailProvider(leagueId));
+      while (true) {
+        final target = _capacityDraft;
+        if (target == null) break;
+        await ref
+            .read(leagueRepositoryProvider)
+            .updateLeague(id: leagueId, teamCapacity: target);
+        // 저장하는 동안 더 눌렀으면 그 값으로 한 번 더 돈다.
+        if (_capacityDraft != target) continue;
+        if (!mounted) return;
+        // 서버가 받은 값과 draft 가 같아졌으니 draft 를 비우고 서버 값을 쓴다.
+        setState(() => _capacityDraft = null);
+        ref.invalidate(leagueDetailProvider(leagueId));
+        break;
+      }
     } catch (e) {
-      if (mounted) AppSnackBar.error(context, _message(e));
+      if (mounted) {
+        setState(() => _capacityDraft = null);
+        AppSnackBar.error(context, _message(e));
+      }
+      ref.invalidate(leagueDetailProvider(leagueId));
+    } finally {
+      _savingCapacity = false;
     }
   }
 
@@ -327,7 +376,11 @@ class _LeagueTeamManageScreenState
       if (shouldDropSnapshot(e) && mounted) {
         setState(() => _undoSnapshot = null);
       }
-      if (mounted) AppSnackBar.error(context, _message(e));
+      // 되돌리기는 팀을 고르는 동작이 아니므로 일반 TEAM_FULL 문구
+      // ("다른 팀을 골라주세요")는 따를 수 없는 지시가 된다.
+      if (mounted) {
+        AppSnackBar.error(context, undoFailureMessage(e) ?? _message(e));
+      }
     }
   }
 
@@ -342,20 +395,25 @@ class _LeagueTeamManageScreenState
     int capacity,
   ) async {
     final nameByUserId = <String, String>{};
+    final teamIdByUserId = <String, String?>{
+      for (final p in participants) p.userId: null,
+    };
     for (final t in teams) {
       for (final uid in t.memberUserIds) {
         nameByUserId[uid] = t.name;
+        teamIdByUserId[uid] = t.id;
       }
     }
-    final mine = team.memberUserIds.toSet();
-    final candidates = participants
-        .where((p) => !mine.contains(p.userId))
-        .toList(growable: false);
+    // 멤버 수는 카드 표시와 같은 기준(순위에 있는 승인 참가자)으로 센다.
+    final mine = team.memberUserIds
+        .where((uid) => teamIdByUserId.containsKey(uid))
+        .toSet();
 
     final picked = await showTeamMemberAddSheet(
       context: context,
       team: team,
-      candidates: candidates,
+      participants: participants,
+      teamIdByUserId: teamIdByUserId,
       teamNameByUserId: nameByUserId,
       remaining: remainingSlots(capacity: capacity, memberCount: mine.length),
       isDark: context.isDark,
@@ -491,10 +549,16 @@ class _LeagueTeamManageScreenState
   }
 
   /// 단건 이동. 팀이 8개를 넘으면 스크롤만으로는 못 찾으므로 검색을 넣는다.
+  ///
+  /// 정원과 꽉 찬 상태를 **시트에서** 보여준다. 안 보여주면 호스트가 이미
+  /// 꽉 찬 팀을 눌러 "방금 정원이 찼습니다" 를 받는데, 시트를 열기 전부터
+  /// 꽉 차 있었으므로 거짓말이고, 어느 팀에 자리가 있는지도 알 수 없다.
   Future<void> _pickTeam(
     List<LeagueTeam> teams,
     String userId,
     String? currentTeamId,
+    int capacity,
+    Map<String, int> memberCountByTeamId,
   ) async {
     final ctrl = TextEditingController();
     final picked = await showModalBottomSheet<_TeamPick>(
@@ -534,20 +598,8 @@ class _LeagueTeamManageScreenState
                       shrinkWrap: true,
                       children: [
                         for (final t in shown)
-                          ListTile(
-                            leading: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                  color: AppColors.teamColor(t.color),
-                                  shape: BoxShape.circle),
-                            ),
-                            title: Text(t.name),
-                            trailing: t.id == currentTeamId
-                                ? const Icon(LucideIcons.check, size: 18)
-                                : null,
-                            onTap: () => Navigator.pop(ctx, _TeamPick(t.id)),
-                          ),
+                          _buildTeamPickRow(ctx, t, currentTeamId, capacity,
+                              memberCountByTeamId[t.id] ?? 0),
                         if (shown.isEmpty)
                           const Padding(
                             padding: EdgeInsets.all(24),
@@ -584,6 +636,56 @@ class _LeagueTeamManageScreenState
     } catch (e) {
       if (mounted) AppSnackBar.error(context, _message(e));
     }
+  }
+
+  /// 단건 이동 시트의 팀 한 줄. 꽉 찬 팀은 탭할 수 없다.
+  Widget _buildTeamPickRow(
+    BuildContext ctx,
+    LeagueTeam t,
+    String? currentTeamId,
+    int capacity,
+    int memberCount,
+  ) {
+    final isCurrent = t.id == currentTeamId;
+    final pickable = canPickTeam(
+      isCurrentTeam: isCurrent,
+      capacity: capacity,
+      memberCount: memberCount,
+    );
+    final over = isOverCapacity(capacity: capacity, memberCount: memberCount);
+    final sub =
+        context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+
+    return Opacity(
+      opacity: pickable ? 1 : 0.45,
+      child: ListTile(
+        enabled: pickable,
+        leading: Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+              color: AppColors.teamColor(t.color), shape: BoxShape.circle),
+        ),
+        title: Text(t.name),
+        subtitle: Text(
+          pickable
+              ? capacityLabel(capacity: capacity, memberCount: memberCount)
+              : '${capacityLabel(capacity: capacity, memberCount: memberCount)} · 정원 마감',
+          style: AppTextStyles.caption.copyWith(
+            color: pickable
+                ? (over ? AppColors.warning : sub)
+                : AppColors.warning,
+            fontWeight: pickable && !over ? null : FontWeight.w700,
+          ),
+        ),
+        trailing: isCurrent
+            ? const Icon(LucideIcons.check, size: 18)
+            : (pickable
+                ? null
+                : Icon(LucideIcons.lock, size: 16, color: sub)),
+        onTap: pickable ? () => Navigator.pop(ctx, _TeamPick(t.id)) : null,
+      ),
+    );
   }
 
   Future<String?> _promptName({

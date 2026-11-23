@@ -7,18 +7,24 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_repository.dart';
 import '../../data/league_team_model.dart';
+import '../../data/team_assign_options.dart';
 
 /// 팀에 여러 명을 한 번에 넣는 바텀시트.
 ///
 /// 1명당 2탭이면 100명·20팀에서 200탭이 된다. 방향을 뒤집어 팀 1개당
 /// 1번으로 만드는 것이 이 시트의 목적이다 — 확인 시 RPC 1회.
 ///
+/// 기본 목록은 **미배정자만**이다. 전체 명단을 깔면 `전체 선택` 이
+/// "모두 이 팀으로"가 되어, 되돌릴 수 없는 일괄 이동이 한 번의 탭으로
+/// 일어난다 (이 경로에는 되돌리기가 없다). 다른 팀 소속은 검색으로 찾는다.
+///
 /// 고른 userId 목록을 돌려주고, 취소면 null 이다.
 /// [remaining] 이 음수면 정원 무제한이다.
 Future<List<String>?> showTeamMemberAddSheet({
   required BuildContext context,
   required LeagueTeam team,
-  required List<LeagueRankEntry> candidates,
+  required List<LeagueRankEntry> participants,
+  required Map<String, String?> teamIdByUserId,
   required Map<String, String> teamNameByUserId,
   required int remaining,
   required bool isDark,
@@ -38,12 +44,13 @@ Future<List<String>?> showTeamMemberAddSheet({
       child: SafeArea(
         child: StatefulBuilder(
           builder: (ctx, setSheetState) {
-            final q = ctrl.text.trim().toLowerCase();
-            final shown = q.isEmpty
-                ? candidates
-                : candidates
-                    .where((c) => c.username.toLowerCase().contains(q))
-                    .toList(growable: false);
+            final q = ctrl.text.trim();
+            final shown = memberAddCandidates(
+              participants: participants,
+              teamIdByUserId: teamIdByUserId,
+              thisTeamId: team.id,
+              query: q,
+            );
             final atLimit = !unlimited && selected.length >= remaining;
 
             return ConstrainedBox(
@@ -85,7 +92,10 @@ Future<List<String>?> showTeamMemberAddSheet({
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 2),
                   child: Row(children: [
                     Expanded(
-                      child: Text('후보 ${candidates.length}명',
+                      child: Text(
+                          q.isEmpty
+                              ? '미배정 ${shown.length}명'
+                              : '검색 결과 ${shown.length}명',
                           style: AppTextStyles.caption.copyWith(
                               color: sub, fontWeight: FontWeight.w700)),
                     ),
@@ -105,8 +115,13 @@ Future<List<String>?> showTeamMemberAddSheet({
                 if (shown.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text('검색 결과가 없습니다',
-                        style: AppTextStyles.bodySmall.copyWith(color: sub)),
+                    child: Text(
+                        q.isEmpty
+                            ? '미배정 참가자가 없습니다.\n다른 팀에서 데려오려면 이름을 검색하세요.'
+                            : '검색 결과가 없습니다',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: sub, height: 1.5)),
                   )
                 else
                   Flexible(
@@ -153,7 +168,10 @@ Future<List<String>?> showTeamMemberAddSheet({
                                         color: AppColors.warning,
                                         fontWeight: FontWeight.w700))
                               else
-                                Text(currentTeam ?? '미배정',
+                                Text(
+                                    currentTeam == null
+                                        ? '${c.totalCount}마리'
+                                        : '$currentTeam · ${c.totalCount}마리',
                                     style: AppTextStyles.caption
                                         .copyWith(color: sub)),
                             ]),
@@ -178,8 +196,8 @@ Future<List<String>?> showTeamMemberAddSheet({
                     const SizedBox(height: 8),
                     Text(
                       unlimited
-                          ? '검색하면 다른 팀 소속도 나옵니다. 고르면 그 팀에서 옮겨집니다.'
-                          : '정원을 넘기면 더 고를 수 없습니다. 검색하면 다른 팀 소속도 나옵니다.',
+                          ? '미배정 참가자만 보입니다. 이름을 검색하면 다른 팀 소속도 나오고, 고르면 그 팀에서 옮겨집니다.'
+                          : '미배정 참가자만 보입니다. 정원을 넘기면 더 고를 수 없습니다. 검색하면 다른 팀 소속도 나옵니다.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.caption
                           .copyWith(color: sub, height: 1.5),

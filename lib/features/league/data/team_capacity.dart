@@ -1,8 +1,8 @@
-/// 팀 정원 판정. `leagues.team_capacity` 가 `0` 이면 무제한이다.
-///
-/// 이 파일의 규칙은 마이그레이션
-/// `20261123140000_league_team_assign_mode.sql` 의 RPC 검증과 1:1 로
-/// 대응한다. 한쪽만 고치면 UI 가 허용한 조작이 서버에서 거부된다.
+// 팀 정원 판정. `leagues.team_capacity` 가 `0` 이면 무제한이다.
+//
+// 이 파일의 규칙은 마이그레이션
+// `20261123140000_league_team_assign_mode.sql` 의 RPC 검증과 1:1 로
+// 대응한다. 한쪽만 고치면 UI 가 허용한 조작이 서버에서 거부된다.
 
 /// 더 들어갈 수 없는가.
 bool isTeamFull({required int capacity, required int memberCount}) =>
