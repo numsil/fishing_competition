@@ -26,7 +26,7 @@ class MyLeagueRepository {
     // 1. Hosted leagues
     final hostedRes = await _supabase
         .from('leagues')
-        .select('id, host_id, title, location, status, start_time, end_time, max_participants, is_public, is_team_mode, created_at, league_participants(count)')
+        .select('id, host_id, title, location, status, start_time, end_time, max_participants, is_public, is_team_mode, team_assign_mode, team_capacity, created_at, league_participants(count)')
         .eq('host_id', userId)
         .eq('league_participants.status', 'approved')
         .order('created_at', ascending: false);
@@ -34,7 +34,7 @@ class MyLeagueRepository {
     // 2. Participated leagues
     final participatedRes = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, is_public, is_team_mode, created_at, league_participants(count))')
+        .select('leagues(id, host_id, title, location, status, start_time, end_time, max_participants, is_public, is_team_mode, team_assign_mode, team_capacity, created_at, league_participants(count))')
         .eq('user_id', userId)
         .eq('leagues.league_participants.status', 'approved')
         .order('joined_at', ascending: false);

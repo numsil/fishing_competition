@@ -6,6 +6,9 @@ part 'league_model.g.dart';
 
 @freezed
 abstract class League with _$League {
+  /// freezed 는 클래스에 getter 를 두려면 private 생성자를 요구한다.
+  const League._();
+
   const factory League({
     required String id,
     @JsonKey(name: 'host_id') required String hostId,
@@ -27,6 +30,8 @@ abstract class League with _$League {
     @JsonKey(name: 'is_public') @Default(true) bool isPublic,
     @JsonKey(name: 'allow_gallery') @Default(true) bool allowGallery,
     @JsonKey(name: 'is_team_mode') @Default(false) bool isTeamMode,
+    @JsonKey(name: 'team_assign_mode') @Default('host') String teamAssignMode,
+    @JsonKey(name: 'team_capacity') @Default(0) int teamCapacity,
     @JsonKey(name: 'intro_image_urls') @Default([]) List<String> introImageUrls,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // 조인된 데이터
@@ -36,4 +41,10 @@ abstract class League with _$League {
   }) = _League;
 
   factory League.fromJson(Map<String, dynamic> json) => _$LeagueFromJson(json);
+
+  /// 참가자가 직접 팀을 고를 수 있는 리그인가.
+  ///
+  /// 팀전을 끄면 team_assign_mode 는 보존되므로(되돌릴 수 있게),
+  /// isTeamMode 를 같이 봐야 개인전 리그에 배너가 뜨지 않는다.
+  bool get isSelfPick => isTeamMode && teamAssignMode == 'self';
 }

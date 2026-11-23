@@ -46,3 +46,21 @@ class LeagueTeam {
     );
   }
 }
+
+/// 한 사람의 팀 배정 1건. `assign_league_teams` RPC 의 입력 원소이고,
+/// `shuffle_league_teams` 가 돌려주는 스냅샷의 원소이기도 하다.
+///
+/// `teamId == null` 은 "미배정"이다.
+class TeamAssignment {
+  const TeamAssignment({required this.userId, this.teamId});
+
+  final String userId;
+  final String? teamId;
+
+  Map<String, dynamic> toJson() => {'user_id': userId, 'team_id': teamId};
+
+  factory TeamAssignment.fromJson(Map<String, dynamic> json) => TeamAssignment(
+        userId: json['user_id'] as String,
+        teamId: json['team_id'] as String?,
+      );
+}

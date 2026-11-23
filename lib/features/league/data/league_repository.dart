@@ -122,6 +122,8 @@ class LeagueRepository {
     bool isPublic = true,
     bool allowGallery = true,
     bool isTeamMode = false,
+    String teamAssignMode = 'host',
+    int teamCapacity = 0,
     List<XFile> introImageFiles = const [],
   }) async {
     final imageUrls = introImageFiles.isNotEmpty
@@ -147,6 +149,8 @@ class LeagueRepository {
       'is_public': isPublic,
       'allow_gallery': allowGallery,
       'is_team_mode': isTeamMode,
+      'team_assign_mode': teamAssignMode,
+      'team_capacity': teamCapacity,
       'intro_image_urls': imageUrls,
     });
   }
@@ -158,7 +162,8 @@ class LeagueRepository {
           'id, host_id, title, description, short_description, location, '
           'lat, lng, start_time, end_time, entry_fee, max_participants, '
           'status, fish_types, rule, catch_limit, prize_info, is_public, '
-          'allow_gallery, is_team_mode, intro_image_urls, created_at, '
+          'allow_gallery, is_team_mode, team_assign_mode, team_capacity, '
+          'intro_image_urls, created_at, '
           'league_participants(count), users!host_id(username, avatar_url)',
         )
         .eq('id', id)
@@ -183,7 +188,7 @@ class LeagueRepository {
   }) async {
     var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, created_at, league_participants(count), users!host_id(username)')
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, team_assign_mode, team_capacity, created_at, league_participants(count), users!host_id(username)')
         .eq('league_participants.status', 'approved')
         .neq('status', 'canceled');
 
@@ -236,7 +241,7 @@ class LeagueRepository {
 
     final response = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, created_at)')
+        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, team_assign_mode, team_capacity, created_at)')
         .eq('user_id', userId)
         .eq('status', 'approved');
 
@@ -539,6 +544,8 @@ class LeagueRepository {
     bool? isPublic,
     bool? allowGallery,
     bool? isTeamMode,
+    String? teamAssignMode,
+    int? teamCapacity,
     List<XFile>? newImageFiles,
     List<String>? existingImageUrls,
     String? hostId,
@@ -561,6 +568,8 @@ class LeagueRepository {
     if (isPublic != null) update['is_public'] = isPublic;
     if (allowGallery != null) update['allow_gallery'] = allowGallery;
     if (isTeamMode != null) update['is_team_mode'] = isTeamMode;
+    if (teamAssignMode != null) update['team_assign_mode'] = teamAssignMode;
+    if (teamCapacity != null) update['team_capacity'] = teamCapacity;
     if (newImageFiles != null || existingImageUrls != null) {
       final uploaded = (newImageFiles?.isNotEmpty == true && hostId != null)
           ? await _uploadIntroImages(hostId, newImageFiles!)
@@ -622,24 +631,56 @@ class LeagueRepository {
     await _supabase.from('league_teams').delete().eq('id', teamId);
   }
 
-  /// teamId == null 이면 미배정으로 되돌린다.
+  /// 호스트 일괄 배정. 다중 추가 / 셔플 되돌리기 / 단건 이동이 모두 이 경로다.
+  ///
+  /// 정원 검증이 한 곳(RPC)에만 있어야 하므로 league_participants 직접
+  /// UPDATE 를 쓰지 않는다.
+  Future<void> assignLeagueTeams({
+    required String leagueId,
+    required List<TeamAssignment> assignments,
+  }) async {
+    if (assignments.isEmpty) return;
+    await _supabase.rpc('assign_league_teams', params: {
+      'p_league_id': leagueId,
+      'p_assignments': assignments.map((a) => a.toJson()).toList(),
+    });
+  }
+
+  /// teamId == null 이면 미배정으로 되돌린다. 단건 = 1개 원소 일괄 배정.
   Future<void> assignParticipantTeam({
     required String leagueId,
     required String userId,
     String? teamId,
-  }) async {
-    await _supabase
-        .from('league_participants')
-        .update({'team_id': teamId})
-        .eq('league_id', leagueId)
-        .eq('user_id', userId);
+  }) {
+    return assignLeagueTeams(
+      leagueId: leagueId,
+      assignments: [TeamAssignment(userId: userId, teamId: teamId)],
+    );
   }
 
-  Future<void> shuffleLeagueTeams(String leagueId) async {
-    await _supabase.rpc(
+  /// 참가자 본인의 팀 선택. 자율 선택 리그에서만 통한다.
+  /// teamId == null 이면 팀에서 나간다(미배정).
+  Future<void> setMyLeagueTeam({
+    required String leagueId,
+    String? teamId,
+  }) async {
+    await _supabase.rpc('set_my_league_team', params: {
+      'p_league_id': leagueId,
+      'p_team_id': teamId,
+    });
+  }
+
+  /// 셔플하고 **직전** 배정 스냅샷을 돌려준다. 호출자가 이 값을 들고 있다가
+  /// `되돌리기` 에서 assignLeagueTeams 로 그대로 되돌린다.
+  Future<List<TeamAssignment>> shuffleLeagueTeams(String leagueId) async {
+    final rows = await _supabase.rpc(
       'shuffle_league_teams',
       params: {'p_league_id': leagueId},
     );
+    if (rows is! List) return const [];
+    return rows
+        .map((r) => TeamAssignment.fromJson(r as Map<String, dynamic>))
+        .toList(growable: false);
   }
 }
 
