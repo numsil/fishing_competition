@@ -17,6 +17,7 @@ import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../auth/data/auth_repository.dart';
+import '../../data/catch_limit_options.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
@@ -47,7 +48,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _startTimeCtrl = TextEditingController();
   final _endTimeCtrl = TextEditingController();
   String _rule = '합산 길이';
-  int _catchLimit = 1; // 0=전체, 1,3,5,10, 그 외=직접입력
+  // 기본 룰이 `합산 길이` 이므로 1마리를 기본값으로 둘 수 없다 (= 최대어).
+  int _catchLimit = 3; // 0=전체, 1,3,5,10, 그 외=직접입력
+  /// 수정 모드에서 **저장된** catchLimit. 생성 모드는 null.
+  /// `합산 길이 + 1마리` 로 이미 저장된 리그는 칩을 계속 보여주기 위해 쓴다.
+  int? _storedCatchLimit;
   bool _customLimitMode = false;
   final _customLimitCtrl = TextEditingController();
   bool _isPublic = true;
@@ -114,6 +119,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       }
       _rule = l.rule;
       _catchLimit = l.catchLimit;
+      _storedCatchLimit = l.catchLimit;
       _isPublic = l.isPublic;
       _allowGallery = l.allowGallery;
       _isTeamMode = l.isTeamMode;
@@ -969,10 +975,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       return GestureDetector(
                         onTap: _isEnded ? null : () => setState(() {
                           _rule = rule;
-                          // 마릿수는 catchLimit 의미 없음, 최대어는 항상 1마리
-                          if (rule == '마릿수') { _catchLimit = 0; _customLimitMode = false; }
-                          else if (rule == '최대어') { _catchLimit = 1; _customLimitMode = false; }
-                          else if (_catchLimit == 0) _catchLimit = 1;
+                          _catchLimit = catchLimitAfterRuleChange(
+                              rule: rule, current: _catchLimit);
+                          if (rule == '마릿수' || rule == '최대어') {
+                            _customLimitMode = false;
+                          }
                         }),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1003,7 +1010,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: [
-                        _buildLimitChip(1, '1마리', context.accentColor, divColor, sub, context.isDark),
+                        // `합산 길이 + 1마리` 는 `최대어` 와 같은 규칙이라 숨긴다.
+                        if (showSingleCatchChip(
+                            rule: _rule, storedLimit: _storedCatchLimit))
+                          _buildLimitChip(1, '1마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(3, '3마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(5, '5마리', context.accentColor, divColor, sub, context.isDark),
                         _buildLimitChip(0, '전체', context.accentColor, divColor, sub, context.isDark),
@@ -1042,7 +1052,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               autofocus: true,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                hintText: '마릿수 입력 (예: 7)',
+                                hintText:
+                                    '${minCatchLimit(rule: _rule)}마리 이상 입력 (예: 7)',
                                 hintStyle: TextStyle(fontSize: 13, color: sub),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 border: OutlineInputBorder(
@@ -1058,7 +1069,10 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                               style: const TextStyle(fontSize: 13),
                               onChanged: (v) {
                                 final n = int.tryParse(v);
-                                if (n != null && n > 0) setState(() => _catchLimit = n);
+                                // 합산 길이는 1마리를 받지 않는다 (= 최대어).
+                                if (n != null && n >= minCatchLimit(rule: _rule)) {
+                                  setState(() => _catchLimit = n);
+                                }
                               },
                             ),
                           ),
