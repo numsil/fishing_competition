@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fishing_competition/features/league/data/league_model.dart';
 import 'package:fishing_competition/features/league/data/league_team_model.dart';
+import 'package:fishing_competition/features/league/presentation/screens/league_team_manage_screen.dart';
 
 Map<String, dynamic> leagueJson(Map<String, dynamic> extra) => {
       'id': 'L',
@@ -67,6 +68,32 @@ void main() {
       final b = TeamAssignment.fromJson(a.toJson());
       expect(b.userId, 'u1');
       expect(b.teamId, 't9');
+    });
+  });
+
+  group('shouldDropSnapshot — 되돌리기 실패 처리', () {
+    test('팀이 삭제됐으면 스냅샷을 폐기한다', () {
+      // 스냅샷이 가리키는 팀이 사라졌으면 그 스냅샷은 영구히 실패한다.
+      // 폐기하지 않으면 '되돌리기' 버튼이 남아 계속 같은 에러를 띄운다.
+      expect(
+          shouldDropSnapshot(
+              Exception('PostgrestException(message: TEAM_NOT_IN_LEAGUE)')),
+          isTrue);
+    });
+
+    test('참가자가 탈퇴했으면 스냅샷을 폐기한다', () {
+      expect(
+          shouldDropSnapshot(
+              Exception('PostgrestException(message: NOT_PARTICIPANT)')),
+          isTrue);
+    });
+
+    test('일시적 실패는 스냅샷을 유지해 재시도할 수 있게 한다', () {
+      expect(shouldDropSnapshot(Exception('SocketException: failed')), isFalse);
+      expect(
+          shouldDropSnapshot(
+              Exception('PostgrestException(message: TEAM_FULL)')),
+          isFalse);
     });
   });
 }
