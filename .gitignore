@@ -52,3 +52,6 @@ upload-keystore.jks
 supabase/.temp/
 supabase/.branches/
 supabase_old/
+
+# superpowers 실행 스크래치 (원장/브리프/리뷰 패키지)
+.superpowers/
