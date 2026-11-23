@@ -98,6 +98,37 @@ void main() {
     });
   });
 
+  group('shouldShowMyTeamBanner — 승인 대기도 배너를 본다', () {
+    test('승인 대기 참가자에게도 보인다', () {
+      // 모집중에 신청만 해둔 사람에게 아무 안내도 없으면, 리그가 시작된 뒤에야
+      // 팀을 고를 수 있다는 사실을 알게 된다.
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: true,
+              isApprovedParticipant: false,
+              isPendingParticipant: true),
+          isTrue);
+    });
+
+    test('호스트 배정 리그면 대기 중이어도 안 보인다', () {
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: false,
+              isApprovedParticipant: false,
+              isPendingParticipant: true),
+          isFalse);
+    });
+
+    test('신청하지 않은 사람에게는 안 보인다', () {
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: true,
+              isApprovedParticipant: false,
+              isPendingParticipant: false),
+          isFalse);
+    });
+  });
+
   group('shouldShowMyTeamBanner — 배너 노출 규칙', () {
     test('자율 선택 + 승인 참가자일 때만 보인다', () {
       expect(

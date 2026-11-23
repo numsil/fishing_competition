@@ -18,6 +18,7 @@ import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
 import '../../data/league_invite_repository.dart';
 import 'league_catch_screen.dart';
+import '../../data/league_detail_tabs.dart';
 import '../widgets/catch_review_tab.dart';
 import '../widgets/league_ranking_tab.dart';
 import '../widgets/league_team_ranking_tab.dart';
@@ -71,30 +72,63 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   RealtimeChannel? _partChannel;
   RealtimeChannel? _inviteChannel;
 
-  bool get _hasTabs =>
-      widget.league.status == 'in_progress' ||
-      widget.league.status == 'completed';
+  /// 지금 화면에 그릴 탭. build 에서 leagueDetailTabs 로 계산해 채운다.
+  /// 탭바·TabBarView·컨트롤러 길이가 **모두 이 리스트 하나**를 쓴다.
+  List<LeagueDetailTab> _tabs = const [];
 
   bool get _isHost =>
       ref.read(currentUserProvider)?.id == widget.league.hostId;
 
-  // 팀전이면 '팀 순위' 탭이 맨 앞에 하나 더 붙는다.
-  // tabs / children 의 조건도 반드시 widget.league.isTeamMode 를 써야
-  // 컨트롤러 길이와 어긋나지 않는다.
-  int get _tabLength =>
-      (widget.league.isTeamMode ? 1 : 0) +
-      (_isHost && widget.league.status == 'in_progress' ? 3 : 2);
-
   /// 탭 컨트롤러를 만들고 인덱스 리스너를 붙인다.
   /// 재생성 시 리스너를 다시 붙이지 않으면 _currentTabIndex 가 얼어붙어
   /// 하단 조과 버튼 표시가 마지막 값에 멈춘다.
-  TabController _newTabController() {
-    final c = TabController(length: _tabLength, vsync: this);
+  TabController _newTabController(int length) {
+    final c = TabController(length: length, vsync: this);
     c.addListener(() {
       if (c.indexIsChanging || !mounted) return;
       setState(() => _currentTabIndex = c.index);
     });
     return c;
+  }
+
+  /// 탭 개수가 바뀌면 컨트롤러를 갈아끼운다.
+  ///
+  /// 모집중 탭은 내 참가 상태(비동기)에 따라 생겼다 없어지므로 initState
+  /// 시점에는 길이를 알 수 없다. build 에서 맞추되, 쓰던 컨트롤러를 build
+  /// 도중에 dispose 하면 진행 중인 애니메이션이 터지므로 프레임 뒤로 넘긴다.
+  void _syncTabController(int length) {
+    if (_tab?.length == length) return;
+    final old = _tab;
+    _tab = length == 0 ? null : _newTabController(length);
+    _currentTabIndex = 0;
+    if (old != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
+  }
+
+  /// 탭 하나의 본문. _tabs 와 **같은 순서**로 쓰이므로 여기서만 매핑한다.
+  Widget _tabBody(LeagueDetailTab t, League league, bool isDark, Color accent,
+      bool preStart) {
+    switch (t) {
+      case LeagueDetailTab.team:
+        return LeagueTeamRankingTab(
+            league: league,
+            isDark: isDark,
+            accent: accent,
+            preStart: preStart);
+      case LeagueDetailTab.participants:
+        return LeagueRankingTab(
+          league: league,
+          isDark: isDark,
+          accent: accent,
+          showRegisterHint: !preStart,
+          preStart: preStart,
+        );
+      case LeagueDetailTab.review:
+        return CatchReviewTab(leagueId: league.id);
+      case LeagueDetailTab.info:
+        return _InfoTab(league: league, isDark: isDark, accent: accent);
+    }
   }
 
   void _refreshAll() {
@@ -111,7 +145,6 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   @override
   void initState() {
     super.initState();
-    if (_hasTabs) _tab = _newTabController();
     WidgetsBinding.instance.addObserver(this);
     _subscribeRealtime();
   }
@@ -172,18 +205,6 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
           },
         )
         .subscribe();
-  }
-
-  @override
-  void didUpdateWidget(_LeagueDetailBody old) {
-    super.didUpdateWidget(old);
-    // 상태가 바뀌면 탭 컨트롤러 재생성
-    if (old.league.status != widget.league.status ||
-        old.league.isTeamMode != widget.league.isTeamMode) {
-      _tab?.dispose();
-      _tab = _hasTabs ? _newTabController() : null;
-      _currentTabIndex = 0;
-    }
   }
 
   @override
@@ -284,6 +305,17 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     final league = widget.league;
     final isDark = widget.isDark;
     final accent = widget.accent;
+
+    // 모집중에는 조과가 없으므로 순위가 아니라 명단으로 그린다.
+    final preStart = league.status == 'recruiting';
+    _tabs = leagueDetailTabs(
+      status: league.status,
+      isTeamMode: league.isTeamMode,
+      isHost: _isHost,
+      myStatus: ref.watch(myParticipantStatusProvider(league.id)).valueOrNull,
+    );
+    _syncTabController(_tabs.length);
+    final hasTabs = _tabs.isNotEmpty;
 
     return Scaffold(
       body: NestedScrollView(
@@ -404,18 +436,15 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
           ),
 
           // ── 탭바 (고정) ─────────────────────────────
-          if (_hasTabs)
+          if (hasTabs)
             SliverPersistentHeader(
               pinned: true,
               delegate: _StickyTabBarDelegate(
                 tabBar: TabBar(
                   controller: _tab,
                   tabs: [
-                    if (widget.league.isTeamMode) const Tab(text: '팀 순위'),
-                    Tab(text: league.status == 'completed' ? '최종 순위' : '실시간 순위'),
-                    if (_isHost && league.status == 'in_progress')
-                      const Tab(text: '심사'),
-                    const Tab(text: '대회 정보'),
+                    for (final t in _tabs)
+                      Tab(text: leagueDetailTabLabel(t, league.status)),
                   ],
                 ),
                 isDark: isDark,
@@ -424,17 +453,12 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         ],
 
         // ── 탭 바디 ─────────────────────────────────
-        body: _hasTabs
+        body: hasTabs
             ? TabBarView(
                 controller: _tab,
                 children: [
-                  if (widget.league.isTeamMode)
-                    LeagueTeamRankingTab(
-                        league: league, isDark: isDark, accent: accent),
-                  LeagueRankingTab(league: league, isDark: isDark, accent: accent, showRegisterHint: true),
-                  if (_isHost && league.status == 'in_progress')
-                    CatchReviewTab(leagueId: league.id),
-                  _InfoTab(league: league, isDark: isDark, accent: accent),
+                  for (final t in _tabs)
+                    _tabBody(t, league, isDark, accent, preStart),
                 ],
               )
             : _InfoTab(league: league, isDark: isDark, accent: accent),

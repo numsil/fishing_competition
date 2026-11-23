@@ -16,11 +16,15 @@ import '../../data/league_team_model.dart';
 /// 프로덕션 경로(league_team_ranking_tab)가 호출하므로 @visibleForTesting 을
 /// 붙이면 안 된다 — analyze 가 invalid_use_of_visible_for_testing_member
 /// 경고를 내고, 경고는 analyze 를 실패시킨다.
+/// 승인 대기(`isPendingParticipant`)에게도 그린다 — 고를 수는 없지만
+/// "승인되면 팀을 고를 수 있다"는 사실은 모집중에 알아야 한다. 선택 가능
+/// 여부는 [LeagueMyTeamBanner.canPick] 이 따로 판단한다.
 bool shouldShowMyTeamBanner({
   required bool isSelfPick,
   required bool isApprovedParticipant,
+  bool isPendingParticipant = false,
 }) =>
-    isSelfPick && isApprovedParticipant;
+    isSelfPick && (isApprovedParticipant || isPendingParticipant);
 
 /// 자율 선택 리그에서 본인의 팀 상태를 보여주는 배너.
 ///
@@ -32,6 +36,7 @@ class LeagueMyTeamBanner extends StatelessWidget {
     required this.leagueId,
     required this.myTeam,
     required this.hasAnyTeam,
+    this.canPick = true,
   });
 
   final String leagueId;
@@ -41,6 +46,11 @@ class LeagueMyTeamBanner extends StatelessWidget {
 
   /// 리그에 팀이 하나라도 있는가. 없으면 고를 수 있는 게 없다.
   final bool hasAnyTeam;
+
+  /// 지금 팀을 고를 수 있는가. 승인 대기 상태면 false —
+  /// set_my_league_team 이 approved 만 허용하므로 버튼을 열어두면
+  /// 누를 때마다 NOT_PARTICIPANT 가 돌아온다.
+  final bool canPick;
 
   void _open(BuildContext context) => context.push('/league/my-team/$leagueId');
 
@@ -73,7 +83,7 @@ class LeagueMyTeamBanner extends StatelessWidget {
                 style: AppTextStyles.heading4),
           ),
           TextButton(
-            onPressed: () => _open(context),
+            onPressed: canPick ? () => _open(context) : null,
             child: const Text('변경'),
           ),
         ]),
@@ -100,9 +110,11 @@ class LeagueMyTeamBanner extends StatelessWidget {
                     style: AppTextStyles.heading4),
                 const SizedBox(height: 4),
                 Text(
-                  hasAnyTeam
-                      ? '팀에 들어가야 내 조과가 팀 점수에 반영됩니다. 리그 중에도 바꿀 수 있습니다.'
-                      : '호스트가 팀을 만들면 선택할 수 있습니다.',
+                  !canPick
+                      ? '호스트가 참가를 승인하면 팀을 선택할 수 있습니다.'
+                      : hasAnyTeam
+                          ? '팀에 들어가야 내 조과가 팀 점수에 반영됩니다. 리그 중에도 바꿀 수 있습니다.'
+                          : '호스트가 팀을 만들면 선택할 수 있습니다.',
                   style:
                       AppTextStyles.caption.copyWith(color: sub, height: 1.5),
                 ),
@@ -113,7 +125,7 @@ class LeagueMyTeamBanner extends StatelessWidget {
         const SizedBox(height: 12),
         AppButton(
           label: '내 팀 선택',
-          onPressed: hasAnyTeam ? () => _open(context) : null,
+          onPressed: (hasAnyTeam && canPick) ? () => _open(context) : null,
         ),
       ]),
     );

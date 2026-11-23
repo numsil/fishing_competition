@@ -10,6 +10,8 @@ import '../../data/league_repository.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_team_model.dart';
+import '../../../../core/router/app_router.dart';
+import '../../data/team_capacity.dart';
 import '../../data/team_ranking.dart';
 import 'league_my_team_banner.dart';
 import '../screens/league_participant_detail_screen.dart';
@@ -25,11 +27,15 @@ class LeagueTeamRankingTab extends ConsumerWidget {
     required this.league,
     required this.isDark,
     required this.accent,
+    this.preStart = false,
   });
 
   final League league;
   final bool isDark;
   final Color accent;
+
+  /// 모집중 리그인가. 조과가 없으므로 순위·기록 대신 `인원 / 정원` 만 보여준다.
+  final bool preStart;
 
   /// 팀 카드를 전부 펼쳐 둘 임계값. 이 수 이상이면 1위만 펼친다.
   static const int _expandAllThreshold = 5;
@@ -58,9 +64,15 @@ class LeagueTeamRankingTab extends ConsumerWidget {
     final myUserId = ref.watch(currentUserProvider)?.id;
     final isApproved =
         myUserId != null && ranking.any((e) => e.userId == myUserId);
+    // 모집중에 신청만 해둔 사람에게도 배너를 보여준다 (고르지는 못한다).
+    // 이 provider 는 리그 상세가 이미 watch 하므로 추가 조회가 없다.
+    final isPending =
+        ref.watch(myParticipantStatusProvider(league.id)).valueOrNull ==
+            'pending';
     final showBanner = shouldShowMyTeamBanner(
       isSelfPick: league.isSelfPick,
       isApprovedParticipant: isApproved,
+      isPendingParticipant: isPending,
     );
     LeagueTeam? myTeam;
     if (showBanner && myUserId != null) {
@@ -76,6 +88,7 @@ class LeagueTeamRankingTab extends ConsumerWidget {
             leagueId: league.id,
             myTeam: myTeam,
             hasAnyTeam: teams.isNotEmpty,
+            canPick: isApproved,
           )
         : null;
 
@@ -93,7 +106,9 @@ class LeagueTeamRankingTab extends ConsumerWidget {
                   style: AppTextStyles.body.copyWith(color: sub)),
               const SizedBox(height: 6),
               Text(
-                '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
+                preStart
+                    ? '호스트가 팀을 만들면 여기서 팀을 고를 수 있습니다.'
+                    : '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption.copyWith(color: sub, height: 1.5),
               ),
@@ -138,6 +153,8 @@ class LeagueTeamRankingTab extends ConsumerWidget {
             accent: accent,
             rankByUserId: rankByUser,
             initiallyExpanded: row.isUnassigned || expandAll || i == 0,
+            preStart: preStart,
+            capacity: league.teamCapacity,
           );
         },
       ),
@@ -156,6 +173,8 @@ class _TeamRankCard extends StatefulWidget {
     required this.accent,
     required this.rankByUserId,
     required this.initiallyExpanded,
+    required this.preStart,
+    required this.capacity,
   });
 
   final int rank; // 0 = 미배정
@@ -169,6 +188,12 @@ class _TeamRankCard extends StatefulWidget {
   /// user_id → 개인 순위. 참가자 상세 화면의 순위 배지에 쓰인다.
   final Map<String, int> rankByUserId;
   final bool initiallyExpanded;
+
+  /// 모집중 모드. 순위 번호·팀 점수·개인 기록을 모두 숨긴다.
+  final bool preStart;
+
+  /// 팀당 정원. 0 이면 무제한. 모집중 부제목에 `3 / 5` 로 쓴다.
+  final int capacity;
 
   @override
   State<_TeamRankCard> createState() => _TeamRankCardState();
@@ -202,6 +227,24 @@ class _TeamRankCardState extends State<_TeamRankCard> {
     return '${e.totalLength.toStringAsFixed(1)}cm';
   }
 
+  /// 카드 부제목. 모집중에는 기록이 없으므로 정원 소진 상황만 보여준다.
+  String _subtitle() {
+    final row = widget.row;
+    if (row.isUnassigned) {
+      return widget.preStart
+          ? '${row.memberCount}명 · 아직 팀을 고르지 않음'
+          : '${row.memberCount}명 · 팀 점수에 반영되지 않음';
+    }
+    if (widget.preStart) {
+      final label =
+          capacityLabel(capacity: widget.capacity, memberCount: row.memberCount);
+      return isTeamFull(capacity: widget.capacity, memberCount: row.memberCount)
+          ? '$label · 정원 마감'
+          : label;
+    }
+    return '${row.memberCount}명 · ${row.totalCount}마리';
+  }
+
   Color get _rankColor {
     if (widget.rank == 1) return AppColors.gold;
     if (widget.rank == 2) return AppColors.silver;
@@ -220,11 +263,14 @@ class _TeamRankCardState extends State<_TeamRankCard> {
     final teamColor = isUnassigned ? sub : AppColors.teamColor(row.team!.color);
 
     return AppCard(
-      variant: widget.rank == 1 ? AppCardVariant.tinted : AppCardVariant.surface,
+      variant: (widget.rank == 1 && !widget.preStart)
+          ? AppCardVariant.tinted
+          : AppCardVariant.surface,
       tintColor: AppColors.gold,
       tintAlpha: 0.06,
-      borderColor:
-          widget.rank == 1 ? AppColors.gold.withValues(alpha: 0.3) : divider,
+      borderColor: (widget.rank == 1 && !widget.preStart)
+          ? AppColors.gold.withValues(alpha: 0.3)
+          : divider,
       radius: 14,
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
@@ -234,7 +280,7 @@ class _TeamRankCardState extends State<_TeamRankCard> {
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(children: [
-              if (!isUnassigned) ...[
+              if (!isUnassigned && !widget.preStart) ...[
                 SizedBox(
                   width: 24,
                   child: Text(
@@ -267,15 +313,13 @@ class _TeamRankCardState extends State<_TeamRankCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isUnassigned
-                          ? '${row.memberCount}명 · 팀 점수에 반영되지 않음'
-                          : '${row.memberCount}명 · ${row.totalCount}마리',
+                      _subtitle(),
                       style: TextStyle(fontSize: 12, color: sub),
                     ),
                   ],
                 ),
               ),
-              if (!isUnassigned)
+              if (!isUnassigned && !widget.preStart)
                 Text(
                   _mainValue,
                   style: TextStyle(
@@ -302,15 +346,17 @@ class _TeamRankCardState extends State<_TeamRankCard> {
           Divider(height: 1, color: divider),
           for (final m in row.members)
             InkWell(
-              onTap: () => context.push(
-                '/league/participant/${widget.leagueId}/${m.userId}',
-                extra: LeagueParticipantArgs(
-                  entry: m,
-                  rule: widget.rule,
-                  catchLimit: widget.catchLimit,
-                  rank: widget.rankByUserId[m.userId] ?? 0,
-                ),
-              ),
+              onTap: () => widget.preStart
+                  ? context.push('${AppRoutes.userProfile}/${m.userId}')
+                  : context.push(
+                      '/league/participant/${widget.leagueId}/${m.userId}',
+                      extra: LeagueParticipantArgs(
+                        entry: m,
+                        rule: widget.rule,
+                        catchLimit: widget.catchLimit,
+                        rank: widget.rankByUserId[m.userId] ?? 0,
+                      ),
+                    ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 child: Row(children: [
@@ -333,21 +379,23 @@ class _TeamRankCardState extends State<_TeamRankCard> {
                       ),
                     ),
                   ),
-                  Text('${m.totalCount}마리',
-                      style: TextStyle(fontSize: 12, color: sub)),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 78,
-                    child: Text(
-                      _memberValue(m),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: m.totalCount > 0 ? text : sub,
+                  if (!widget.preStart) ...[
+                    Text('${m.totalCount}마리',
+                        style: TextStyle(fontSize: 12, color: sub)),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 78,
+                      child: Text(
+                        _memberValue(m),
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: m.totalCount > 0 ? text : sub,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(width: 2),
                   Icon(LucideIcons.chevronRight, size: 16, color: sub),
                 ]),

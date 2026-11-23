@@ -18,6 +18,7 @@ class LeagueRankingTab extends ConsumerWidget {
     required this.isDark,
     required this.accent,
     this.showRegisterHint = false,
+    this.preStart = false,
   });
 
   final League league;
@@ -25,6 +26,10 @@ class LeagueRankingTab extends ConsumerWidget {
   final Color accent;
   /// 참가자 화면에서만 "아래 버튼으로 첫 조과를 등록해보세요!" 힌트 표시
   final bool showRegisterHint;
+
+  /// 아직 시작하지 않은(모집중) 리그인가. 조과가 존재할 수 없으므로
+  /// 순위·기록을 숨기고 참가자 명단으로만 그린다.
+  final bool preStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,7 +53,7 @@ class LeagueRankingTab extends ConsumerWidget {
               Icon(LucideIcons.fish, size: 48,
                   color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub),
               const SizedBox(height: 12),
-              Text('아직 조과 기록이 없습니다',
+              Text(preStart ? '아직 참가자가 없습니다' : '아직 조과 기록이 없습니다',
                   style: TextStyle(fontSize: 14,
                       color: isDark ? AppColors.darkTextSub : AppColors.lightTextSub)),
               if (showRegisterHint && league.status == 'in_progress') ...[
@@ -71,7 +76,8 @@ class LeagueRankingTab extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             itemCount: entries.length,
             itemBuilder: (_, i) => LeagueRankCard(
-              rank: i + 1,
+              // 모집중에는 순위가 없다. 0 을 넘기면 카드가 메달·기록을 숨긴다.
+              rank: preStart ? 0 : i + 1,
               entry: entries[i],
               leagueId: league.id,
               rule: league.rule,
@@ -80,6 +86,7 @@ class LeagueRankingTab extends ConsumerWidget {
               accent: accent,
               team: teamByUserId[entries[i].userId],
               showTeamBadge: league.isTeamMode,
+              preStart: preStart,
             ),
           ),
         );
@@ -102,6 +109,7 @@ class LeagueRankCard extends StatelessWidget {
     required this.accent,
     this.team,
     this.showTeamBadge = false,
+    this.preStart = false,
   });
 
   final int rank;
@@ -115,6 +123,10 @@ class LeagueRankCard extends StatelessWidget {
   /// 팀전 리그에서 이 참가자의 팀. null 이면 미배정.
   final LeagueTeam? team;
   final bool showTeamBadge;
+
+  /// 모집중 명단 모드. 순위 배지·기록·1위 강조를 모두 끄고,
+  /// 탭하면 순위 상세가 아니라 프로필로 보낸다 (볼 조과가 없다).
+  final bool preStart;
 
   Color get _rankColor {
     if (rank == 1) return AppColors.gold;
@@ -153,15 +165,20 @@ class LeagueRankCard extends StatelessWidget {
     final sub = isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
 
     return GestureDetector(
-      onTap: () => context.push(
-        '/league/participant/$leagueId/${entry.userId}',
-        extra: LeagueParticipantArgs(entry: entry, rule: rule, catchLimit: catchLimit, rank: rank),
-      ),
+      onTap: () => preStart
+          ? context.push('${AppRoutes.userProfile}/${entry.userId}')
+          : context.push(
+              '/league/participant/$leagueId/${entry.userId}',
+              extra: LeagueParticipantArgs(
+                  entry: entry, rule: rule, catchLimit: catchLimit, rank: rank),
+            ),
       child: AppCard(
-        variant: rank == 1 ? AppCardVariant.tinted : AppCardVariant.surface,
+        variant: (rank == 1 && !preStart)
+            ? AppCardVariant.tinted
+            : AppCardVariant.surface,
         tintColor: AppColors.gold,
         tintAlpha: 0.06,
-        borderColor: rank == 1
+        borderColor: (rank == 1 && !preStart)
             ? AppColors.gold.withValues(alpha: 0.3)
             : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
         radius: 14,
@@ -179,7 +196,7 @@ class LeagueRankCard extends StatelessWidget {
                   radius: 21,
                   isDark: isDark,
                 ),
-                if (rank <= 3)
+                if (!preStart && rank >= 1 && rank <= 3)
                   Positioned(
                     bottom: -3, right: -3,
                     child: Container(
@@ -243,7 +260,11 @@ class LeagueRankCard extends StatelessWidget {
                     Text(team?.name ?? '팀 미배정',
                         style: TextStyle(fontSize: 11, color: sub)),
                   ]),
-                LeagueSubStat(icon: LucideIcons.fish, value: '${entry.totalCount}마리', sub: sub),
+                if (!preStart)
+                  LeagueSubStat(
+                      icon: LucideIcons.fish,
+                      value: '${entry.totalCount}마리',
+                      sub: sub),
                 if (catchLimit > 1 && entry.bestLength != null)
                   LeagueSubStat(
                     icon: rule == '무게' ? LucideIcons.scale : LucideIcons.ruler,
@@ -255,18 +276,21 @@ class LeagueRankCard extends StatelessWidget {
               ]),
             ]),
           ),
-          const SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(
-              _mainValue,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: rank == 1 ? AppColors.gold : accent,
+          if (!preStart) ...[
+            const SizedBox(width: 8),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(
+                _mainValue,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: rank == 1 ? AppColors.gold : accent,
+                ),
               ),
-            ),
-            Text(_mainLabel, style: TextStyle(fontSize: 10, color: sub)),
-          ]),
+              Text(_mainLabel, style: TextStyle(fontSize: 10, color: sub)),
+            ]),
+          ] else
+            Icon(LucideIcons.chevronRight, size: 16, color: sub),
         ]),
       ),
     );
