@@ -485,12 +485,7 @@ class _CatchCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(children: [
-                        Icon(LucideIcons.fish, size: 13, color: accent),
-                        const SizedBox(width: 5),
-                        Text(post.fishType,
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
                         if (post.isLunker) ...[
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(4)),

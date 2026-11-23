@@ -189,7 +189,9 @@ class _VerifCard extends StatelessWidget {
                           fontWeight: FontWeight.w700, fontSize: 14)),
                   const SizedBox(height: 4),
                   Text(
-                    '${req.fishType}${req.length != null ? ' · ${req.length!.toStringAsFixed(1)}cm' : ''}',
+                    req.length != null
+                        ? '${req.length!.toStringAsFixed(1)}cm'
+                        : '측정값 없음',
                     style: TextStyle(fontSize: 12, color: sub),
                   ),
                 ],

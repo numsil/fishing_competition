@@ -399,7 +399,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('역대 최대어', style: TextStyle(fontSize: 11, color: sub)),
                             Text(
-                              '${profile.maxFishPost!.fishType} ${profile.maxFishPost!.length!.toStringAsFixed(1)}cm',
+                              '${profile.maxFishPost!.length!.toStringAsFixed(1)}cm',
                               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.gold),
                             ),
                             Text(

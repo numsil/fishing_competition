@@ -578,30 +578,6 @@ class _InfoTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        // ── 대상 어종 ─────────────────────────────────
-        _InfoSection(
-          title: '대상 어종',
-          icon: LucideIcons.fish,
-          accent: accent,
-          isDark: isDark,
-          child: Wrap(
-            spacing: 8, runSpacing: 8,
-            children: league.fishTypes.split(',').map((f) => f.trim()).where((f) => f.isNotEmpty).map((fish) =>
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: accent.withValues(alpha: 0.3)),
-                ),
-                child: Text(fish,
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: accent)),
-              ),
-            ).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-
         // ── 순위 결정 방식 ────────────────────────────
         _InfoSection(
           title: '순위 결정 방식',

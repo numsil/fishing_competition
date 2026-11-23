@@ -363,7 +363,6 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 name: league.title,
                 location: league.location,
                 dateRange: dateRange,
-                fish: league.fishTypes,
                 rule: league.rule,
                 maxParticipants: league.maxParticipants,
                 fee: league.entryFee,
@@ -679,7 +678,6 @@ class _StatusCard extends StatelessWidget {
     required this.name,
     required this.location,
     required this.dateRange,
-    required this.fish,
     required this.rule,
     required this.maxParticipants,
     required this.fee,
@@ -695,7 +693,7 @@ class _StatusCard extends StatelessWidget {
 
   final LeagueManageStatus status;
   final bool isCanceled;
-  final String name, location, dateRange, fish, rule;
+  final String name, location, dateRange, rule;
   final int maxParticipants, fee, currentParticipants;
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
@@ -764,15 +762,6 @@ class _StatusCard extends StatelessWidget {
               InfoChipFilled(
                 icon: Icons.people_outline_rounded,
                 label: '$currentParticipants/$maxParticipants명',
-                color: accent,
-                isDark: isDark,
-                fontWeight: FontWeight.w700,
-                gap: 5,
-              ),
-              const SizedBox(width: 8),
-              InfoChipFilled(
-                icon: Icons.set_meal_rounded,
-                label: fish,
                 color: accent,
                 isDark: isDark,
                 fontWeight: FontWeight.w700,

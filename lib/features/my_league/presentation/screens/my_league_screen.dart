@@ -682,7 +682,6 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
             data: (posts) {
               final verifiedCount = posts.where((p) => p.reviewStatus == 'approved').length;
               final lunkerCount = posts.where((p) => p.isLunker).length;
-              final speciesCount = posts.map((p) => p.fishType).toSet().length;
               double? maxLen;
               Post? maxPost;
               for (final p in posts) {
@@ -707,7 +706,6 @@ class _PersonalRecordTabState extends ConsumerState<_PersonalRecordTab> {
                         postsCount: posts.length,
                         verifiedCount: verifiedCount,
                         lunkerCount: lunkerCount,
-                        speciesCount: speciesCount,
                         maxLength: maxLen,
                         maxPost: maxPost,
                         anglerScore: profileAsync.valueOrNull?.anglerScore ?? 0,
@@ -1015,7 +1013,6 @@ class _CatchDashboard extends StatelessWidget {
     required this.postsCount,
     required this.verifiedCount,
     required this.lunkerCount,
-    required this.speciesCount,
     required this.maxLength,
     required this.maxPost,
     required this.anglerScore,
@@ -1023,7 +1020,7 @@ class _CatchDashboard extends StatelessWidget {
 
   final bool isDark;
   final Color accent, sub, cardBg, divColor;
-  final int postsCount, verifiedCount, lunkerCount, speciesCount;
+  final int postsCount, verifiedCount, lunkerCount;
   final double? maxLength;
   final Post? maxPost;
   final int anglerScore;
@@ -1370,8 +1367,6 @@ class _MyLeagueCard extends ConsumerWidget {
                         ? AppColors.liveRed
                         : accent,
                   ),
-                  const SizedBox(width: 8),
-                  InfoChip(icon: Icons.set_meal_outlined, label: '모든 어종', color: accent),
                   if (isUpcoming) ...[
                     const SizedBox(width: 8),
                     InfoChip(

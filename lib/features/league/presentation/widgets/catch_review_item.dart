@@ -172,7 +172,8 @@ class CatchReviewItem extends StatelessWidget {
     final parts = <String>[];
     if (post.length != null) parts.add('${post.length!.toStringAsFixed(0)}cm');
     if (post.weight != null) parts.add('${post.weight!.toStringAsFixed(0)}g');
-    if (parts.isEmpty) parts.add(post.fishType);
+    // 길이도 무게도 없는 조과. 어종은 더 이상 보여주지 않으므로 빈 줄 대신 명시한다.
+    if (parts.isEmpty) parts.add('측정값 없음');
     return parts.join(' · ');
   }
 }

@@ -140,12 +140,6 @@ class _VerificationDetailScreenState
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _InfoRow(
-                    icon: LucideIcons.fish,
-                    label: '어종',
-                    value: req.fishType,
-                    accent: accent,
-                  ),
                   if (req.length != null)
                     _InfoRow(
                       icon: LucideIcons.ruler,

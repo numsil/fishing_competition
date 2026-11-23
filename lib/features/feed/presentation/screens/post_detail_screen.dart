@@ -313,8 +313,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               ]),
             ),
 
-            // 조과 정보 (길이, 어종)
-            if (p.length != null || p.fishType.isNotEmpty)
+            // 조과 정보 (길이)
+            if (p.length != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                 child: Container(
@@ -327,13 +327,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   child: Row(children: [
                     Icon(LucideIcons.fish, size: 16, color: context.accentColor),
                     const SizedBox(width: 8),
-                    Text(p.fishType,
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.accentColor)),
-                    if (p.length != null) ...[
-                      const SizedBox(width: 10),
-                      Text('${p.length}cm',
-                          style: TextStyle(fontSize: 13, color: context.accentColor, fontWeight: FontWeight.w600)),
-                    ],
+                    Text('${p.length}cm',
+                        style: TextStyle(fontSize: 13, color: context.accentColor, fontWeight: FontWeight.w700)),
                   ]),
                 ),
               ),

@@ -793,7 +793,7 @@ class _InstaPostState extends ConsumerState<_InstaPost> {
           ),
         ),
 
-        // ── 어종 정보 칩 ──
+        // ── 측정값 칩 ──
         if (p.length != null || p.weight != null || p.catchCount > 1)
           Container(
             color: bgColor,

@@ -185,17 +185,6 @@ class _CatchReviewDetailScreenState
                 // 조과 정보
                 Row(
                   children: [
-                    Icon(LucideIcons.fish, size: 14, color: accent),
-                    const SizedBox(width: 6),
-                    Text(
-                      _post.fishType,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: accent,
-                      ),
-                    ),
-                    const Spacer(),
                     Text(
                       DateFormat('yyyy.MM.dd HH:mm').format(_post.createdAt.toLocal()),
                       style: TextStyle(fontSize: 12, color: sub),

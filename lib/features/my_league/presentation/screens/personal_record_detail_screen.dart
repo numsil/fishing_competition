@@ -235,9 +235,6 @@ class _PersonalRecordDetailScreenState extends ConsumerState<PersonalRecordDetai
                 ),
                 child: Row(children: [
                   Icon(LucideIcons.fish, size: 22, color: context.accentColor),
-                  const SizedBox(width: 12),
-                  Text(post.fishType,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.accentColor)),
                   const Spacer(),
                   Text('${post.length}',
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: context.accentColor)),
