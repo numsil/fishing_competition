@@ -12,6 +12,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_repository.dart';
 import '../../data/league_team_model.dart';
+import '../../data/league_model.dart';
 import '../../data/team_assign_options.dart';
 import '../../data/team_capacity.dart';
 import '../widgets/team_member_add_sheet.dart';
@@ -317,10 +318,21 @@ class _LeagueTeamManageScreenState
             .updateLeague(id: leagueId, teamCapacity: target);
         // 저장하는 동안 더 눌렀으면 그 값으로 한 번 더 돈다.
         if (_capacityDraft != target) continue;
+        // 재조회가 끝날 때까지 기다린 뒤에 비운다. 먼저 비우면 캐시에 남은
+        // 이전 값이 한 프레임 보여서 6 → 5 → 6 으로 깜빡인다.
+        final League fresh;
+        try {
+          fresh = await ref.refresh(leagueDetailProvider(leagueId).future);
+        } catch (_) {
+          // 저장은 됐고 재조회만 실패했다. draft 를 그대로 두면 사용자가 올린
+          // 값이 유지되고, 다음 갱신에서 서버 값이 따라온다.
+          return;
+        }
         if (!mounted) return;
-        // 서버가 받은 값과 draft 가 같아졌으니 draft 를 비우고 서버 값을 쓴다.
-        setState(() => _capacityDraft = null);
-        ref.invalidate(leagueDetailProvider(leagueId));
+        if (canClearCapacityDraft(
+            draft: _capacityDraft, serverCapacity: fresh.teamCapacity)) {
+          setState(() => _capacityDraft = null);
+        }
         break;
       }
     } catch (e) {

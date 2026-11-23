@@ -129,4 +129,25 @@ void main() {
       expect(undoFailureMessage(Exception('SocketException')), isNull);
     });
   });
+
+  group('canClearCapacityDraft — 낙관적 값을 언제 버려도 되는가', () {
+    test('서버 값이 아직 따라오지 않았으면 draft 를 유지한다', () {
+      // 실기기에서 잡힌 버그다. 저장 직후 draft 를 비우면 재조회가 끝나기
+      // 전까지 이전 서버 값(5)이 한 프레임 보여서 6 → 5 → 6 으로 깜빡인다.
+      expect(canClearCapacityDraft(draft: 6, serverCapacity: 5), isFalse);
+    });
+
+    test('서버 값이 draft 와 같아지면 버려도 된다', () {
+      expect(canClearCapacityDraft(draft: 6, serverCapacity: 6), isTrue);
+    });
+
+    test('draft 가 없으면 비울 것도 없다', () {
+      expect(canClearCapacityDraft(draft: null, serverCapacity: 5), isTrue);
+    });
+
+    test('0(무제한)도 일반 값과 똑같이 비교한다', () {
+      expect(canClearCapacityDraft(draft: 0, serverCapacity: 5), isFalse);
+      expect(canClearCapacityDraft(draft: 0, serverCapacity: 0), isTrue);
+    });
+  });
 }

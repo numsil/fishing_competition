@@ -56,3 +56,11 @@ String? undoFailureMessage(Object error) {
   }
   return null;
 }
+
+/// 낙관적으로 올려둔 정원 값(draft)을 비워도 되는가.
+///
+/// 저장이 성공했어도 서버 값이 아직 재조회되지 않았으면 비우면 안 된다.
+/// 비우는 순간 화면은 캐시에 남은 **이전** 값으로 떨어지고, 재조회가 끝나면
+/// 다시 올라와서 `6 → 5 → 6` 으로 깜빡인다.
+bool canClearCapacityDraft({required int? draft, required int serverCapacity}) =>
+    draft == null || draft == serverCapacity;
