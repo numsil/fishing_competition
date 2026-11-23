@@ -377,6 +377,19 @@ class _LeagueManageScreenState extends ConsumerState<LeagueManageScreen>
                 onEnd: _endLeague,
               ),
 
+              // ── 팀 관리 (팀전 리그만) ──────────────────────────
+              if (league.isTeamMode)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: AppButton(
+                    label: '팀 관리',
+                    variant: AppButtonVariant.outline,
+                    icon: LucideIcons.users,
+                    onPressed: () =>
+                        context.push('/league/teams/${widget.leagueId}'),
+                  ),
+                ),
+
               // ── 유저 초대 버튼 (@아이디) ─────────────────────────
               // 공개·비공개 모두 동일하게 @user_key 초대 화면으로.
               if (status != LeagueManageStatus.ended)
