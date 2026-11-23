@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fishing_competition/features/league/data/league_model.dart';
 import 'package:fishing_competition/features/league/data/league_team_model.dart';
 import 'package:fishing_competition/features/league/presentation/screens/league_team_manage_screen.dart';
+import 'package:fishing_competition/features/league/presentation/widgets/league_my_team_banner.dart';
 
 Map<String, dynamic> leagueJson(Map<String, dynamic> extra) => {
       'id': 'L',
@@ -93,6 +94,34 @@ void main() {
       expect(
           shouldDropSnapshot(
               Exception('PostgrestException(message: TEAM_FULL)')),
+          isFalse);
+    });
+  });
+
+  group('shouldShowMyTeamBanner — 배너 노출 규칙', () {
+    test('자율 선택 + 승인 참가자일 때만 보인다', () {
+      expect(
+          shouldShowMyTeamBanner(isSelfPick: true, isApprovedParticipant: true),
+          isTrue);
+    });
+
+    test('호스트 배정 리그에는 아예 그리지 않는다', () {
+      // 누를 수 없는 버튼을 보여주는 셈이다.
+      // set_my_league_team 도 SELF_PICK_DISABLED 를 던진다.
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: false, isApprovedParticipant: true),
+          isFalse);
+    });
+
+    test('참가자가 아니면(관전·미승인) 그리지 않는다', () {
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: true, isApprovedParticipant: false),
+          isFalse);
+      expect(
+          shouldShowMyTeamBanner(
+              isSelfPick: false, isApprovedParticipant: false),
           isFalse);
     });
   });

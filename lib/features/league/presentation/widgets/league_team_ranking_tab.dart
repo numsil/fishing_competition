@@ -7,7 +7,11 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/data/auth_repository.dart';
+import '../../data/league_team_model.dart';
 import '../../data/team_ranking.dart';
+import 'league_my_team_banner.dart';
 import '../screens/league_participant_detail_screen.dart';
 
 /// 팀 순위 탭.
@@ -49,22 +53,53 @@ class LeagueTeamRankingTab extends ConsumerWidget {
     final teams = teamsAsync.requireValue;
     final ranking = rankingAsync.requireValue;
 
+    // 자율 선택 리그에서 본인이 승인 참가자일 때만 내 팀 배너를 그린다.
+    // 호스트 배정 리그에 그리면 누를 수 없는 버튼을 보여주는 셈이다.
+    final myUserId = ref.watch(currentUserProvider)?.id;
+    final isApproved =
+        myUserId != null && ranking.any((e) => e.userId == myUserId);
+    final showBanner = shouldShowMyTeamBanner(
+      isSelfPick: league.isSelfPick,
+      isApprovedParticipant: isApproved,
+    );
+    LeagueTeam? myTeam;
+    if (showBanner && myUserId != null) {
+      for (final t in teams) {
+        if (t.memberUserIds.contains(myUserId)) {
+          myTeam = t;
+          break;
+        }
+      }
+    }
+    final banner = showBanner
+        ? LeagueMyTeamBanner(
+            leagueId: league.id,
+            myTeam: myTeam,
+            hasAnyTeam: teams.isNotEmpty,
+          )
+        : null;
+
     if (teams.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(LucideIcons.users, size: 48, color: sub),
-            const SizedBox(height: 12),
-            Text('아직 팀이 없습니다', style: TextStyle(fontSize: 14, color: sub)),
-            const SizedBox(height: 6),
-            Text(
-              '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: sub, height: 1.5),
-            ),
-          ]),
-        ),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        children: [
+          if (banner != null) banner,
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(LucideIcons.users, size: 48, color: sub),
+              const SizedBox(height: 12),
+              Text('아직 팀이 없습니다',
+                  style: AppTextStyles.body.copyWith(color: sub)),
+              const SizedBox(height: 6),
+              Text(
+                '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(color: sub, height: 1.5),
+              ),
+            ]),
+          ),
+        ],
       );
     }
 
@@ -85,8 +120,12 @@ class LeagueTeamRankingTab extends ConsumerWidget {
       },
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: rows.length,
+        itemCount: rows.length + (banner != null ? 1 : 0),
         itemBuilder: (_, i) {
+          if (banner != null) {
+            if (i == 0) return banner;
+            i -= 1;
+          }
           final row = rows[i];
           return _TeamRankCard(
             // 미배정 그룹은 순위를 받지 않는다 (0)

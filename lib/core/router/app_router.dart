@@ -13,6 +13,7 @@ import '../../features/auth/presentation/screens/password_change_email_screen.da
 import '../../features/auth/presentation/screens/password_change_otp_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/league/presentation/screens/league_screen.dart';
+import '../../features/league/presentation/screens/league_my_team_screen.dart';
 import '../../features/league/presentation/screens/league_team_manage_screen.dart';
 import '../../features/league/presentation/screens/league_detail_screen.dart';
 import '../../features/league/presentation/screens/league_create_screen.dart';
@@ -253,6 +254,13 @@ GoRouter appRouter(Ref ref) {
           leagueId: state.pathParameters['leagueId']!,
         ),
       ),
+      // 내 팀 선택 (참가자, 자율 선택 리그): ShellRoute 밖 → 하단 탭 없음
+      GoRoute(
+        path: '/league/my-team/:leagueId',
+        builder: (context, state) => LeagueMyTeamScreen(
+          leagueId: state.pathParameters['leagueId']!,
+        ),
+      ),
       // 리그 참가자 상세: ShellRoute 밖 → 하단 탭 없음
       GoRoute(
         path: '/league/participant/:leagueId/:userId',
@@ -342,6 +350,7 @@ class AppRoutes {
   static const String myLeagueDetail = '/my-league/detail';
   static const String leagueManage = '/league/manage';
   static const String leagueTeams = '/league/teams';
+  static const String leagueMyTeam = '/league/my-team';
   static const String upload = '/upload';
   static const String personalCatch = '/personal-catch';
   static const String personalCatchBatch = '/personal-catch-batch';
