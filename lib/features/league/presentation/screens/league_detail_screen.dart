@@ -20,6 +20,7 @@ import '../../data/league_invite_repository.dart';
 import 'league_catch_screen.dart';
 import '../widgets/catch_review_tab.dart';
 import '../widgets/league_ranking_tab.dart';
+import '../widgets/league_team_ranking_tab.dart';
 import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/slide_to_confirm.dart';
 import '../../../../core/extensions/theme_extensions.dart';
@@ -77,8 +78,12 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   bool get _isHost =>
       ref.read(currentUserProvider)?.id == widget.league.hostId;
 
+  // 팀전이면 '팀 순위' 탭이 맨 앞에 하나 더 붙는다.
+  // tabs / children 의 조건도 반드시 widget.league.isTeamMode 를 써야
+  // 컨트롤러 길이와 어긋나지 않는다.
   int get _tabLength =>
-      _isHost && widget.league.status == 'in_progress' ? 3 : 2;
+      (widget.league.isTeamMode ? 1 : 0) +
+      (_isHost && widget.league.status == 'in_progress' ? 3 : 2);
 
   void _refreshAll() {
     // leagueRanking은 무거운 RPC + 5분 keepAlive로 자동 갱신 + 사용자 액션 시
@@ -167,7 +172,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   void didUpdateWidget(_LeagueDetailBody old) {
     super.didUpdateWidget(old);
     // 상태가 바뀌면 탭 컨트롤러 재생성
-    if (old.league.status != widget.league.status) {
+    if (old.league.status != widget.league.status ||
+        old.league.isTeamMode != widget.league.isTeamMode) {
       _tab?.dispose();
       _tab = _hasTabs ? TabController(length: _tabLength, vsync: this) : null;
     }
@@ -398,6 +404,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
                 tabBar: TabBar(
                   controller: _tab,
                   tabs: [
+                    if (widget.league.isTeamMode) const Tab(text: '팀 순위'),
                     Tab(text: league.status == 'completed' ? '최종 순위' : '실시간 순위'),
                     if (_isHost && league.status == 'in_progress')
                       const Tab(text: '심사'),
@@ -414,6 +421,9 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
             ? TabBarView(
                 controller: _tab,
                 children: [
+                  if (widget.league.isTeamMode)
+                    LeagueTeamRankingTab(
+                        league: league, isDark: isDark, accent: accent),
                   LeagueRankingTab(league: league, isDark: isDark, accent: accent, showRegisterHint: true),
                   if (_isHost && league.status == 'in_progress')
                     CatchReviewTab(leagueId: league.id),
