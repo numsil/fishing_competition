@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/entry_fee.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -217,9 +218,7 @@ class _LeagueScreenState extends ConsumerState<LeagueScreen> {
                         date: startStr == endStr ? startStr : '$startStr ~ $endStr',
                         participants: l.participantsCount,
                         max: l.maxParticipants,
-                        prize: l.entryFee > 0
-                            ? '${NumberFormat('#,###').format(l.entryFee)}원'
-                            : '무료 참가',
+                        prize: formatEntryFee(l.entryFee, freeLabel: '무료 참가'),
                         status: stat,
                         rule: l.shortDescription ?? '',
                         hostUsername: l.hostUsername,

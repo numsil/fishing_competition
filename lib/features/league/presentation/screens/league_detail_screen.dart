@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../../core/utils/entry_fee.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -523,9 +524,7 @@ class _InfoTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final feeStr = league.entryFee > 0
-        ? '${NumberFormat('#,###').format(league.entryFee)}원'
-        : '무료';
+    final feeStr = formatEntryFee(league.entryFee);
     final divColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     return ListView(

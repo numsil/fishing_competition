@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/entry_fee.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -780,7 +781,7 @@ class _StatusCard extends StatelessWidget {
               const SizedBox(width: 8),
               InfoChipFilled(
                 icon: Icons.payments_outlined,
-                label: fee == 0 ? '무료' : '${fee ~/ 1000}천원',
+                label: formatEntryFee(fee),
                 color: accent,
                 isDark: isDark,
                 fontWeight: FontWeight.w700,
