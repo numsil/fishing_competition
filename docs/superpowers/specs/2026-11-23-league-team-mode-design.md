@@ -74,8 +74,10 @@
 - `league_participants` → `users` FK가 여전히 1개뿐인지 (`pg_constraint` 확인)
 - PostgREST embed 실제 호출 200 확인:
   - `league_participants?select=id,users(username,avatar_url)`
-  - `league_participants?select=id,team_id,league_teams(name,color)`
-  - `leagues?select=id,is_team_mode`
+  - `league_participants?select=user_id,team_id`
+  - `league_teams?select=id,name,color,sort_order,league_participants(user_id)`
+  - `leagues?select=id,status,is_team_mode`
+  - `posts?select=id,users(username,avatar_url)`
 
 ---
 
@@ -129,8 +131,10 @@
 팀 점수는 그 행들을 `team_id` 로 묶어 더한 값이므로, **집계용 쿼리를 새로 만들지 않는다.**
 
 - `get_league_ranking` — **무수정**. 그대로 재사용한다.
-- 팀 명단은 가벼운 조회 1회로 가져온다:
-  `league_participants?select=user_id,team_id,league_teams(id,name,color)&league_id=eq.<id>&status=eq.approved`
+- 팀 명단은 가벼운 조회 **1회**로 가져온다. 멤버가 0명인 팀도 나와야 하므로
+  `league_teams` 를 기준으로 조회하고 참가자를 embed 한다:
+  `league_teams?select=id,name,color,sort_order,league_participants(user_id)&league_id=eq.<id>&order=sort_order`
+  (순위에 없는 user_id = 미승인·탈퇴자는 화면에서 무시한다)
 - 화면(Provider)에서 `user_id` 기준으로 두 결과를 합치고 팀별로 합산한다.
   - `rule = '마릿수'` → `total_count` 합
   - 그 외 → `total_length` 합 (무게 룰도 이 컬럼에 실린다)
@@ -160,6 +164,10 @@
 - `league_teams` INSERT/UPDATE/DELETE: 해당 리그의 `host_id = auth.uid()` 또는 admin
 - `league_participants.team_id` UPDATE: 동일 조건
   (참가자 본인은 자기 `team_id` 를 바꿀 수 없다 — 호스트 배정 방식 확정)
+  RLS 정책은 컬럼 단위 제한이 불가능하고 기존 정책이 "본인 행 수정"을 허용할 수
+  있으므로, **BEFORE UPDATE 트리거**로 호스트/admin 외의 `team_id` 변경을 거부한다.
+  (`auth.uid()` 가 없는 서버 내부 동작 — 팀 삭제 시 SET NULL — 은 통과시킨다)
+- 호스트·admin 판별은 `is_league_host(uuid)` SECURITY DEFINER 헬퍼로 공유한다
 
 ---
 
@@ -170,7 +178,12 @@
 - `팀전으로 진행` 토글 (`is_team_mode`) **하나만 추가.** 다른 설정은 없다.
 - **팀 생성은 개설 플로우에 넣지 않는다.** 개설 직후 관리 화면에서 만든다.
 
-### 4.2 리그 관리 (호스트) — 신규 `팀 관리` 섹션
+### 4.2 리그 관리 (호스트) — `팀 관리`
+
+리그 관리 화면의 `TabController` 길이가 2로 고정되어 있고 상태별 분기가 3개 있어,
+탭을 늘리면 모든 분기를 건드려야 한다. 최소 변경을 위해 **별도 화면
+(`/league/teams/:leagueId`)으로 분리하고, 관리 화면에는 진입 버튼 하나만** 둔다
+(팀전 리그에서만 노출).
 
 - 팀 목록: 팀명 / 색 / 인원수, 추가·이름변경·색변경·삭제
 - 참가자 목록에서 팀 지정 (바텀시트 선택)
@@ -247,6 +260,6 @@
 
 ## 7. 열린 질문
 
-- 팀 색상 팔레트를 `AppColors` 에 몇 개 추가할지 (4색? 8색?)
+- ~~팀 색상 팔레트 개수~~ → **6색 확정** (`AppColors.teamColors`: red/blue/green/amber/purple/pink). 키 문자열이 `league_teams.color` 에 저장되므로 변경 금지
 - 팀 기본 펼침 임계값 5팀이 적절한지 — 실사용 후 조정
 - 팀전 리그의 알림 문구를 팀 단위로 바꿀지 (현재는 개인 기준)
