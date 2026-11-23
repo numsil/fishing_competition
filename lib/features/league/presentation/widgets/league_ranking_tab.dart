@@ -8,6 +8,7 @@ import '../../../../core/widgets/user_avatar.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../data/league_model.dart';
 import '../../data/league_repository.dart';
+import '../../data/league_team_model.dart';
 import '../screens/league_participant_detail_screen.dart';
 
 class LeagueRankingTab extends ConsumerWidget {
@@ -27,6 +28,18 @@ class LeagueRankingTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 팀전 리그에서만 팀 배지를 붙인다. 일반 리그는 추가 조회가 없다.
+    final teamByUserId = <String, LeagueTeam>{};
+    if (league.isTeamMode) {
+      final teams =
+          ref.watch(leagueTeamsProvider(league.id)).valueOrNull ?? const [];
+      for (final t in teams) {
+        for (final uid in t.memberUserIds) {
+          teamByUserId[uid] = t;
+        }
+      }
+    }
+
     return ref.watch(leagueRankingProvider(league.id)).when(
       data: (entries) {
         if (entries.isEmpty) {
@@ -65,6 +78,8 @@ class LeagueRankingTab extends ConsumerWidget {
               catchLimit: league.catchLimit,
               isDark: isDark,
               accent: accent,
+              team: teamByUserId[entries[i].userId],
+              showTeamBadge: league.isTeamMode,
             ),
           ),
         );
@@ -85,6 +100,8 @@ class LeagueRankCard extends StatelessWidget {
     required this.catchLimit,
     required this.isDark,
     required this.accent,
+    this.team,
+    this.showTeamBadge = false,
   });
 
   final int rank;
@@ -94,6 +111,10 @@ class LeagueRankCard extends StatelessWidget {
   final int catchLimit;
   final bool isDark;
   final Color accent;
+
+  /// 팀전 리그에서 이 참가자의 팀. null 이면 미배정.
+  final LeagueTeam? team;
+  final bool showTeamBadge;
 
   Color get _rankColor {
     if (rank == 1) return AppColors.gold;
@@ -204,7 +225,24 @@ class LeagueRankCard extends StatelessWidget {
                 ],
               ]),
               const SizedBox(height: 4),
-              Wrap(spacing: 8, children: [
+              Wrap(spacing: 8, runSpacing: 4, children: [
+                // 색만으로 구분되지 않도록 팀명을 항상 함께 표시한다.
+                if (showTeamBadge)
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: team != null
+                            ? AppColors.teamColor(team!.color)
+                            : sub,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(team?.name ?? '팀 미배정',
+                        style: TextStyle(fontSize: 11, color: sub)),
+                  ]),
                 LeagueSubStat(icon: LucideIcons.fish, value: '${entry.totalCount}마리', sub: sub),
                 if (catchLimit > 1 && entry.bestLength != null)
                   LeagueSubStat(
