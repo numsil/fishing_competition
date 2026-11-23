@@ -22,7 +22,16 @@ class LeagueTeamManageScreen extends ConsumerWidget {
 
   final String leagueId;
 
-  void _refresh(WidgetRef ref) {
+  /// 팀 변경 후 갱신. 팀 소속이 바뀌어도 개인 점수는 바뀌지 않으므로
+  /// 무거운 get_league_ranking RPC 는 다시 호출하지 않는다
+  /// (호스트가 한 명씩 배정할 때마다 돌면 낭비다).
+  void _refreshTeams(WidgetRef ref) {
+    ref.invalidate(leagueTeamsProvider(leagueId));
+  }
+
+  /// 당겨서 새로고침. 사용자가 명시적으로 최신 데이터를 요청한 경우라
+  /// 참가자 명단(순위)까지 다시 받는다.
+  void _refreshAll(WidgetRef ref) {
     ref.invalidate(leagueTeamsProvider(leagueId));
     ref.invalidate(leagueRankingProvider(leagueId));
   }
@@ -53,7 +62,7 @@ class LeagueTeamManageScreen extends ConsumerWidget {
                 participants.where((p) => !assigned.contains(p.userId)).toList();
 
             return RefreshIndicator(
-              onRefresh: () async => _refresh(ref),
+              onRefresh: () async => _refreshAll(ref),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
                 children: [
@@ -123,6 +132,7 @@ class LeagueTeamManageScreen extends ConsumerWidget {
                       divColor: divColor,
                       sub: sub,
                       onRename: () => _editTeam(context, ref, t),
+                      onRecolor: () => _editTeamColor(context, ref, t),
                       onDelete: () => _deleteTeam(context, ref, t),
                       onTapMember: (uid) => _pickTeam(context, ref, teams, uid, t.id),
                     ),
@@ -133,7 +143,7 @@ class LeagueTeamManageScreen extends ConsumerWidget {
                     label: '팀 추가',
                     icon: LucideIcons.plus,
                     variant: AppButtonVariant.outline,
-                    onPressed: () => _createTeam(context, ref, teams.length),
+                    onPressed: () => _createTeam(context, ref, teams),
                   ),
                 ],
               ),
@@ -154,24 +164,26 @@ class LeagueTeamManageScreen extends ConsumerWidget {
     if (!ok || !context.mounted) return;
     try {
       await ref.read(leagueRepositoryProvider).shuffleLeagueTeams(leagueId);
-      _refresh(ref);
+      _refreshTeams(ref);
       if (context.mounted) AppSnackBar.success(context, '팀을 다시 배정했습니다.');
     } catch (e) {
       if (context.mounted) AppSnackBar.error(context, _message(e));
     }
   }
 
-  Future<void> _createTeam(BuildContext context, WidgetRef ref, int count) async {
+  Future<void> _createTeam(
+      BuildContext context, WidgetRef ref, List<LeagueTeam> teams) async {
     final name = await _promptName(context, title: '팀 추가', initial: '');
     if (name == null || !context.mounted) return;
     try {
       await ref.read(leagueRepositoryProvider).createLeagueTeam(
             leagueId: leagueId,
             name: name,
-            color: AppColors.teamColorKeyAt(count),
-            sortOrder: count,
+            color: AppColors.nextUnusedTeamColorKey(
+                teams.map((t) => t.color)),
+            sortOrder: nextTeamSortOrder(teams),
           );
-      _refresh(ref);
+      _refreshTeams(ref);
     } catch (e) {
       if (context.mounted) AppSnackBar.error(context, _message(e));
     }
@@ -184,7 +196,68 @@ class LeagueTeamManageScreen extends ConsumerWidget {
       await ref
           .read(leagueRepositoryProvider)
           .updateLeagueTeam(teamId: t.id, name: name);
-      _refresh(ref);
+      _refreshTeams(ref);
+    } catch (e) {
+      if (context.mounted) AppSnackBar.error(context, _message(e));
+    }
+  }
+
+  /// 팀 색 변경. 색은 팀 탭·개인 탭 배지의 식별 수단이라 겹쳤을 때
+  /// 호스트가 직접 고칠 수 있어야 한다.
+  Future<void> _editTeamColor(
+      BuildContext context, WidgetRef ref, LeagueTeam t) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('팀 색 변경',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            child: Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: [
+                for (final key in AppColors.teamColors.keys)
+                  Semantics(
+                    label: key,
+                    button: true,
+                    selected: key == t.color,
+                    child: InkWell(
+                      onTap: () => Navigator.pop(ctx, key),
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.teamColors[key],
+                          shape: BoxShape.circle,
+                          border: key == t.color
+                              ? Border.all(color: AppColors.darkText, width: 3)
+                              : null,
+                        ),
+                        child: key == t.color
+                            ? const Icon(LucideIcons.check,
+                                size: 20, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+    if (picked == null || !context.mounted || picked == t.color) return;
+    try {
+      await ref
+          .read(leagueRepositoryProvider)
+          .updateLeagueTeam(teamId: t.id, color: picked);
+      _refreshTeams(ref);
     } catch (e) {
       if (context.mounted) AppSnackBar.error(context, _message(e));
     }
@@ -202,7 +275,7 @@ class LeagueTeamManageScreen extends ConsumerWidget {
     if (!ok || !context.mounted) return;
     try {
       await ref.read(leagueRepositoryProvider).deleteLeagueTeam(t.id);
-      _refresh(ref);
+      _refreshTeams(ref);
     } catch (e) {
       if (context.mounted) AppSnackBar.error(context, _message(e));
     }
@@ -256,7 +329,7 @@ class LeagueTeamManageScreen extends ConsumerWidget {
             userId: userId,
             teamId: picked.teamId,
           );
-      _refresh(ref);
+      _refreshTeams(ref);
     } catch (e) {
       if (context.mounted) AppSnackBar.error(context, _message(e));
     }
@@ -320,6 +393,7 @@ class _TeamCard extends StatelessWidget {
     required this.divColor,
     required this.sub,
     required this.onRename,
+    required this.onRecolor,
     required this.onDelete,
     required this.onTapMember,
   });
@@ -330,6 +404,7 @@ class _TeamCard extends StatelessWidget {
   final Color divColor;
   final Color sub;
   final VoidCallback onRename;
+  final VoidCallback onRecolor;
   final VoidCallback onDelete;
   final void Function(String userId) onTapMember;
 
@@ -344,13 +419,25 @@ class _TeamCard extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
           child: Row(children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                  color: AppColors.teamColor(team.color), shape: BoxShape.circle),
+            Semantics(
+              label: '${team.name} 색 변경',
+              button: true,
+              child: InkWell(
+                onTap: onRecolor,
+                customBorder: const CircleBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                        color: AppColors.teamColor(team.color),
+                        shape: BoxShape.circle),
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 4),
             Expanded(
               child: Row(children: [
                 Flexible(

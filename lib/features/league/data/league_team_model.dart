@@ -1,3 +1,14 @@
+/// 새 팀에 줄 `sort_order`. 기존 최대값 + 1.
+///
+/// 팀 개수를 쓰면 중간 팀을 삭제한 뒤 추가할 때 남은 팀과 값이 겹친다.
+int nextTeamSortOrder(List<LeagueTeam> teams) {
+  var max = -1;
+  for (final t in teams) {
+    if (t.sortOrder > max) max = t.sortOrder;
+  }
+  return max + 1;
+}
+
 /// 리그 팀 (팀전 전용).
 ///
 /// 점수는 담지 않는다. 팀 점수는 팀원 각자의 개인 점수 합이므로

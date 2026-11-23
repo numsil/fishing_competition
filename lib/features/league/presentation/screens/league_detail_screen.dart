@@ -85,6 +85,18 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
       (widget.league.isTeamMode ? 1 : 0) +
       (_isHost && widget.league.status == 'in_progress' ? 3 : 2);
 
+  /// 탭 컨트롤러를 만들고 인덱스 리스너를 붙인다.
+  /// 재생성 시 리스너를 다시 붙이지 않으면 _currentTabIndex 가 얼어붙어
+  /// 하단 조과 버튼 표시가 마지막 값에 멈춘다.
+  TabController _newTabController() {
+    final c = TabController(length: _tabLength, vsync: this);
+    c.addListener(() {
+      if (c.indexIsChanging || !mounted) return;
+      setState(() => _currentTabIndex = c.index);
+    });
+    return c;
+  }
+
   void _refreshAll() {
     // leagueRanking은 무거운 RPC + 5분 keepAlive로 자동 갱신 + 사용자 액션 시
     // 이미 invalidate됨. resume마다 재페치하지 않음.
@@ -99,13 +111,7 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
   @override
   void initState() {
     super.initState();
-    if (_hasTabs) {
-      _tab = TabController(length: _tabLength, vsync: this)
-        ..addListener(() {
-          if (_tab!.indexIsChanging) return;
-          setState(() => _currentTabIndex = _tab!.index);
-        });
-    }
+    if (_hasTabs) _tab = _newTabController();
     WidgetsBinding.instance.addObserver(this);
     _subscribeRealtime();
   }
@@ -175,7 +181,8 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
     if (old.league.status != widget.league.status ||
         old.league.isTeamMode != widget.league.isTeamMode) {
       _tab?.dispose();
-      _tab = _hasTabs ? TabController(length: _tabLength, vsync: this) : null;
+      _tab = _hasTabs ? _newTabController() : null;
+      _currentTabIndex = 0;
     }
   }
 
@@ -442,13 +449,24 @@ class _LeagueDetailBodyState extends ConsumerState<_LeagueDetailBody>
         cancelling: _cancelling,
         onJoin: _join,
         onCancelJoin: _cancelJoin,
-        showCatchButton: _currentTabIndex == 0,
+        showCatchButton: isRankingTabIndex(_currentTabIndex,
+            isTeamMode: widget.league.isTeamMode),
       ),
     );
   }
 }
 
 // ── 탭바 고정 헤더 delegate ──────────────────────────────
+/// 하단 "조과 사진 등록" 버튼을 보여줄 탭인지.
+///
+/// 순위 탭은 팀전이면 두 개다 (0: 팀 순위, 1: 개인 순위). 팀 탭을 맨 앞에
+/// 끼워 넣으면서 이 조건을 `index == 0` 으로 두면 개인 순위 탭에서 버튼이
+/// 사라지고, 그 탭의 "아래 버튼으로 첫 조과를 등록해보세요!" 안내가 없는
+/// 버튼을 가리키게 된다.
+@visibleForTesting
+bool isRankingTabIndex(int index, {required bool isTeamMode}) =>
+    index <= (isTeamMode ? 1 : 0);
+
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   const _StickyTabBarDelegate({required this.tabBar, required this.isDark});
   final TabBar tabBar;

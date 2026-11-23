@@ -29,6 +29,16 @@ class LeagueTeamRank {
   int get memberCount => members.length;
 }
 
+/// `get_league_ranking` 결과 순서에서 user_id → 개인 순위(1부터).
+///
+/// 팀 탭에서 멤버를 눌러 참가자 상세로 보낼 때 쓴다. 상세 화면은 받은 rank 를
+/// 아바타 배지에 그대로 찍으므로 0 을 넘기면 "0" 배지가 보인다.
+Map<String, int> rankByUserId(List<LeagueRankEntry> ranking) {
+  return {
+    for (var i = 0; i < ranking.length; i++) ranking[i].userId: i + 1,
+  };
+}
+
 /// 개인 순위를 팀으로 묶어 팀 순위를 만든다.
 ///
 /// 점수 규칙은 전혀 재계산하지 않는다. [ranking] 은 `get_league_ranking`

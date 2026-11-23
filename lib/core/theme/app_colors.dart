@@ -51,4 +51,16 @@ class AppColors {
   /// 새 팀에 돌아가며 배정할 색 키.
   static String teamColorKeyAt(int index) =>
       teamColors.keys.elementAt(index % teamColors.length);
+
+  /// 아직 쓰지 않은 첫 색 키. 팔레트를 다 쓰면 첫 색으로 되돌아간다.
+  ///
+  /// 팀 개수를 인덱스로 쓰면 중간 팀을 삭제한 뒤 추가할 때 남은 팀과 색이
+  /// 겹쳐 호스트가 구분할 수 없게 된다 (색 변경 외에 되돌릴 방법이 없다).
+  static String nextUnusedTeamColorKey(Iterable<String?> usedKeys) {
+    final used = usedKeys.whereType<String>().toSet();
+    for (final key in teamColors.keys) {
+      if (!used.contains(key)) return key;
+    }
+    return teamColors.keys.first;
+  }
 }

@@ -73,6 +73,9 @@ class LeagueTeamRankingTab extends ConsumerWidget {
       teams: teams,
       rule: league.rule,
     );
+    // 참가자 상세 화면이 rank 를 아바타 배지에 그대로 찍으므로
+    // 실제 개인 순위를 넘긴다 (0 을 넘기면 "0" 배지가 보인다).
+    final rankByUser = rankByUserId(ranking);
     final expandAll = teams.length < _expandAllThreshold;
 
     return RefreshIndicator(
@@ -94,6 +97,7 @@ class LeagueTeamRankingTab extends ConsumerWidget {
             catchLimit: league.catchLimit,
             isDark: isDark,
             accent: accent,
+            rankByUserId: rankByUser,
             initiallyExpanded: row.isUnassigned || expandAll || i == 0,
           );
         },
@@ -111,6 +115,7 @@ class _TeamRankCard extends StatefulWidget {
     required this.catchLimit,
     required this.isDark,
     required this.accent,
+    required this.rankByUserId,
     required this.initiallyExpanded,
   });
 
@@ -121,6 +126,9 @@ class _TeamRankCard extends StatefulWidget {
   final int catchLimit;
   final bool isDark;
   final Color accent;
+
+  /// user_id → 개인 순위. 참가자 상세 화면의 순위 배지에 쓰인다.
+  final Map<String, int> rankByUserId;
   final bool initiallyExpanded;
 
   @override
@@ -261,7 +269,7 @@ class _TeamRankCardState extends State<_TeamRankCard> {
                   entry: m,
                   rule: widget.rule,
                   catchLimit: widget.catchLimit,
-                  rank: 0,
+                  rank: widget.rankByUserId[m.userId] ?? 0,
                 ),
               ),
               child: Padding(
