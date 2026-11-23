@@ -26,6 +26,7 @@ _League _$LeagueFromJson(Map<String, dynamic> json) => _League(
   prizeInfo: json['prize_info'] as String?,
   isPublic: json['is_public'] as bool? ?? true,
   allowGallery: json['allow_gallery'] as bool? ?? true,
+  isTeamMode: json['is_team_mode'] as bool? ?? false,
   introImageUrls:
       (json['intro_image_urls'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -54,6 +55,7 @@ Map<String, dynamic> _$LeagueToJson(_League instance) => <String, dynamic>{
   'prize_info': instance.prizeInfo,
   'is_public': instance.isPublic,
   'allow_gallery': instance.allowGallery,
+  'is_team_mode': instance.isTeamMode,
   'intro_image_urls': instance.introImageUrls,
   'created_at': instance.createdAt.toIso8601String(),
 };

@@ -26,6 +26,7 @@ abstract class League with _$League {
     @JsonKey(name: 'prize_info') String? prizeInfo,
     @JsonKey(name: 'is_public') @Default(true) bool isPublic,
     @JsonKey(name: 'allow_gallery') @Default(true) bool allowGallery,
+    @JsonKey(name: 'is_team_mode') @Default(false) bool isTeamMode,
     @JsonKey(name: 'intro_image_urls') @Default([]) List<String> introImageUrls,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     // 조인된 데이터

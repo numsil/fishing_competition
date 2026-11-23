@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../feed/data/post_model.dart';
 import '../../../core/utils/storage_cleanup.dart';
 import 'league_model.dart';
+import 'league_team_model.dart';
 
 part 'league_repository.g.dart';
 
@@ -120,6 +121,7 @@ class LeagueRepository {
     String? prizeInfo,
     bool isPublic = true,
     bool allowGallery = true,
+    bool isTeamMode = false,
     List<XFile> introImageFiles = const [],
   }) async {
     final imageUrls = introImageFiles.isNotEmpty
@@ -144,6 +146,7 @@ class LeagueRepository {
       'prize_info': prizeInfo,
       'is_public': isPublic,
       'allow_gallery': allowGallery,
+      'is_team_mode': isTeamMode,
       'intro_image_urls': imageUrls,
     });
   }
@@ -155,7 +158,7 @@ class LeagueRepository {
           'id, host_id, title, description, short_description, location, '
           'lat, lng, start_time, end_time, entry_fee, max_participants, '
           'status, fish_types, rule, catch_limit, prize_info, is_public, '
-          'allow_gallery, intro_image_urls, created_at, '
+          'allow_gallery, is_team_mode, intro_image_urls, created_at, '
           'league_participants(count), users!host_id(username, avatar_url)',
         )
         .eq('id', id)
@@ -180,7 +183,7 @@ class LeagueRepository {
   }) async {
     var query = _supabase
         .from('leagues')
-        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at, league_participants(count), users!host_id(username)')
+        .select('id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, created_at, league_participants(count), users!host_id(username)')
         .eq('league_participants.status', 'approved')
         .neq('status', 'canceled');
 
@@ -233,7 +236,7 @@ class LeagueRepository {
 
     final response = await _supabase
         .from('league_participants')
-        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, created_at)')
+        .select('leagues(id, host_id, title, short_description, location, status, start_time, end_time, entry_fee, max_participants, is_public, is_team_mode, created_at)')
         .eq('user_id', userId)
         .eq('status', 'approved');
 
@@ -535,6 +538,7 @@ class LeagueRepository {
     int? entryFee,
     bool? isPublic,
     bool? allowGallery,
+    bool? isTeamMode,
     List<XFile>? newImageFiles,
     List<String>? existingImageUrls,
     String? hostId,
@@ -556,6 +560,7 @@ class LeagueRepository {
     if (entryFee != null) update['entry_fee'] = entryFee;
     if (isPublic != null) update['is_public'] = isPublic;
     if (allowGallery != null) update['allow_gallery'] = allowGallery;
+    if (isTeamMode != null) update['is_team_mode'] = isTeamMode;
     if (newImageFiles != null || existingImageUrls != null) {
       final uploaded = (newImageFiles?.isNotEmpty == true && hostId != null)
           ? await _uploadIntroImages(hostId, newImageFiles!)
@@ -564,6 +569,77 @@ class LeagueRepository {
     }
     if (update.isEmpty) return;
     await _supabase.from('leagues').update(update).eq('id', id);
+  }
+
+  // ── 팀전 (Team Mode) ───────────────────────────────────────
+  //
+  // 팀 집계용 RPC 는 만들지 않는다. 팀 점수는 이미 받아온 개인 순위
+  // (get_league_ranking) 를 team_id 로 묶어 더한 값이므로, 여기서는
+  // "누가 어느 팀인지"만 가져온다. 빈 팀도 나와야 하므로 league_teams
+  // 를 기준으로 조회하고 참가자를 embed 한다 (쿼리 1회).
+
+  Future<List<LeagueTeam>> getLeagueTeams(String leagueId) async {
+    final rows = await _supabase
+        .from('league_teams')
+        .select('id, league_id, name, color, sort_order, league_participants(user_id)')
+        .eq('league_id', leagueId)
+        .order('sort_order')
+        .order('created_at');
+    return (rows as List)
+        .map((r) => LeagueTeam.fromRow(r as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<void> createLeagueTeam({
+    required String leagueId,
+    required String name,
+    String? color,
+    int sortOrder = 0,
+  }) async {
+    await _supabase.from('league_teams').insert({
+      'league_id': leagueId,
+      'name': name,
+      'color': color,
+      'sort_order': sortOrder,
+    });
+  }
+
+  Future<void> updateLeagueTeam({
+    required String teamId,
+    String? name,
+    String? color,
+  }) async {
+    final update = <String, dynamic>{};
+    if (name != null) update['name'] = name;
+    if (color != null) update['color'] = color;
+    if (update.isEmpty) return;
+    await _supabase.from('league_teams').update(update).eq('id', teamId);
+  }
+
+  /// 팀을 지우면 FK ON DELETE SET NULL 로 멤버가 미배정으로 돌아간다.
+  /// 조과(posts)는 영향을 받지 않는다.
+  Future<void> deleteLeagueTeam(String teamId) async {
+    await _supabase.from('league_teams').delete().eq('id', teamId);
+  }
+
+  /// teamId == null 이면 미배정으로 되돌린다.
+  Future<void> assignParticipantTeam({
+    required String leagueId,
+    required String userId,
+    String? teamId,
+  }) async {
+    await _supabase
+        .from('league_participants')
+        .update({'team_id': teamId})
+        .eq('league_id', leagueId)
+        .eq('user_id', userId);
+  }
+
+  Future<void> shuffleLeagueTeams(String leagueId) async {
+    await _supabase.rpc(
+      'shuffle_league_teams',
+      params: {'p_league_id': leagueId},
+    );
   }
 }
 
@@ -637,6 +713,14 @@ Future<List<LeagueRankEntry>> leagueRanking(LeagueRankingRef ref, String leagueI
   final link = ref.keepAlive();
   Timer(const Duration(minutes: 5), link.close);
   return ref.watch(leagueRepositoryProvider).getLeagueRanking(leagueId);
+}
+
+// 팀전: 팀 목록 + 각 팀의 멤버 user_id (집계는 team_ranking.dart 에서)
+@riverpod
+Future<List<LeagueTeam>> leagueTeams(LeagueTeamsRef ref, String leagueId) {
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
+  return ref.watch(leagueRepositoryProvider).getLeagueTeams(leagueId);
 }
 
 // 특정 참가자의 조과 목록
