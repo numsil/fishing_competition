@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/address_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -52,6 +53,16 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   bool _isPublic = true;
   bool _allowGallery = true;
   bool _isTeamMode = false;
+  String _teamAssignMode = 'host';
+  int _teamCapacity = 0;
+
+  /// 정원 초기값을 한 번만 5 로 세팅하기 위한 플래그.
+  ///
+  /// DB DEFAULT 는 0(무제한)이어야 한다 — 기존 리그와 일반 리그가 v1 과
+  /// 동일하게 동작해야 하기 때문이다. 하지만 팀전을 켜는 사람은 정원을
+  /// 원할 가능성이 높으므로 **처음 켜는 순간** 화면 값만 5 로 둔다.
+  /// 껐다 다시 켜면 직전 값을 유지한다.
+  bool _teamCapacityTouched = false;
 
   // 장소 좌표
   LatLng? _selectedLatLng;
@@ -106,6 +117,11 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _isPublic = l.isPublic;
       _allowGallery = l.allowGallery;
       _isTeamMode = l.isTeamMode;
+    _teamAssignMode = l.teamAssignMode;
+    _teamCapacity = l.teamCapacity;
+    // 수정 모드는 항상 DB 값을 그대로 보여준다. 자동 5 세팅이 걸리면
+    // 무제한으로 운영 중인 리그가 저장만 눌렀을 때 정원 5 로 바뀐다.
+    _teamCapacityTouched = true;
       if (l.lat != null && l.lng != null) {
         _selectedLatLng = LatLng(l.lat!, l.lng!);
       }
@@ -191,6 +207,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           isPublic: _isPublic,
           allowGallery: _allowGallery,
           isTeamMode: _isTeamMode,
+          teamAssignMode: _teamAssignMode,
+          teamCapacity: _teamCapacity,
           newImageFiles: _newImageFiles,
           existingImageUrls: _existingImageUrls,
           hostId: widget.league!.hostId,
@@ -227,6 +245,8 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           isPublic: _isPublic,
           allowGallery: _allowGallery,
           isTeamMode: _isTeamMode,
+          teamAssignMode: _teamAssignMode,
+          teamCapacity: _teamCapacity,
           introImageFiles: _newImageFiles,
         );
         ref.invalidate(leaguesProvider);
@@ -1108,10 +1128,101 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                       value: _isTeamMode,
                       // ignore: deprecated_member_use
                       activeColor: context.accentColor,
-                      onChanged: _isEnded ? null : (v) => setState(() => _isTeamMode = v),
+                      onChanged: _isEnded
+                          ? null
+                          : (v) => setState(() {
+                                _isTeamMode = v;
+                                if (v && !_teamCapacityTouched) {
+                                  _teamCapacity = 5;
+                                  _teamCapacityTouched = true;
+                                }
+                              }),
                     ),
                     if (_isTeamMode) ...[
                       Divider(height: 1, color: divColor),
+
+                      // 팀 선택 방식
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('팀 선택 방식', style: AppTextStyles.bodyBold),
+                            const SizedBox(height: 10),
+                            Row(children: [
+                              Expanded(
+                                child: _AssignModeChip(
+                                  label: '호스트가\n배정',
+                                  selected: _teamAssignMode == 'host',
+                                  onTap: _isEnded
+                                      ? null
+                                      : () => setState(
+                                          () => _teamAssignMode = 'host'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _AssignModeChip(
+                                  label: '참가자가\n선택',
+                                  selected: _teamAssignMode == 'self',
+                                  onTap: _isEnded
+                                      ? null
+                                      : () => setState(
+                                          () => _teamAssignMode = 'self'),
+                                ),
+                              ),
+                            ]),
+                          ],
+                        ),
+                      ),
+
+                      // 팀당 정원
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Row(children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('팀당 정원', style: AppTextStyles.bodyBold),
+                                const SizedBox(height: 3),
+                                Text('0이면 무제한',
+                                    style: AppTextStyles.caption
+                                        .copyWith(color: sub)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: (_isEnded || _teamCapacity <= 0)
+                                ? null
+                                : () => setState(() {
+                                      _teamCapacity--;
+                                      _teamCapacityTouched = true;
+                                    }),
+                            icon: const Icon(LucideIcons.minus, size: 18),
+                            tooltip: '정원 줄이기',
+                          ),
+                          SizedBox(
+                            width: 56,
+                            child: Text(
+                              _teamCapacity == 0 ? '무제한' : '$_teamCapacity명',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.heading4,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: (_isEnded || _teamCapacity >= 50)
+                                ? null
+                                : () => setState(() {
+                                      _teamCapacity++;
+                                      _teamCapacityTouched = true;
+                                    }),
+                            icon: const Icon(LucideIcons.plus, size: 18),
+                            tooltip: '정원 늘리기',
+                          ),
+                        ]),
+                      ),
+
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1120,9 +1231,13 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '점수 규칙은 위에서 고른 그대로입니다. 팀 전용 설정은 없습니다.\n'
-                              '팀은 개설 후 리그 관리 화면에서 만들고 배정합니다.',
-                              style: TextStyle(fontSize: 12, height: 1.6, color: sub),
+                              _teamAssignMode == 'self'
+                                  ? '참가자가 직접 팀을 고릅니다. 호스트도 계속 배정할 수 있습니다.\n'
+                                      '점수 규칙은 위에서 고른 그대로이고, 팀은 개설 후 리그 관리에서 만듭니다.'
+                                  : '호스트만 팀을 바꿀 수 있습니다. 자동 셔플로 한 번에 배정할 수 있습니다.\n'
+                                      '점수 규칙은 위에서 고른 그대로이고, 팀은 개설 후 리그 관리에서 만듭니다.',
+                              style: AppTextStyles.caption
+                                  .copyWith(height: 1.6, color: sub),
                             ),
                           ),
                         ]),
@@ -1599,6 +1714,53 @@ class _TimeInputFormatter extends TextInputFormatter {
     return newValue.copyWith(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// 팀 선택 방식 2지 선택 칩. 이 화면에서만 쓰이므로 여기 둔다.
+class _AssignModeChip extends StatelessWidget {
+  const _AssignModeChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = context.accentColor;
+    final sub = context.isDark ? AppColors.darkTextSub : AppColors.lightTextSub;
+    final divColor =
+        context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(11),
+        child: Container(
+          height: 54,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? accent.withValues(alpha: 0.1) : null,
+            border: Border.all(color: selected ? accent : divColor),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyBold.copyWith(
+              height: 1.35,
+              color: selected ? accent : sub,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
