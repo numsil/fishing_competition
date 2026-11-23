@@ -51,6 +51,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
   final _customLimitCtrl = TextEditingController();
   bool _isPublic = true;
   bool _allowGallery = true;
+  bool _isTeamMode = false;
 
   // 장소 좌표
   LatLng? _selectedLatLng;
@@ -104,6 +105,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
       _catchLimit = l.catchLimit;
       _isPublic = l.isPublic;
       _allowGallery = l.allowGallery;
+      _isTeamMode = l.isTeamMode;
       if (l.lat != null && l.lng != null) {
         _selectedLatLng = LatLng(l.lat!, l.lng!);
       }
@@ -188,6 +190,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           prizeInfo: _buildPrizeInfo(),
           isPublic: _isPublic,
           allowGallery: _allowGallery,
+          isTeamMode: _isTeamMode,
           newImageFiles: _newImageFiles,
           existingImageUrls: _existingImageUrls,
           hostId: widget.league!.hostId,
@@ -223,6 +226,7 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
           prizeInfo: _buildPrizeInfo(),
           isPublic: _isPublic,
           allowGallery: _allowGallery,
+          isTeamMode: _isTeamMode,
           introImageFiles: _newImageFiles,
         );
         ref.invalidate(leaguesProvider);
@@ -1061,6 +1065,71 @@ class _LeagueCreateScreenState extends ConsumerState<LeagueCreateScreen> {
                     ),
                   ],
                 ],
+              ),
+            ),
+
+            // ── 팀전 ──
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: AppCard(
+                padding: EdgeInsets.zero,
+                radius: 12,
+                borderColor: _isTeamMode
+                    ? context.accentColor.withValues(alpha: 0.4)
+                    : divColor,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      title: Row(children: [
+                        const Text('팀전으로 진행',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: context.accentColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('NEW',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: context.isDark ? Colors.black : Colors.white,
+                              )),
+                        ),
+                      ]),
+                      subtitle: Text(
+                        _isTeamMode
+                            ? '팀원 각자의 점수를 합산해 팀 순위를 매깁니다'
+                            : '지금처럼 개인전으로 진행합니다',
+                        style: TextStyle(fontSize: 12, color: sub),
+                      ),
+                      value: _isTeamMode,
+                      // ignore: deprecated_member_use
+                      activeColor: context.accentColor,
+                      onChanged: _isEnded ? null : (v) => setState(() => _isTeamMode = v),
+                    ),
+                    if (_isTeamMode) ...[
+                      Divider(height: 1, color: divColor),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 15, color: context.accentColor),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '점수 규칙은 위에서 고른 그대로입니다. 팀 전용 설정은 없습니다.\n'
+                              '팀은 개설 후 리그 관리 화면에서 만들고 배정합니다.',
+                              style: TextStyle(fontSize: 12, height: 1.6, color: sub),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
 

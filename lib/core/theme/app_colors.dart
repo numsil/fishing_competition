@@ -31,4 +31,24 @@ class AppColors {
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
   static const Color liveRed = Color(0xFFFF3B30);
+
+  // ── 팀전 팀 색상 ──
+  // 키는 league_teams.color 에 저장되는 값이다. 변경 금지.
+  // 색상만으로 구분되지 않도록 UI 에서 팀명을 항상 함께 표시한다.
+  static const Map<String, Color> teamColors = {
+    'red': Color(0xFFE8674B),
+    'blue': Color(0xFF4B8FE8),
+    'green': Color(0xFF3DD6A0),
+    'amber': Color(0xFFE8B84B),
+    'purple': Color(0xFFA77BE8),
+    'pink': Color(0xFFE86BA8),
+  };
+
+  /// 저장된 색 키를 Color 로. 알 수 없는 키/없는 값은 첫 색으로 대체한다.
+  static Color teamColor(String? key) =>
+      teamColors[key] ?? teamColors.values.first;
+
+  /// 새 팀에 돌아가며 배정할 색 키.
+  static String teamColorKeyAt(int index) =>
+      teamColors.keys.elementAt(index % teamColors.length);
 }
