@@ -71,9 +71,7 @@ class _LeagueInviteScreenState extends ConsumerState<LeagueInviteScreen> {
     try {
       await ref.read(leagueInviteRepositoryProvider).inviteUser(
             leagueId: widget.leagueId,
-            leagueTitle: widget.leagueTitle,
             inviteeId: hit.id,
-            inviterUsername: widget.inviterUsername,
           );
       ref.invalidate(sentLeagueInvitesProvider(widget.leagueId));
       if (mounted) {

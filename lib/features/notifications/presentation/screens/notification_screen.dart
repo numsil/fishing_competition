@@ -172,6 +172,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return '$actor님이 팔로우했습니다';
       case 'league_catch_edit':
         return '$actor님이 조과 기록을 수정했습니다';
+      case 'league_invite':
+        return '$actor님이 리그에 초대했습니다';
+      case 'league_start':
+        return '$actor님이 리그를 시작했습니다';
+      case 'league_approved':
+        return '$actor님이 참가를 승인했습니다';
       default:
         return '알림';
     }

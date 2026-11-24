@@ -20,6 +20,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // flutter_local_notifications 가 java.time 을 쓴다. 데슈가링 없이는
+        // 빌드가 깨진다 (포그라운드 알림용 의존성).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -64,4 +67,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

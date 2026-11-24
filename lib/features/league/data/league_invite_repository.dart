@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../dm/data/dm_repository.dart';
 
 part 'league_invite_repository.g.dart';
 
@@ -57,10 +56,9 @@ class LeagueInvite {
 }
 
 class LeagueInviteRepository {
-  LeagueInviteRepository(this._supabase, this._dm);
+  LeagueInviteRepository(this._supabase);
 
   final SupabaseClient _supabase;
-  final DmRepository _dm;
 
   String? get _myId => _supabase.auth.currentUser?.id;
 
@@ -88,28 +86,21 @@ class LeagueInviteRepository {
     );
   }
 
-  // ── 초대 생성 (RPC + DM 자동 발송) ───────────────────
+  // ── 초대 생성 ────────────────────────────────────────
+  /// 초대 알림(`league_invite`)은 RPC 안에서 발송된다.
+  /// 마이그레이션: 20261124140000_league_notifications.sql
+  ///
+  /// 예전에는 여기서 초대 DM 을 자동 발송했다. 제거한 이유: 초대 1건에
+  /// 푸시가 2번(DM + 초대) 울리고, DM 푸시는 탭하면 리그가 아니라
+  /// 채팅방으로 갔다. 받은 초대는 `getReceivedInvites()` 목록에 남는다.
   Future<String> inviteUser({
     required String leagueId,
-    required String leagueTitle,
     required String inviteeId,
-    required String inviterUsername,
   }) async {
     final inviteId = await _supabase.rpc(
       'create_league_invite',
       params: {'p_league_id': leagueId, 'p_invitee_id': inviteeId},
     ) as String;
-
-    // DM 발송은 best-effort — 실패해도 초대 자체는 성공으로 간주
-    try {
-      final convId = await _dm.getOrCreateConversation(inviteeId);
-      final msg =
-          '$inviterUsername님이 \'$leagueTitle\' 리그에 초대했어요.\nhttps://nakstar.app/league/$leagueId';
-      await _dm.sendMessage(convId, msg);
-    } catch (_) {
-      // 무시
-    }
-
     return inviteId;
   }
 
@@ -232,10 +223,7 @@ class LeagueInviteRepository {
 
 @riverpod
 LeagueInviteRepository leagueInviteRepository(LeagueInviteRepositoryRef ref) {
-  return LeagueInviteRepository(
-    Supabase.instance.client,
-    ref.watch(dmRepositoryProvider),
-  );
+  return LeagueInviteRepository(Supabase.instance.client);
 }
 
 @riverpod

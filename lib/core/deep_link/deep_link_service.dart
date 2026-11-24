@@ -15,6 +15,11 @@ String? routeFromNotification(String type, String? targetId, {String? actorId}) 
       return actorId != null ? '/user/$actorId' : null;
     case 'league_catch_edit':
       return targetId != null ? '/post/$targetId' : null;
+    // 리그 초대 / 시작 / 참가 승인 — target_id 는 league_id 다.
+    case 'league_invite':
+    case 'league_start':
+    case 'league_approved':
+      return targetId != null ? '/league/detail/$targetId' : null;
     default:
       return null;
   }
