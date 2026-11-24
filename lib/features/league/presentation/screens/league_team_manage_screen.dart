@@ -16,6 +16,7 @@ import '../../data/league_model.dart';
 import '../../data/team_assign_options.dart';
 import '../../data/team_capacity.dart';
 import '../widgets/team_member_add_sheet.dart';
+import '../widgets/team_name_dialog.dart';
 
 /// 셔플 되돌리기가 실패했을 때 스냅샷을 버려야 하는가.
 ///
@@ -450,7 +451,7 @@ class _LeagueTeamManageScreenState
   }
 
   Future<void> _createTeam(List<LeagueTeam> teams) async {
-    final name = await _promptName(title: '팀 추가', initial: '');
+    final name = await promptTeamName(context, title: '팀 추가', initial: '');
     if (name == null || !mounted) return;
     try {
       await ref.read(leagueRepositoryProvider).createLeagueTeam(
@@ -466,7 +467,7 @@ class _LeagueTeamManageScreenState
   }
 
   Future<void> _editTeam(LeagueTeam t) async {
-    final name = await _promptName(title: '팀 이름 변경', initial: t.name);
+    final name = await promptTeamName(context, title: '팀 이름 변경', initial: t.name);
     if (name == null || !mounted) return;
     try {
       await ref
@@ -698,39 +699,6 @@ class _LeagueTeamManageScreenState
         onTap: pickable ? () => Navigator.pop(ctx, _TeamPick(t.id)) : null,
       ),
     );
-  }
-
-  Future<String?> _promptName({
-    required String title,
-    required String initial,
-  }) async {
-    final ctrl = TextEditingController(text: initial);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: AppTextField(
-          controller: ctrl,
-          hint: '팀 이름',
-          maxLength: 20,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
-          TextButton(
-            onPressed: () {
-              final v = ctrl.text.trim();
-              if (v.isEmpty) return;
-              Navigator.pop(ctx, v);
-            },
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    return result;
   }
 
   String _message(Object e) {

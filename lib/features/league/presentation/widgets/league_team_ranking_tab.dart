@@ -11,9 +11,13 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../data/league_team_model.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_snack_bar.dart';
 import '../../data/team_capacity.dart';
+import '../../data/team_create_options.dart';
 import '../../data/team_ranking.dart';
 import 'league_my_team_banner.dart';
+import 'team_name_dialog.dart';
 import '../screens/league_participant_detail_screen.dart';
 
 /// 팀 순위 탭.
@@ -74,6 +78,26 @@ class LeagueTeamRankingTab extends ConsumerWidget {
       isApprovedParticipant: isApproved,
       isPendingParticipant: isPending,
     );
+    // 참가자가 직접 팀을 만들 수 있는가. 상한은 RPC 와 같은 규칙으로 센다
+    // (team_create_options.dart) — 어긋나면 버튼이 거짓말을 한다.
+    final maxTeams = maxTeamCount(
+        maxParticipants: league.maxParticipants, capacity: league.teamCapacity);
+    final createFooter = league.isSelfPick && isApproved
+        ? _CreateTeamFooter(
+            leagueId: league.id,
+            usedColors: teams.map((t) => t.color).toList(growable: false),
+            teamCount: teams.length,
+            maxTeams: maxTeams,
+            canCreate: canCreateTeam(
+              isSelfPick: league.isSelfPick,
+              isApprovedParticipant: isApproved,
+              teamCount: teams.length,
+              maxTeams: maxTeams,
+            ),
+            sub: sub,
+          )
+        : null;
+
     LeagueTeam? myTeam;
     if (showBanner && myUserId != null) {
       for (final t in teams) {
@@ -106,14 +130,17 @@ class LeagueTeamRankingTab extends ConsumerWidget {
                   style: AppTextStyles.body.copyWith(color: sub)),
               const SizedBox(height: 6),
               Text(
-                preStart
-                    ? '호스트가 팀을 만들면 여기서 팀을 고를 수 있습니다.'
-                    : '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
+                createFooter != null
+                    ? '직접 팀을 만들어 첫 팀이 될 수 있습니다.'
+                    : preStart
+                        ? '호스트가 팀을 만들면 여기서 팀을 고를 수 있습니다.'
+                        : '호스트가 리그 관리 > 팀 관리에서 팀을 만들면\n팀 순위가 표시됩니다.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption.copyWith(color: sub, height: 1.5),
               ),
             ]),
           ),
+          if (createFooter != null) createFooter,
         ],
       );
     }
@@ -135,12 +162,15 @@ class LeagueTeamRankingTab extends ConsumerWidget {
       },
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: rows.length + (banner != null ? 1 : 0),
+        itemCount: rows.length +
+            (banner != null ? 1 : 0) +
+            (createFooter != null ? 1 : 0),
         itemBuilder: (_, i) {
           if (banner != null) {
             if (i == 0) return banner;
             i -= 1;
           }
+          if (i == rows.length) return createFooter!;
           final row = rows[i];
           return _TeamRankCard(
             // 미배정 그룹은 순위를 받지 않는다 (0)
@@ -157,6 +187,91 @@ class LeagueTeamRankingTab extends ConsumerWidget {
             capacity: league.teamCapacity,
           );
         },
+      ),
+    );
+  }
+}
+
+/// 팀 목록 아래의 `팀 만들기`.
+///
+/// 상한에 걸렸을 때 버튼을 숨기고 이유를 남긴다. 버튼만 사라지면 사용자는
+/// 기능이 없는 줄 알고, 눌러서 실패 문구를 보게 하면 한 번 헛걸음한다.
+class _CreateTeamFooter extends ConsumerStatefulWidget {
+  const _CreateTeamFooter({
+    required this.leagueId,
+    required this.usedColors,
+    required this.teamCount,
+    required this.maxTeams,
+    required this.canCreate,
+    required this.sub,
+  });
+
+  final String leagueId;
+  final List<String?> usedColors;
+  final int teamCount;
+
+  /// `0` 은 상한 없음.
+  final int maxTeams;
+  final bool canCreate;
+  final Color sub;
+
+  @override
+  ConsumerState<_CreateTeamFooter> createState() => _CreateTeamFooterState();
+}
+
+class _CreateTeamFooterState extends ConsumerState<_CreateTeamFooter> {
+  bool _busy = false;
+
+  Future<void> _create() async {
+    final name = await promptTeamName(context, title: '팀 만들기');
+    if (name == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(leagueRepositoryProvider).createMyLeagueTeam(
+            leagueId: widget.leagueId,
+            name: name,
+            color: AppColors.nextUnusedTeamColorKey(widget.usedColors),
+          );
+      // 팀 목록과 내 소속이 함께 바뀐다. 순위는 그대로다 (조과 변화 없음).
+      ref.invalidate(leagueTeamsProvider(widget.leagueId));
+      if (mounted) AppSnackBar.success(context, '팀을 만들고 합류했습니다.');
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, teamCreateErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final caption = widget.maxTeams == 0
+        ? null
+        : widget.canCreate
+            ? '최대 ${widget.maxTeams}팀까지 만들 수 있습니다 (현재 ${widget.teamCount}팀)'
+            : '팀은 최대 ${widget.maxTeams}팀까지입니다. 기존 팀에 들어가주세요.';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.canCreate)
+            AppButton(
+              label: '팀 만들기',
+              variant: AppButtonVariant.secondary,
+              icon: LucideIcons.plus,
+              loading: _busy,
+              onPressed: _busy ? null : _create,
+            ),
+          if (caption != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              caption,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption.copyWith(color: widget.sub),
+            ),
+          ],
+        ],
       ),
     );
   }

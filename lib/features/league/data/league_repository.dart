@@ -670,6 +670,25 @@ class LeagueRepository {
     });
   }
 
+  /// 참가자가 직접 팀을 만든다. 만든 팀의 id 를 돌려주고, 호출자(본인)는
+  /// RPC 안에서 그 팀에 합류된다.
+  ///
+  /// 팀 개수 상한과 권한 판정이 모두 RPC 안에 있다 — 직접 insert 를 쓰면
+  /// 상한을 동시 생성에서 지킬 수 없다 (RLS 정책은 테이블 전체 개수를 셀 수
+  /// 없다). 규칙: lib/features/league/data/team_create_options.dart
+  Future<String> createMyLeagueTeam({
+    required String leagueId,
+    required String name,
+    String? color,
+  }) async {
+    final id = await _supabase.rpc('create_my_league_team', params: {
+      'p_league_id': leagueId,
+      'p_name': name,
+      'p_color': color,
+    });
+    return id as String;
+  }
+
   /// 셔플하고 **직전** 배정 스냅샷을 돌려준다. 호출자가 이 값을 들고 있다가
   /// `되돌리기` 에서 assignLeagueTeams 로 그대로 되돌린다.
   Future<List<TeamAssignment>> shuffleLeagueTeams(String leagueId) async {
