@@ -2,28 +2,42 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fishing_competition/features/league/data/team_create_options.dart';
 
 void main() {
-  group('maxTeamCount — 정원으로 역산한 팀 수 상한', () {
-    test('나누어떨어지면 그 값', () {
-      expect(maxTeamCount(maxParticipants: 20, capacity: 5), 4);
+  group('maxTeamCount — 최대 참가자 절반', () {
+    // 팀이 성립하려면 최소 2명이다. 그래서 상한은 올림(참가자 ÷ 팀당 정원)
+    // 이 아니라 내림(참가자 ÷ 2) 이다.
+    //
+    // 예전 공식은 `올림(참가자 ÷ 팀당 정원)` 이었는데, 그건 "전원을 앉히려면
+    // 최소 몇 팀이 필요한가" 이고 최대값이 아니다. 실기기에서 잡힌 버그:
+    // 정원 12 · 참가자 12 인 리그가 상한 1팀으로 계산돼서, 첫 사람이 팀을
+    // 만들면 나머지 전원이 막혔다.
+    test('참가자의 절반', () {
+      expect(maxTeamCount(maxParticipants: 12), 6);
+      expect(maxTeamCount(maxParticipants: 20), 10);
+      expect(maxTeamCount(maxParticipants: 100), 50);
     });
 
-    test('나누어떨어지지 않으면 올림', () {
-      // 22명/정원 5 → 4팀이면 20자리뿐이라 2명이 들어갈 팀이 없다.
-      expect(maxTeamCount(maxParticipants: 22, capacity: 5), 5);
-      expect(maxTeamCount(maxParticipants: 21, capacity: 5), 5);
+    test('홀수면 내림', () {
+      // 15명이면 2명씩 7팀 + 1명은 어느 팀에 끼어야 한다.
+      expect(maxTeamCount(maxParticipants: 15), 7);
     });
 
-    test('정원 무제한(0)이면 상한 없음(0)', () {
-      // 정원이 없으면 한 팀에 전원이 들어갈 수 있어서 역산할 근거가 없다.
-      expect(maxTeamCount(maxParticipants: 20, capacity: 0), 0);
+    test('팀당 정원과 무관하다', () {
+      // 정원 12 는 "12명 1팀" 도 "2명 6팀" 도 유효하다. 정원으로는
+      // 최대 팀 수를 역산할 수 없다.
+      expect(maxTeamCount(maxParticipants: 12), 6);
     });
 
-    test('정원이 참가자보다 크면 1팀', () {
-      expect(maxTeamCount(maxParticipants: 4, capacity: 10), 1);
+    test('아주 작은 리그도 최소 2팀은 만들 수 있다', () {
+      // 내림만 쓰면 3명 리그가 1팀이 되어 팀전이 성립하지 않는다.
+      expect(maxTeamCount(maxParticipants: 3), 2);
+      expect(maxTeamCount(maxParticipants: 2), 2);
+      expect(maxTeamCount(maxParticipants: 1), 2);
     });
 
-    test('정원 1명이면 참가자 수만큼', () {
-      expect(maxTeamCount(maxParticipants: 6, capacity: 1), 6);
+    test('참가자 수가 없으면(0) 상한 없음(0)', () {
+      // leagues.max_participants 는 DB 에서 nullable 이다. 셀 근거가 없으면
+      // 막지 않는다 — 막으면 팀을 아예 만들 수 없다.
+      expect(maxTeamCount(maxParticipants: 0), 0);
     });
   });
 

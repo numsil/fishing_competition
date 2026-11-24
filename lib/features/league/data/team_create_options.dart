@@ -7,13 +7,23 @@
 
 /// 참가자가 만들 수 있는 팀의 최대 개수. `0` 은 상한 없음.
 ///
-/// `올림(최대 참가자 ÷ 팀당 정원)`. 내림이면 자리가 모자라 어느 팀에도
-/// 못 들어가는 참가자가 생긴다 (22명/정원 5 → 4팀 = 20자리).
+/// `내림(최대 참가자 ÷ 2)`. 팀이 성립하려면 최소 2명이므로, 12명 리그에서
+/// 만들 수 있는 팀은 많아도 6개다. 1인 팀 난립만 막고 그 외엔 다 허용한다.
 ///
-/// 정원이 무제한이면 한 팀에 전원이 들어갈 수 있어서 역산할 근거가 없다.
-int maxTeamCount({required int maxParticipants, required int capacity}) {
-  if (capacity <= 0 || maxParticipants <= 0) return 0;
-  return (maxParticipants + capacity - 1) ~/ capacity;
+/// **팀당 정원은 쓰지 않는다.** 정원 12 는 "12명 1팀" 도 "2명 6팀" 도
+/// 유효해서 최대 팀 수를 역산할 수 없다. 예전 공식
+/// `올림(참가자 ÷ 팀당 정원)` 은 "전원을 앉히려면 최소 몇 팀이 필요한가"
+/// 였고 최대값이 아니었다 — 정원 12·참가자 12 인 리그가 상한 1팀으로
+/// 계산돼서 첫 사람이 팀을 만들면 나머지 전원이 막혔다 (실기기 버그).
+///
+/// 정원은 여전히 **합류**를 막는다 (team_capacity.dart 의 isTeamFull).
+/// 이 함수는 개수만 센다.
+int maxTeamCount({required int maxParticipants}) {
+  // max_participants 는 DB 에서 nullable 이다. 셀 근거가 없으면 막지 않는다.
+  if (maxParticipants <= 0) return 0;
+  final half = maxParticipants ~/ 2;
+  // 내림만 쓰면 3명 리그가 1팀이 되어 팀전이 성립하지 않는다.
+  return half < 2 ? 2 : half;
 }
 
 /// `팀 만들기` 를 할 수 있는가.

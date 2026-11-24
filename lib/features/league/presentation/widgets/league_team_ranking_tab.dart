@@ -80,8 +80,7 @@ class LeagueTeamRankingTab extends ConsumerWidget {
     );
     // 참가자가 직접 팀을 만들 수 있는가. 상한은 RPC 와 같은 규칙으로 센다
     // (team_create_options.dart) — 어긋나면 버튼이 거짓말을 한다.
-    final maxTeams = maxTeamCount(
-        maxParticipants: league.maxParticipants, capacity: league.teamCapacity);
+    final maxTeams = maxTeamCount(maxParticipants: league.maxParticipants);
     final createFooter = league.isSelfPick && isApproved
         ? _CreateTeamFooter(
             leagueId: league.id,
@@ -117,7 +116,15 @@ class LeagueTeamRankingTab extends ConsumerWidget {
         : null;
 
     if (teams.isEmpty) {
-      return ListView(
+      // 빈 상태에도 당겨서 새로고침이 있어야 한다. leagueTeamsProvider 는
+      // 5분 캐시라서, 호스트가 방금 만든 팀이 캐시 때문에 안 보일 때
+      // 새로고침이 없으면 앱을 껐다 켜는 수밖에 없다 (실기기 버그).
+      return RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(leagueTeamsProvider(league.id));
+          ref.invalidate(leagueRankingProvider(league.id));
+        },
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           if (banner != null) banner,
@@ -142,6 +149,7 @@ class LeagueTeamRankingTab extends ConsumerWidget {
           ),
           if (createFooter != null) createFooter,
         ],
+        ),
       );
     }
 

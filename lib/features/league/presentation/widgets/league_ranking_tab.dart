@@ -68,6 +68,9 @@ class LeagueRankingTab extends ConsumerWidget {
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(leagueRankingProvider(league.id));
+            // 이 탭이 `내 팀` 배너에서 팀 목록을 읽는다 (아래 teams).
+            // 안 비우면 5분 캐시가 남아 새로고침이 거짓말을 한다.
+            ref.invalidate(leagueTeamsProvider(league.id));
             ref.invalidate(leagueDetailProvider(league.id));
             ref.invalidate(isJoinedProvider(league.id));
             ref.invalidate(myParticipantStatusProvider(league.id));
