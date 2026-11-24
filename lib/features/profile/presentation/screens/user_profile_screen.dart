@@ -533,12 +533,38 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           ),
         ),
       ),
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) =>
-          Scaffold(body: Center(child: Text('프로필을 불러올 수 없어요: $e'))),
+      // 로딩·에러 분기에도 AppBar 를 붙인다. 없으면 뒤로가기 버튼이 없어서
+      // 프로필을 못 불러오는 동안 화면에 갇힌다 (실기기 버그).
+      // userProfileProvider 는 keepAlive + 3분 캐시라 첫 진입은 항상
+      // 로딩을 거친다 — 즉 이 분기는 매번 지나간다.
+      loading: () => Scaffold(
+        appBar: _backOnlyAppBar(context),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: _backOnlyAppBar(context),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text('프로필을 불러올 수 없어요: $e',
+                textAlign: TextAlign.center),
+          ),
+        ),
+      ),
     );
   }
+
+  /// 뒤로가기만 있는 AppBar. 데이터 분기의 AppBar 와 같은 색·같은 아이콘.
+  AppBar _backOnlyAppBar(BuildContext context) => AppBar(
+        leading: IconButton(
+          icon: Icon(LucideIcons.chevronLeft,
+              color: context.isDark ? Colors.white : Colors.black),
+          onPressed: () => context.pop(),
+        ),
+        backgroundColor: context.isDark ? AppColors.darkBg : Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      );
 }
 
 class _LunkerBadge extends StatelessWidget {
